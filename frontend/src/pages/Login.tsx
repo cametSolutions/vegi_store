@@ -33,13 +33,7 @@ const {user,isAuthenticated,isLoading,login,logout}=useAuth()
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 z-20 flex flex-col justify-center px-12 text-white">
-          {/* <h2 className="text-5xl font-bold mb-6 leading-tight">
-            Fresh & Organic
-          </h2>
-          <p className="text-xl mb-8 opacity-90 leading-relaxed">
-            Your trusted source for the freshest vegetables, delivered straight
-            from local farms to your table.
-          </p> */}
+        
           <div className="flex items-center space-x-8">
             <div className="text-center">
               <div className="text-3xl font-bold">500+</div>
@@ -49,10 +43,7 @@ const {user,isAuthenticated,isLoading,login,logout}=useAuth()
               <div className="text-3xl font-bold">1000+</div>
               <div className="text-sm opacity-80 mt-1">Happy Customers</div>
             </div>
-            {/* <div className="text-center">
-              <div className="text-3xl font-bold">24/7</div>
-              <div className="text-sm opacity-80 mt-1">Fresh Delivery</div>
-            </div> */}
+          
           </div>
         </div>
       </div>
@@ -68,7 +59,7 @@ const {user,isAuthenticated,isLoading,login,logout}=useAuth()
 
         <div className="w-full max-w-lg relative z-10">
           {/* Login Card */}
-          <div className="bg-white rounded-2xl shadow-2xl p-10 backdrop-blur-sm bg-white/95 border border-white/20">
+          <div className="bg-white rounded-2xl shadow-2xl p-10 backdrop-blur-sm border border-white/20">
             <LoginForm onSubmit={login} isLoading={isLoading} />
             
            

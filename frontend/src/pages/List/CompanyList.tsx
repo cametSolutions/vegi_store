@@ -11,7 +11,7 @@ interface Company {
   location: string
 }
 
-const CompanyMaster: React.FC = () => {
+const CompanyList: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([
     {
       id: "1",
@@ -50,7 +50,7 @@ const CompanyMaster: React.FC = () => {
       >
         <FaUserPlus className="mr-2" />
       </Link>
-      <Button>Click me</Button>
+      {/* <Button>Click me</Button> */}
       <MasterTable
         headers={headers}
         data={companies}
@@ -61,4 +61,4 @@ const CompanyMaster: React.FC = () => {
   )
 }
 
-export default CompanyMaster
+export default CompanyList

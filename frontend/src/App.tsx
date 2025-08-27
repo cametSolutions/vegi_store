@@ -3,7 +3,8 @@ import Login from "./pages/Login"
 import "./App.css"
 import Header from "./components/Layout/Header"
 import PriceLevel from "./pages/Master/PriceLevel"
-import CompanyMaster from "./pages/List/CompanyList"
+import CompanyMaster from "./pages/Master/CompanyMaster"
+import CompanyList from "./pages/List/CompanyList"
 function App() {
   const location = useLocation()
 
@@ -19,7 +20,11 @@ function App() {
           <Route path="/" element={<Login />} />
           <Route path="/price-level" element={<PriceLevel />} />
           {/* <Route path="/admin/homePge" element={<HomePage />} /> */}
-          <Route path="/masters/company" element={<CompanyMaster />} />
+          <Route path="/masters/company" element={<CompanyList />} />
+          <Route
+            path="/admin/masters/companyRegistration"
+            element={<CompanyMaster />}
+          />
         </Routes>
       </main>
     </div>
@@ -27,4 +32,3 @@ function App() {
 }
 
 export default App
-
