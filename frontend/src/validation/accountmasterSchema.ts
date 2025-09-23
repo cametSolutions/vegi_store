@@ -11,4 +11,3 @@ export const AccountmasterSchema = z.object({
   address: z.string().optional(),
   phoneNo: z.string().optional()
 })
-export type AccountmasterFormData = z.infer<typeof AccountmasterSchema>
