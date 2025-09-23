@@ -13,6 +13,8 @@ import {
   Leaf,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+
 const Navbar = () => {
   const [isMastersOpen, setIsMastersOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
