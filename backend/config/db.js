@@ -1,22 +1,33 @@
 
 import mongoose from "mongoose";
+
+let isConnected = null;
+
 const connectDB = async () => {
-    try {
-        const mongoUri = process.env.MONGO_URI;
-        if (!mongoUri) {
-            throw new Error("MONGO_URI is not defined in environment variables");
-        }
-        const connect = await mongoose.connect(mongoUri);
-        console.log(`MongoDB connected: ${connect.connection.host}`);
-    }
-    catch (error) {
-        if (error instanceof Error) {
-            console.error(`❌ Mongo Connection failed: ${error.message}`);
-        }
-        else {
-            console.error("❌ Unknown error occurred during Mongo connection");
-        }
-        process.exit(1);
-    }
+  const MONGO_URI = process.env.MONGO_URI;
+  if (!MONGO_URI) {
+    throw new Error("❌ MONGO_URI is not defined in environment variables");
+  }
+
+  if (isConnected) {
+    console.log("✅ Using existing MongoDB connection");
+    return;
+  }
+
+  try {
+    const connection = await mongoose.connect(MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    isConnected = connection.connections[0].readyState;
+    console.log(`✅ MongoDB connected: ${connection.connection.host}`);
+  } catch (error) {
+    console.error(`❌ MongoDB connection error: ${error.message}`);
+    process.exit(1);
+  }
 };
+
 export default connectDB;
+
+

@@ -31,8 +31,8 @@ const Navbar = () => {
       label: "Stock Adjustment",
       path: "/stock-adjustment"
     },
-    { label: "Item Master", path: "/item-master" },
-    { label: "Account Master", path: "/account-master" },
+    { label: "Item Master", path: "/master/item-master" },
+    { label: "Account Master", path: "/admin/masters/accountMaster" },
     { label: "Purchase Return", path: "/purchase-return" },
 
     { label: "Purchase", path: "/purchase" },
@@ -111,7 +111,7 @@ const Navbar = () => {
               {/* Navigation Links - Always visible on desktop */}
               <div className="flex-1 flex justify-center">
                 <div className="flex items-center space-x-4">
-                  {menuItems.map((item, index) => (
+                  {menuItems.map((item) => (
                     <div key={item.label} className="relative group">
                       <Link
                         to={item.path}
@@ -151,9 +151,9 @@ const Navbar = () => {
               </div>
 
               <div className="flex items-center space-x-4 ">
-             <div className="relative ml-6 ">
-    <ProfileDropdown />
-  </div>
+                <div className="relative ml-6 ">
+                  <ProfileDropdown />
+                </div>
                 <div className="md:hidden">
                   <button
                     onClick={toggleMobileMenu}
@@ -200,7 +200,7 @@ const Navbar = () => {
                       key={index}
                       className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-700 transition-colors"
                     >
-                      {item}
+                      {item.label}
                     </button>
                   ))}
 
@@ -232,11 +232,7 @@ const Navbar = () => {
                     )}
                   </div>
 
-                  {/* <div className="px-4 py-2">
-                  <button className="w-full px-4 py-2 border-2 border-white text-white rounded-full hover:bg-white hover:text-gray-800 transition-colors duration-200 text-sm font-medium">
-                    Dashboard
-                  </button>
-                </div> */}
+                
                 </div>
               </div>
             )}

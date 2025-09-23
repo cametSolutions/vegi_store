@@ -1,23 +1,24 @@
 export interface LoginFormData {
-  email: string;
-  password: string;
+  email: string
+  password: string
+  
 }
 
 export interface LoginFormErrors {
-  email?: string;
-  password?: string;
-  general?: string;
+  email?: string
+  password?: string
+  general?: string
 }
 
 export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: 'customer' | 'admin';
+  id: string
+  email: string
+  name: string
+  role: "Staff" | "Admin"
 }
 
 export interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
+  user: User | null
+  isAuthenticated: boolean
+  isLoading: boolean
 }

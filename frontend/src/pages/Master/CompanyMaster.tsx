@@ -1,23 +1,7 @@
 import DynamicForm from "../../components/form/DynamicForm"
-import { createCompany } from "../../api/CompanyApi"
-export interface CompanyFormData {
-  companyName: string
-  companyType?: string
-  registrationNumber?: string
-  incorporationDate?: string
-  permanentAddress?: string
-  residentialAddress?: string
-  email: string
-  notificationEmail?: string
-  mobile?: string
-  landline?: string
-  gstNumber?: string
-  panNumber?: string
-  website?: string
-  industry?: string
-  authorizedSignatory?: string
-  numEmployees?: number
-}
+import { companyApi } from "../../api/companyApi"
+import { CompanyFormData, CompanySchema } from "../../validation/companySchema"
+import getLocalStorageItem from "../../helper/getlocalstorage"
 
 interface Field {
   name: keyof CompanyFormData // ensures field name matches the form data keys
@@ -27,6 +11,13 @@ interface Field {
   validation?: any
 }
 const CompanyMaster = () => {
+const a=getLocalStorageItem("user")
+const selectedCompany=getLocalStorageItem("selectedCompany")
+const selectedBranch=getLocalStorageItem("selectedBranch")
+console.log("companymastercompanyyyy",selectedBranch)
+console.log("companymasterbranch",selectedCompany)
+console.log("aroooo",a)
+
   const sampleFields: Field[] = [
     {
       name: "companyName",
@@ -58,9 +49,9 @@ const CompanyMaster = () => {
     { name: "numEmployees", label: "Number of Employees", type: "number" }
   ]
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: CompanyFormData) => {
     try {
-      const response = await createCompany(data)
+      const response = await companyApi.create(data)
     } catch (error) {
       console.log(error)
     }
@@ -80,13 +71,14 @@ const CompanyMaster = () => {
   ]
 
   return (
-    <DynamicForm
-      fields={sampleFields}
-      onSubmit={handleSubmit}
-      buttons={customButtons}
-      title="Professional Contact Form"
-      subtitle="We'd love to hear from you. Send us a message and we'll respond as soon as possible."
-    />
+    <div className="flex justify-center items-center w-screen">
+      <DynamicForm<CompanyFormData>
+        fields={sampleFields}
+        onSubmit={handleSubmit}
+        buttons={customButtons}
+        schema={CompanySchema}
+      />
+    </div>
   )
 }
 export default CompanyMaster
