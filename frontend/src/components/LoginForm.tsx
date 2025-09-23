@@ -2,10 +2,28 @@ import React, { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Mail, Lock, Leaf, Eye, EyeOff } from "lucide-react"
 import { LoginFormData, LoginFormErrors } from "../types/auth"
-
+import { useDispatch } from "react-redux"
+import { branchApi } from "../api/branchApi"
+import {
+  
+  setLocalStorageItem,
+} from "../helper/localstorage"
+import {
+  selectedCompany,
+  selectedBranch,
+  setBranches
+} from "../store/slices/companyBranchSlice"
+import { AppDispatch } from "../store/store"
+// import {s}
 interface LoginFormProps {
-  onSubmit: (data: LoginFormData) => Promise<void>
+  onSubmit: (data: LoginFormData) => Promise<User>
   isLoading?: boolean
+}
+// Define the branch type
+interface Branch {
+  _id: string
+  branchName: string
+  // add other fields if needed
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({
@@ -20,6 +38,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [errors, setErrors] = useState<LoginFormErrors>({})
   const [showPassword, setShowPassword] = useState(false)
   const navigate = useNavigate()
+  const dispatch = useDispatch<AppDispatch>()
   const validateForm = (): boolean => {
     const newErrors: LoginFormErrors = {}
 
@@ -47,11 +66,40 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     if (!validateForm()) return
 
     try {
-      console.log(formData)
-      await onSubmit(formData)
+      const loggeduser = await onSubmit(formData)
+      console.log("loggeduser", loggeduser.role)
+      if (loggeduser.role === "Staff") {
+        const loggedCompany = loggeduser.access[0]?.company
+        const loggedBranch = loggeduser.access[0]?.branches[0]
+        setLocalStorageItem("selectedCompany", loggedCompany)
+        setLocalStorageItem("selectedBranch", loggedBranch)
+        dispatch(selectedBranch(loggedBranch))
+        dispatch(selectedCompany(loggedCompany))
+        console.log("before")
+        const branches = await branchApi.getAll(loggedCompany._id)
+        // const simplifiedBranches = branches.data.map((b: any) => ({
+        //   _id: b._id,
+        //   branchName: b.branchName
+        // }))
+        // Map to only _id and branchName with proper typing
+        const simplifiedBranches: Pick<Branch, "_id" | "branchName">[] =
+          branches.data.map((b: Branch) => ({
+            _id: b._id,
+            branchName: b.branchName
+          }))
+
+        // Store in localStorage
+        setLocalStorageItem("companybranches", simplifiedBranches)
+        dispatch(setBranches(branches.data))
+        console.log("after")
+      } else if (loggeduser.role === "Admin") {
+      }
+
+      // dispatch(selectedCompany)
       navigate("/admin/homePge")
       setErrors({})
     } catch (error) {
+      console.log("Login failed", error)
       setErrors({
         general: "Invalid email or password. Please try again."
       })
@@ -65,7 +113,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       setErrors((prev) => ({ ...prev, [field]: undefined }))
     }
   }
-console.log("osss",isLoading)
+
   return (
     <div className="w-full max-w-md mx-auto">
       {/* Logo and Header */}

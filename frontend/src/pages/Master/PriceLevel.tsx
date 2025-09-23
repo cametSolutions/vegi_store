@@ -5,7 +5,7 @@ const PriceLevel: React.FC = () => {
   const [priceLevelName, setPriceLevelName] = useState("")
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
-
+  const [showallpricelevel, setshowallpricelevel] = useState(false)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -20,13 +20,15 @@ const PriceLevel: React.FC = () => {
     try {
       // Replace with your API Gateway endpoint
       const response = await axios.post(
-        "http://localhost:5000/api/price-level/pricelevelRegister",
-        { name: priceLevelName }
+        "http://localhost:5000/api/pricelevel/createpricelevel",
+        { priceLevelName }
       )
+      if (response.status === 201) {
+        console.log("response", response.data.data)
+      }
 
       setMessage("Price Level added successfully!")
       setPriceLevelName("") // clear input
-      console.log("Response:", response.data)
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         setMessage(error.response?.data?.message || "Something went wrong")
@@ -43,10 +45,19 @@ const PriceLevel: React.FC = () => {
 
   return (
     <div className="w-full h-auto flex justify-center items-center">
-      <div className="bg-white shadow-md rounded-xl p-8 w-98">
+      <div className="bg-white shadow-2xl rounded-xl p-8 w-98">
         <h1 className="text-2xl font-bold text-center mb-6 text-blue-700">
           Add Price Level
         </h1>
+
+        <div className="flex justify-end">
+          <span
+            onClick={() => setshowallpricelevel(!showallpricelevel)}
+            className="bg-blue-800 text-white shadow-xl px-2 py-0.5 rounded-md cursor-pointer"
+          >
+            show all
+          </span>
+        </div>
 
         {message && (
           <div

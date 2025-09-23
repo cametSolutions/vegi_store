@@ -10,7 +10,7 @@ const userSchema = new Schema({
     },
     mobile: { type: String, match: /^[0-9]{10}$/ },
     password: { type: String, required: [true, "Password is required"] },
-    role: { type: String },
+    role: { type: String,required:[true,"Role is required"] },
     activeRole: { type: String },
     privilegeleavestartsfrom: { type: String },
     casualleavestartsfrom: { type: String },
@@ -41,6 +41,10 @@ const userSchema = new Schema({
     permissions: [{}],
     permissionLevel: [{}],
     selected: [{}],
+    access: [{
+        company: { type: Schema.Types.ObjectId, ref: "Company" },
+        branches: [{ type: Schema.Types.ObjectId, ref: "Branch" }]
+    }]
 }, { timestamps: true });
 userSchema.pre("save", async function (next) {
     if (!this.isModified("password"))

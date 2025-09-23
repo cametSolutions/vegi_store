@@ -5,7 +5,6 @@ import { LoginForm } from "../components/LoginForm"
 import { useAuth } from "../hooks/useAuth"
 const Login = () => {
   const [email, setEmail] = useState("")
-console.log("hhhhhhh")
 
   const [password, setPassword] = useState("")
   const navigate = useNavigate()
