@@ -82,7 +82,7 @@ export const LoginForm = ({
       }
 
       // dispatch(selectedCompany)
-      navigate("/admin/homePge")
+      navigate("/home-page")
       setErrors({})
     } catch (error) {
       console.log("Login failed", error)

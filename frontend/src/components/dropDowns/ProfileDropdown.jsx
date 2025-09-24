@@ -1,251 +1,334 @@
-import { useState, useEffect, useRef } from "react"
-import { Link, useNavigate } from "react-router-dom"
-import { VscAccount } from "react-icons/vsc"
-import {
-  getLocalStorageItem,
-  setLocalStorageItem
-} from "../../helper/localstorage.js"
+import { useState, useEffect } from "react";
 import {
   ChevronDown,
   LogOut,
   User,
   Building2,
   GitBranch,
-  Settings
-} from "lucide-react"
-import { useDispatch } from "react-redux"
+  Settings,
+  Database,
+  Power,
+} from "lucide-react";
 import {
-  selectedBranch as setseletedBranch,
-  selectedCompany as setSelectedCompany
-} from "../../store/slices/companyBranchSlice.js"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { userApi } from "../../api/userApi"; // Import your userApi
+import { useSelector } from "react-redux";
+import { getLocalStorageItem } from "@/helper/localstorage";
+import { truncate } from "../../../../shared/utils/string";
+import { useNavigate } from "react-router-dom";
+
 const ProfileDropdown = () => {
-  const [open, setOpen] = useState(false)
-  const [selectedCompany, setselectedCompany] = useState(null)
-  const [selectedBranch, setselectedBranch] = useState(null)
-  const [showCompanies, setShowCompanies] = useState(false)
-  const [showBranches, setShowBranches] = useState(false)
-  const [loggedUser, setloggedUser] = useState(null)
-  const [showMaster, setShowMaster] = useState(false)
-  const dropdownRef = useRef(null)
-  const navigate = useNavigate()
-  const dispatch = useDispatch()
-  useEffect(() => {
-    const selectedcompany = getLocalStorageItem("selectedCompany")
-    const user = getLocalStorageItem("user")
-    setloggedUser(user)
-    const selectedbranch = getLocalStorageItem("selectedBranch")
+  //// Redux Store Data
+  const selectedCompanyFromStore = useSelector(
+    (state) => state.companyBranch.selectedCompany
+  );
+  const selectedBranchFromStore = useSelector(
+    (state) => state.companyBranch.selectedBranch
+  );
 
-    setselectedCompany(selectedcompany)
-    setselectedBranch(selectedbranch)
-  }, [])
+  const navigate = useNavigate();
 
-  // Close dropdown when clicking outside
+  /// User details from local storage
+  const userData = getLocalStorageItem("user");
+
+  // Direct query usage with comprehensive refetch prevention and debugging
+  const { data: apiResponse, isLoading } = useQuery({
+    queryKey: ["users", userData?._id],
+    queryFn: () => {
+      return userApi.getById(userData?._id);
+    },
+    staleTime: 1000 * 60 * 5, // cache 5 mins
+    cacheTime: 1000 * 60 * 10, // keep in cache for 10 mins
+    refetchOnWindowFocus: false, // don't refetch on window focus
+    refetchOnMount: false, // don't refetch when component mounts if data exists
+    refetchOnReconnect: false, // don't refetch on network reconnect
+    refetchInterval: false, // don't refetch on interval
+    refetchIntervalInBackground: false, // don't refetch in background
+    // enabled: !!userData?._id, // don't fetch if no userId
+    retry: 1, // reduce retry attempts
+    retryOnMount: false, // don't retry when component mounts
+  });
+
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [selectedBranch, setSelectedBranch] = useState(null);
+  const [loggedUser, setLoggedUser] = useState(null);
+
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target)
-      ) {
-        setOpen(false)
-        setShowMaster(false) // also close Master submenu
+    // Handle API response structure: { message: "user found", data: {...} }
+    if (apiResponse?.data) {
+      const userData = apiResponse.data;
+      setLoggedUser(userData);
+
+      // Set initial selected company and branch from API data
+      if (userData.access && userData.access.length > 0) {
+        const firstCompanyAccess = userData.access[0];
+        setSelectedCompany(firstCompanyAccess);
+
+        // Set first branch of the first company as default
+        if (
+          firstCompanyAccess.branches &&
+          firstCompanyAccess.branches.length > 0
+        ) {
+          setSelectedBranch(firstCompanyAccess.branches[0]);
+        }
       }
     }
+  }, [apiResponse]);
 
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
+  // Update selected branch when company changes - Show only branches of selected company
+  useEffect(() => {
+    if (
+      selectedCompany &&
+      selectedCompany.branches &&
+      selectedCompany.branches.length > 0
+    ) {
+      // Reset to first branch of newly selected company
+      setSelectedBranch(selectedCompany.branches[0]);
+    } else {
+      setSelectedBranch(null);
     }
-  }, [])
-  const handleLogOut = () => {
-    localStorage.clear()
-    navigate("/login")
-  }
+  }, [selectedCompany]);
 
-  const handleSelectCompany = (company) => {
-    dispatch(setSelectedCompany(company))
-    // setselectedCompany(company.name)
-    setLocalStorageItem("selectedCompany", company)
-    setShowCompanies(false)
-  }
+  const handleLogOut = () => {
+    // Clear localStorage and navigate to login
+    localStorage.clear();
+    // navigate("/login");
+  };
+
+  const handleSelectCompany = (companyAccess) => {
+    setSelectedCompany(companyAccess);
+    // You can dispatch to Redux store here if needed
+    // dispatch(setSelectedCompany(companyAccess));
+  };
 
   const handleSelectBranch = (branch) => {
-    dispatch(setseletedBranch(branch))
-    // setseletedBranch(branch.name)
-    setLocalStorageItem("selectedBranch", branch)
-    setselectedBranch(branch)
-    setShowBranches(false)
+    setSelectedBranch(branch);
+    // You can dispatch to Redux store here if needed
+    // dispatch(setSelectedBranch(branch));
+  };
+
+  const handleNavigate = (path) => {
+    navigate(path);
+  };
+
+  const getUserInitials = (email) => {
+    if (!email) return "U";
+    const name = email.split("@")[0];
+    return name.split("").slice(0, 2).join("").toUpperCase();
+  };
+
+  const getDisplayName = (email) => {
+    if (!email) return "User";
+    return email.split("@")[0];
+  };
+
+  // Show loading state
+  if (isLoading || !loggedUser) {
+    return (
+      <div className="ml-6">
+        <Button variant="outline" size="sm" disabled className="text-black">
+          <User className="w-4 h-4  " />
+          Loading...
+        </Button>
+      </div>
+    );
   }
-  // console.log(loggedUser)
+
+  // console.log("Logged User:", loggedUser);
+  // console.log("Selected Company:", selectedCompany);
+  // console.log("Selected Branch:", selectedBranch);
+
   return (
-    <div className="relative ml-6 cursor-pointer" ref={dropdownRef}>
-      {/* Profile Icon */}
-      <button
-        className="flex items-center space-x-2 border border-gray-100 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-full transition focus:outline-none"
-        onClick={() => setOpen(!open)}
-      >
-        <VscAccount className="w-6 h-6 text-gray-600 " />
-        {/* <span className="text-gray-700 font-medium ">Profile</span> */}
+    <div className="">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="relative p-0 rounded-full w-10 h-10 flex items-center justify-center border-2 border-primary hover:border-accent transition-colors"
+          >
+            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary text-primary-foreground">
+              {getUserInitials(loggedUser.email)}
+            </div>
+          </Button>
+        </DropdownMenuTrigger>
 
-        <ChevronDown
-          className={`h-4 w-4   text-black transition-transform ${
-            open ? "rotate-180" : ""
-          }`}
-        />
-      </button>
-
-      {/* Dropdown Menu */}
-      {open && (
-        <div className="absolute right-0 mt-2 w-56 bg-gray-800 shadow-lg rounded-lg border border-gray-200 py-2 z-50">
-          <div className="px-4 py-3 border-b border-gray-200">
-            <p className="text-sm font-medium text-white">{loggedUser.name}</p>
-            <p className="text-xs text-white">{loggedUser.email}</p>
-          </div>
-          <div className="px-4 py-3 border-b border-gray-200">
-            <p className="text-xs uppercase text-gray-400">Logged In Details</p>
-            <div className="mt-2">
-              <p className="text-sm text-white">
-                <span className="font-semibold">Company:</span>{" "}
-                {selectedCompany?.companyName || "Not Selected"}
-              </p>
-              <p className="text-sm text-white">
-                <span className="font-semibold">Branch:</span>{" "}
-                {selectedBranch?.branchName || "Not Selected"}
-              </p>
+        <DropdownMenuContent className="w-80 p-0" align="end" sideOffset={8}>
+          {/* User Info Section */}
+          <div className="px-4 py-3 bg-gradient-to-r from-primary/10 to-primary/5">
+            <div className="flex items-center gap-3">
+              <Avatar className="w-10 h-10">
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {getUserInitials(loggedUser.email)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm truncate">
+                  {getDisplayName(loggedUser.email)}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {loggedUser.email}
+                </p>
+                <Badge variant="outline" className="mt-1 text-xs">
+                  {loggedUser.role}
+                </Badge>
+              </div>
             </div>
           </div>
 
-          {/* Switch Company Section */}
-          <div>
-            <button
-              onClick={() => {
-                setShowCompanies(!showCompanies)
-                setShowBranches(false)
-              }}
-              className="flex items-center justify-between w-full px-4 py-2 text-white hover:bg-gray-500"
-            >
-              <span>
-                <Building2 className="inline w-4 h-4 mr-2" />
-                Switch Company
-              </span>
-              <ChevronDown
-                className={`w-4 h-4 transition-transform ${
-                  showCompanies ? "rotate-180" : ""
-                }`}
-              />
-            </button>
+          <DropdownMenuSeparator />
 
-            {showCompanies && (
-              <div className="ml-6 mt-1">
-                {loggedUser.access.map((company) => (
-                  <div
-                    key={company.id}
-                    onClick={() => handleSelectCompany(company)}
-                    className="block px-4 py-2 text-white hover:bg-gray-500 cursor-pointer"
-                  >
-                    {company.company.companyName}
-                  </div>
-                ))}
+          {/* Current Selection Info */}
+          <div className="px-4 py-3 bg-muted/30">
+            <DropdownMenuLabel className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-0 pb-2">
+              Current Selection
+            </DropdownMenuLabel>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Company:</span>
+                <Badge variant="secondary" className="max-w-[150px] truncate">
+                  {truncate(selectedCompany?.company?.companyName, 15) ||
+                    "None Selected"}
+                </Badge>
               </div>
-            )}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Branch:</span>
+                <Badge variant="outline" className="max-w-[150px] truncate">
+                  {truncate(selectedBranch?.branchName, 15) || "None Selected"}
+                </Badge>
+              </div>
+            </div>
           </div>
 
-          {/* Switch Branch Section */}
-          <div>
-            <button
-              onClick={() => {
-                setShowBranches(!showBranches)
-                setShowCompanies(false)
-              }}
-              className="flex items-center justify-between w-full px-4 py-2 text-white hover:bg-gray-500"
-            >
-              <span>
-                <GitBranch className="inline w-4 h-4 mr-2" />
-                Switch Branch
-              </span>
-              <ChevronDown
-                className={`w-4 h-4 transition-transform ${
-                  showBranches ? "rotate-180" : ""
-                }`}
-              />
-            </button>
+          <DropdownMenuSeparator />
 
-            {showBranches && (
-              <div className="ml-6 mt-1">
-                {loggedUser?.access[0]?.branches?.map((branch) => (
-                  <div
+          {/* Switch Company */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="flex items-center gap-2">
+              <Building2 className="w-4 h-4" />
+              Switch Company
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-56">
+              {loggedUser.access && loggedUser.access.length > 0 ? (
+                loggedUser.access.map((companyAccess) => (
+                  <DropdownMenuItem
+                    key={companyAccess._id}
+                    onClick={() => handleSelectCompany(companyAccess)}
+                    className="cursor-pointer"
+                  >
+                    <Building2 className="w-4 h-4 mr-2 opacity-50" />
+                    <span className="truncate">
+                      {companyAccess.company.companyName}
+                    </span>
+                    {selectedCompany?._id === companyAccess._id && (
+                      <div className="ml-auto w-2 h-2 bg-primary rounded-full" />
+                    )}
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <DropdownMenuItem disabled>
+                  No companies available
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+
+          {/* Switch Branch - Only shows branches of selected company */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="flex items-center gap-2">
+              <GitBranch className="w-4 h-4" />
+              Switch Branch
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-56">
+              {selectedCompany?.branches &&
+              selectedCompany.branches.length > 0 ? (
+                selectedCompany.branches.map((branch) => (
+                  <DropdownMenuItem
                     key={branch._id}
                     onClick={() => handleSelectBranch(branch)}
-                    className="block px-4 py-2 text-white hover:bg-gray-500 cursor-pointer"
+                    className="cursor-pointer"
                   >
-                    {branch.branchName}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                    <GitBranch className="w-4 h-4 mr-2 opacity-50" />
+                    <span className="truncate">{branch.branchName}</span>
+                    {selectedBranch?._id === branch._id && (
+                      <div className="ml-auto w-2 h-2 bg-primary rounded-full" />
+                    )}
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <DropdownMenuItem disabled>
+                  No branches available for this company
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
 
-          <Link
-            to="/profile"
-            className="flex items-center px-4 py-2 text-white hover:bg-gray-500"
-          >
+          <DropdownMenuSeparator />
+
+          {/* Profile Links */}
+          <DropdownMenuItem onClick={() => handleNavigate("/profile")}>
             <User className="w-4 h-4 mr-2" />
             Personal Info
-          </Link>
-          <Link
-            to="/settings"
-            className="flex items-center px-4 py-2 text-white hover:bg-gray-500"
-          >
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onClick={() => handleNavigate("/settings")}>
             <Settings className="w-4 h-4 mr-2" />
             Settings
-          </Link>
-          {/* Master Dropdown */}
-          <div>
-            <button
-              onClick={() => setShowMaster(!showMaster)}
-              className="flex items-center justify-between w-full px-4 py-2 text-white hover:bg-gray-500 focus:outline-none"
-            >
-              <span>Master</span>
-              <ChevronDown
-                className={`w-4 h-4 transition-transform ${
-                  showMaster ? "rotate-180" : ""
-                }`}
-              />
-            </button>
+          </DropdownMenuItem>
 
-            {showMaster && (
-              <div className="ml-6 mt-1">
-                <Link
-                  to="/masters/company"
-                  className="block px-4 py-2 text-white hover:bg-gray-500"
-                >
-                  Company Master
-                </Link>
-                <Link
-                  to="/masters/branch"
-                  className="block px-4 py-2 text-white hover:bg-gray-500"
-                >
-                  Branch Master
-                </Link>
-                <Link
-                  to="/masters/user"
-                  className="block px-4 py-2 text-white hover:bg-gray-500"
-                >
-                  User Master
-                </Link>
-              </div>
-            )}
-          </div>
-          <button
-            onClick={() => handleLogOut()}
-            className="flex items-center w-full px-4 py-2 text-white hover:bg-gray-500"
+          {/* Master Menu */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="flex items-center gap-2">
+              <Database className="w-4 h-4" />
+              Master Data
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-48">
+              <DropdownMenuItem
+                onClick={() => handleNavigate("/masters/company")}
+              >
+                <Building2 className="w-4 h-4 mr-2 opacity-50" />
+                Company Master
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleNavigate("/masters/branch")}
+              >
+                <GitBranch className="w-4 h-4 mr-2 opacity-50" />
+                Branch Master
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleNavigate("/masters/user")}>
+                <User className="w-4 h-4 mr-2 opacity-50" />
+                User Master
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+
+          <DropdownMenuSeparator />
+
+          {/* Logout */}
+          <DropdownMenuItem
+            onClick={handleLogOut}
+            className="flex items-center gap-2 text-destructive focus:text-destructive cursor-pointer  font-bold"
           >
-            <LogOut className="w-4 h-4 mr-2 text-red-500" />
+            <Power className="w-4 h-4" />
             Logout
-          </button>
-        </div>
-      )}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
-  )
-}
+  );
+};
 
-export default ProfileDropdown
+export default ProfileDropdown;

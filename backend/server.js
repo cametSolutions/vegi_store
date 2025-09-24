@@ -17,7 +17,7 @@ dotenv.config();
 // connectDB()
 const corsOptions = {
     origin: true,
-    credential: true
+    credentials: true
 };
 app.use(cors(corsOptions));
 // Connect to DB

@@ -35,7 +35,7 @@ const BranchList= () => {
     <div className="p-6 w-screen">
       <h1 className="text-2xl font-bold mb-4">Branch Master</h1>
       <Link
-        to="/admin/masters/branchRegistration"
+        to="/masters/branchRegistration"
         className="hover:bg-gray-100 text-black font-bold py-2 px-2 rounded inline-flex items-center"
       >
         <FaUserPlus className="mr-2" />
