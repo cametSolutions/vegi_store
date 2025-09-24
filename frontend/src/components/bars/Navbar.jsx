@@ -7,18 +7,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ProfileDropdown from "../dropDowns/ProfileDropdown";
+import { Link, useNavigate } from "react-router-dom";
 
 const Navbar = () => {
-  
   const menuItems = [
     {
       label: "Master",
       path: "/price-level",
       hasDropdown: true,
       dropdownItems: [
-        { label: "Price Level", path: "/price-level" },
-        { label: "Unit Master", path: "/unit-master" },
-        { label: "Data Backup", path: "/data-backup" },
+        { label: "Price Level", path: "/masters/price-level" },
+        { label: "Unit Master", path: "/masters/unit-master" },
+        { label: "Data Backup", path: "/masters/data-backup" },
       ],
     },
     { label: "Rate Setting", path: "/rate-setting" },
@@ -31,8 +31,11 @@ const Navbar = () => {
     { label: "Sales", path: "/sales" },
   ];
 
+  const navigate = useNavigate();
+
   const handleNavClick = (path) => {
-    console.log(`Navigating to: ${path}`);
+    navigate(path);
+    // console.log(`Navigating to: ${path}`);
     // Replace with your router navigation logic
   };
 
@@ -42,11 +45,9 @@ const Navbar = () => {
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center px-3 py-2 text-sm font-medium hover:bg-gray-700 rounded-md transition-colors duration-200 whitespace-nowrap focus:outline-none group">
             {item.label}
-            <ChevronDown 
-              className="ml-1 h-4 w-4 mt-0.5 transition-transform duration-200 group-data-[state=open]:rotate-180"
-            />
+            <ChevronDown className="ml-1 h-4 w-4 mt-0.5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent 
+          <DropdownMenuContent
             align="start"
             className="bg-white border border-gray-200 shadow-lg"
           >
@@ -79,10 +80,10 @@ const Navbar = () => {
       <div className=" mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center space-x-2 flex-shrink-0">
+          <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
             <Leaf className="text-emerald-500" size={24} />
             <span className="text-lg font-bold">VeggieShop</span>
-          </div>
+          </Link>
 
           {/* Navigation Links */}
           <div className="flex items-center space-x-1">
@@ -90,7 +91,7 @@ const Navbar = () => {
               <NavLink key={item.label} item={item} />
             ))}
 
-            <ProfileDropdown/>
+            <ProfileDropdown />
           </div>
         </div>
       </div>

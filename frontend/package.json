@@ -31,6 +31,7 @@
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.8.2",
     "react-simple-keyboard": "^3.8.122",
+    "react-spinners": "^0.17.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.12",

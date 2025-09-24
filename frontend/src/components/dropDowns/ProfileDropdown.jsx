@@ -7,6 +7,7 @@ import {
   GitBranch,
   Settings,
   Database,
+  Power,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -27,6 +28,7 @@ import { userApi } from "../../api/userApi"; // Import your userApi
 import { useSelector } from "react-redux";
 import { getLocalStorageItem } from "@/helper/localstorage";
 import { truncate } from "../../../../shared/utils/string";
+import { useNavigate } from "react-router-dom";
 
 const ProfileDropdown = () => {
   //// Redux Store Data
@@ -36,6 +38,8 @@ const ProfileDropdown = () => {
   const selectedBranchFromStore = useSelector(
     (state) => state.companyBranch.selectedBranch
   );
+
+  const navigate = useNavigate();
 
   /// User details from local storage
   const userData = getLocalStorageItem("user");
@@ -53,7 +57,7 @@ const ProfileDropdown = () => {
     refetchOnReconnect: false, // don't refetch on network reconnect
     refetchInterval: false, // don't refetch on interval
     refetchIntervalInBackground: false, // don't refetch in background
-    enabled: !!userData?._id, // don't fetch if no userId
+    // enabled: !!userData?._id, // don't fetch if no userId
     retry: 1, // reduce retry attempts
     retryOnMount: false, // don't retry when component mounts
   });
@@ -117,7 +121,7 @@ const ProfileDropdown = () => {
   };
 
   const handleNavigate = (path) => {
-    // navigate(path);
+    navigate(path);
   };
 
   const getUserInitials = (email) => {
@@ -135,8 +139,8 @@ const ProfileDropdown = () => {
   if (isLoading || !loggedUser) {
     return (
       <div className="ml-6">
-        <Button variant="outline" size="sm" disabled>
-          <User className="w-4 h-4 mr-2" />
+        <Button variant="outline" size="sm" disabled className="text-black">
+          <User className="w-4 h-4  " />
           Loading...
         </Button>
       </div>
@@ -196,7 +200,8 @@ const ProfileDropdown = () => {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Company:</span>
                 <Badge variant="secondary" className="max-w-[150px] truncate">
-                  {truncate(selectedCompany?.company?.companyName,15) || "None Selected"}
+                  {truncate(selectedCompany?.company?.companyName, 15) ||
+                    "None Selected"}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
@@ -315,9 +320,9 @@ const ProfileDropdown = () => {
           {/* Logout */}
           <DropdownMenuItem
             onClick={handleLogOut}
-            className="flex items-center gap-2 text-destructive focus:text-destructive cursor-pointer"
+            className="flex items-center gap-2 text-destructive focus:text-destructive cursor-pointer  font-bold"
           >
-            <LogOut className="w-4 h-4" />
+            <Power className="w-4 h-4" />
             Logout
           </DropdownMenuItem>
         </DropdownMenuContent>
