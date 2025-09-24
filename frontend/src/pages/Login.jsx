@@ -1,8 +1,20 @@
-import { useNavigate } from "react-router-dom"
-import { LoginForm } from "../components/LoginForm"
-import { useAuth } from "../hooks/useAuth"
+import { useNavigate } from "react-router-dom";
+import { LoginForm } from "../components/LoginForm";
+import { useAuth } from "../hooks/useAuth";
+import { getLocalStorageItem } from "@/helper/localstorage";
+import { useEffect } from "react";
 const Login = () => {
-  const { isLoading, login } = useAuth()
+  const { isLoading, login } = useAuth();
+  const navigate = useNavigate();
+  /// User details from local storage
+  const userData = getLocalStorageItem("user");
+
+  useEffect(() => {
+    if (userData) {
+      navigate("/");
+    }
+  }, [navigate, userData]);
+
   return (
     <div className="min-h-screen flex overflow-hidden">
       {/* Left Side - Hero Image */}
@@ -59,7 +71,7 @@ const Login = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;

@@ -17,6 +17,8 @@ function MainLayout() {
           className="absolute inset-0 bg-center bg-no-repeat bg-[length:500px] opacity-10"
           style={{ backgroundImage: `url('/images/background2.png')` }}
         />
+
+        
         <div className="relative z-10 w-full">
           <Outlet />
         </div>
