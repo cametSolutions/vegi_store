@@ -12,42 +12,44 @@ import BranchList from "./pages/List/BranchList";
 import UserList from "./pages/List/UserList";
 import AccountMaster from "./pages/Master/AccountMaster";
 import ItemMaster from "./pages/Master/ItemMaster";
-import AdminHome from "./pages/home/AdminHome";
+import Home from "./pages/home/Home";
 
 function App() {
   return (
     <Routes>
       {/* Routes without header (Auth Layout) */}
       <Route element={<AuthLayout />}>
-        <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
       </Route>
 
       {/* Routes with header (Main Layout) */}
       <Route element={<MainLayout />}>
-        <Route path="/admin/admin-home-page" element={<AdminHome />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/home-page" element={<Home />} />
 
-        <Route path="/admin/masters/price-level" element={<PriceLevel />} />
-        <Route path="/admin/masters/company" element={<CompanyList />} />
-        <Route path="/admin/masters/branch" element={<BranchList />} />
-        <Route path="/admin/masters/user" element={<UserList />} />
+
+
+        <Route path="/masters/price-level" element={<PriceLevel />} />
+        <Route path="/masters/company" element={<CompanyList />} />
+        <Route path="/masters/branch" element={<BranchList />} />
+        <Route path="/masters/user" element={<UserList />} />
         <Route
-          path="/admin/masters/companyRegistration"
+          path="/masters/companyRegistration"
           element={<CompanyMaster />}
         />
         <Route
-          path="/admin/masters/branchRegistration"
+          path="/masters/branchRegistration"
           element={<BranchMaster />}
         />
         <Route
-          path="/admin/masters/userRegistration"
+          path="/masters/userRegistration"
           element={<UserMaster />}
         />
         <Route
-          path="/admin/masters/accountMaster"
+          path="/masters/accountMaster"
           element={<AccountMaster />}
         />
-        <Route path="/admin/master/item-master" element={<ItemMaster />} />
+        <Route path="/master/item-master" element={<ItemMaster />} />
       </Route>
     </Routes>
   );

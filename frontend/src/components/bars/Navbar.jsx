@@ -6,6 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import ProfileDropdown from "../dropDowns/ProfileDropdown";
 
 const Navbar = () => {
   
@@ -23,7 +24,7 @@ const Navbar = () => {
     { label: "Rate Setting", path: "/rate-setting" },
     { label: "Stock Adjustment", path: "/stock-adjustment" },
     { label: "Item Master", path: "/master/item-master" },
-    { label: "Account Master", path: "/admin/masters/accountMaster" },
+    { label: "Account Master", path: "/masters/accountMaster" },
     { label: "Purchase Return", path: "/purchase-return" },
     { label: "Purchase", path: "/purchase" },
     { label: "Receipt", path: "/receipt" },
@@ -88,6 +89,8 @@ const Navbar = () => {
             {menuItems.map((item) => (
               <NavLink key={item.label} item={item} />
             ))}
+
+            <ProfileDropdown/>
           </div>
         </div>
       </div>
