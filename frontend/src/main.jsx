@@ -22,17 +22,16 @@ createRoot(document.getElementById("root")).render(
       </GlobalErrorBoundary>
 
       <Toaster
-        position="top-right"
+        position="bottom-right"
+        visibleToasts={1}
+        theme="dark"
+        closeButton={true}
         richColors
         toastOptions={{
-          duration: 4000,
+          duration: 2000,
           style: {
-            borderRadius: "12px",
-            padding: "16px 20px",
-            fontSize: "15px",
             boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
             backdropFilter: "blur(5px)",
-            color: "#fff",
             fontWeight: 500,
           },
         }}

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "sonner";
 
 let baseUrl;
 
@@ -20,14 +21,19 @@ const api = axios.create({
 });
 
 // 🔹 Add response interceptor
+let isRedirecting = false;
+
 api.interceptors.response.use(
-  (response) => response, // pass through successful responses
+  (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      console.warn("Unauthorized! Redirecting to login...");
-      localStorage.removeItem("user");
-      // Redirect to login (React Router way)
-      window.location.href = "/login";
+    if (error.response && error.response.status === 401 && !isRedirecting) {
+      isRedirecting = true; // prevent multiple triggers
+      toast.error("Session expired. Please log in again.");
+      setTimeout(() => {
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+        isRedirecting = false; // reset after navigation
+      }, 2000);
     }
     return Promise.reject(error);
   }
