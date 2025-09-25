@@ -19,6 +19,20 @@ const api = axios.create({
   withCredentials: true, // ✅ sends cookies/auth info
 });
 
+// 🔹 Add response interceptor
+api.interceptors.response.use(
+  (response) => response, // pass through successful responses
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      console.warn("Unauthorized! Redirecting to login...");
+      localStorage.removeItem("user");
+      // Redirect to login (React Router way)
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Generic resource API factory
 export const createResourceApi = (resourcePath, customEndpoints) => {
   return {

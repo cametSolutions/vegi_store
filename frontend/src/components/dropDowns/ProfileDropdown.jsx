@@ -41,8 +41,13 @@ const ProfileDropdown = () => {
 
   const navigate = useNavigate();
 
+  
+
   /// User details from local storage
   const userData = getLocalStorageItem("user");
+
+  console.log("userData from localStorage:", userData);
+
 
   // Direct query usage with comprehensive refetch prevention and debugging
   const { data: apiResponse, isLoading } = useQuery({
@@ -61,6 +66,9 @@ const ProfileDropdown = () => {
     retry: 1, // reduce retry attempts
     retryOnMount: false, // don't retry when component mounts
   });
+
+  console.log("userData from localStorage 2:", userData);
+
 
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [selectedBranch, setSelectedBranch] = useState(null);
