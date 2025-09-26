@@ -14,7 +14,7 @@ const TransactionTypeSelector = ({ transactionTypes, selectedType, onTypeChange 
       <label className="block text-sm font-medium text-slate-700 mb-3">Transaction Type</label>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {transactionTypes.map((type) => {
-          const IconComponent = iconMap[type.icon];
+          const IconComponent = type.icon;
           return (
             <button
               key={type.value}

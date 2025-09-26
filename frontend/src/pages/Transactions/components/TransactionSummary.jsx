@@ -8,9 +8,9 @@ const TransactionSummary = ({
   closingBalance 
 }) => {
   return (
-    <div className="bg-white rounded-xs shadow-lg p-6">
+    <div className="bg-white rounded-lg shadow p-4 mb-4">
       <h3 className="text-lg font-semibold text-slate-800 mb-4">Transaction Summary</h3>
-      <div className="space-y-3">
+      <div className="space-y-3 text-sm">
         <div className="flex justify-between">
           <span className="text-slate-600">Total Amount:</span>
           <span className="font-semibold">₹{total}</span>
@@ -21,7 +21,7 @@ const TransactionSummary = ({
             type="number"
             value={discount}
             onChange={(e) => onDiscountChange(parseFloat(e.target.value) || 0)}
-            className="w-20 px-2 py-1 border border-slate-300 rounded text-right"
+            className="w-16 px-2 py-1 border border-slate-300 rounded text-right text-xs"
           />
         </div>
         <div className="flex justify-between border-t pt-2">
@@ -34,10 +34,10 @@ const TransactionSummary = ({
             type="number"
             value={paidAmount}
             onChange={(e) => onPaidAmountChange(parseFloat(e.target.value) || 0)}
-            className="w-20 px-2 py-1 border border-slate-300 rounded text-right"
+            className="w-16 px-2 py-1 border border-slate-300 rounded text-right text-xs"
           />
         </div>
-        <div className="flex justify-between border-t pt-2 text-lg font-bold">
+        <div className="flex justify-between border-t pt-2 font-bold">
           <span>Closing Balance:</span>
           <span className={closingBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}>
             ₹{closingBalance}
@@ -47,5 +47,6 @@ const TransactionSummary = ({
     </div>
   );
 };
+
 
 export default TransactionSummary;

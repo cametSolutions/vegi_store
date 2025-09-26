@@ -28,7 +28,7 @@ const Navbar = () => {
     { label: "Purchase Return", path: "/purchase-return" },
     { label: "Purchase", path: "/purchase" },
     { label: "Receipt", path: "/receipt" },
-    { label: "Sales", path: "/sales" },
+    { label: "Sales", path: "/transactions/sale/create" },
   ];
 
   const navigate = useNavigate();
