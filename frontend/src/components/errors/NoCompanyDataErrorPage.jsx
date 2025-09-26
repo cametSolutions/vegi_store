@@ -23,6 +23,10 @@ const NoCompanyDataErrorPage = ({ onRetry, onGoHome, onLogout }) => {
     queryClient.invalidateQueries({ queryKey: ["users", userData?._id] }); // Invalidate all queries to refetch data
   };
 
+  if (userData === null) {
+    window.location.href = "/login";
+  }
+
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-0">
       {/* Make the card full width */}

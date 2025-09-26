@@ -36,8 +36,8 @@ function App() {
 
         {/* Main */}
         <Route element={<MainLayout />}>
-          <Route path="/" element={ <ProtectedRoute><Home /></ProtectedRoute> } />
-          <Route path="/home-page" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/" element={ <ProtectedRoute><Home/></ProtectedRoute> } />
+          <Route path="/home-page" element={<ProtectedRoute><Home/></ProtectedRoute>} />
 
           {MastersRoutes()}
 

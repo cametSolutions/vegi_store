@@ -2,7 +2,6 @@ import { Outlet } from "react-router-dom";
 import Header from "./Header";
 import CustomBarLoader from "../loaders/CustomBarLoader";
 import { useSelector } from "react-redux";
-import NoCompanyDataWrapper from "../errors/NoCompanyDataErrorPage";
 import NoCompanyDataErrorPage from "../errors/NoCompanyDataErrorPage";
 
 function MainLayout() {
@@ -14,6 +13,9 @@ function MainLayout() {
   const selectedBranchFromStore = useSelector(
     (state) => state.companyBranch?.selectedBranch
   );
+
+  console.log("selectedCompanyFromStore", selectedCompanyFromStore);
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-green-50 flex flex-col">
@@ -40,6 +42,8 @@ function MainLayout() {
           ) : (
             <Outlet />
           )}
+
+          {/* <Outlet /> */}
         </div>
       </main>
     </div>

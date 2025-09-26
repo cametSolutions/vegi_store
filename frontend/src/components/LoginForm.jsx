@@ -1,104 +1,66 @@
-import  { useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { Mail, Lock, Leaf, Eye, EyeOff } from "lucide-react"
-import { useDispatch } from "react-redux"
-import { branchApi } from "../api/branchApi"
-import {
-  
-  setLocalStorageItem,
-} from "../helper/localstorage"
-import {
-  selectedCompany,
-  selectedBranch,
-  setBranches
-} from "../store/slices/companyBranchSlice"
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Mail, Lock, Leaf, Eye, EyeOff } from "lucide-react";
+import { setLocalStorageItem } from "../helper/localstorage";
+import { toast } from "sonner";
 
-
-
-export const LoginForm = ({
-  onSubmit,
-  isLoading = false
-}) => {
+export const LoginForm = ({ onSubmit, isLoading = false }) => {
   const [formData, setFormData] = useState({
     email: "",
-    password: ""
-  })
+    password: "",
+  });
 
-  const [errors, setErrors] = useState({})
-  const [showPassword, setShowPassword] = useState(false)
-  const navigate = useNavigate()
-  const dispatch = useDispatch()
+  const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
   const validateForm = () => {
-    const newErrors = {}
+    const newErrors = {};
 
     // Email validation
     if (!formData.email) {
-      newErrors.email = "Email is required"
+      newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address"
+      newErrors.email = "Please enter a valid email address";
     }
 
     // Password validation
     if (!formData.password) {
-      newErrors.password = "Password is required"
+      newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters"
+      newErrors.password = "Password must be at least 6 characters";
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!validateForm()) return
+    if (!validateForm()) return;
 
     try {
-      const loggeduser = await onSubmit(formData)
-      console.log("loggeduser", loggeduser.role)
-      if (loggeduser.role === "Staff") {
-        const loggedCompany = loggeduser.access[0]?.company
-        const loggedBranch = loggeduser.access[0]?.branches[0]
-        setLocalStorageItem("selectedCompany", loggedCompany)
-        setLocalStorageItem("selectedBranch", loggedBranch)
-        dispatch(selectedBranch(loggedBranch))
-        dispatch(selectedCompany(loggedCompany))
-        console.log("before")
-        const branches = await branchApi.getAll(loggedCompany._id)
-     
-        // Map to only _id and branchName with proper typing
-        const simplifiedBranches =
-          branches.data.map((b) => ({
-            _id: b._id,
-            branchName: b.branchName
-          }))
+      const loggedUser = await onSubmit(formData);
+      setLocalStorageItem("user", loggedUser);
 
-        // Store in localStorage
-        setLocalStorageItem("companybranches", simplifiedBranches)
-        dispatch(setBranches(branches.data))
-        console.log("after")
-      } else if (loggeduser.role === "Admin") {
-      }
-
-      // dispatch(selectedCompany)
-      navigate("/home-page")
-      setErrors({})
+      navigate("/home-page");
+      toast.success("Login successful");
+      setErrors({});
     } catch (error) {
-      console.log("Login failed", error)
+      console.log("Login failed", error);
       setErrors({
-        general: "Invalid email or password. Please try again."
-      })
+        general: "Invalid email or password. Please try again.",
+      });
     }
-  }
+  };
 
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }))
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
-  }
+  };
 
   return (
     <div className="w-full max-w-md mx-auto">
@@ -114,7 +76,6 @@ export const LoginForm = ({
             </div>
           </div>
         </div>
-      
 
         {/* Small vegetable icons */}
         <div className="flex justify-center items-center space-x-4 mt-4 opacity-60">
@@ -266,5 +227,5 @@ export const LoginForm = ({
         </p>
       </div>
     </div>
-  )
-}
+  );
+};

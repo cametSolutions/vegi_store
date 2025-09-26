@@ -12,7 +12,7 @@ if (ENV === "development") {
   baseUrl = "";
 }
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: baseUrl,
   headers: {
     "Content-Type": "application/json",

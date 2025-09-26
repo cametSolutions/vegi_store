@@ -1,20 +1,44 @@
 import React from "react";
-import { Phone, Mail, Leaf, Facebook, Twitter, Youtube } from "lucide-react";
+import {
+  Phone,
+  Mail,
+  Leaf,
+  Facebook,
+  Twitter,
+  Youtube,
+  Building2,
+  GitBranch,
+} from "lucide-react";
+import { useSelector } from "react-redux";
 
 function TopBar() {
+  // Memoized selectors to prevent unnecessary re-renders
+  const selectedCompanyFromStore = useSelector(
+    (state) => state.companyBranch?.selectedCompany
+  );
+  const selectedBranchFromStore = useSelector(
+    (state) => state.companyBranch?.selectedBranch
+  );
+
   return (
     <div className="bg-emerald-500 text-white px-5 py-1.5 text-xs ">
       <div className="mx-auto flex justify-between items-center">
         {/* Left side */}
+
         <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-1">
-            <Phone size={12} />
-            <span>+977 42647190</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <Mail size={12} />
-            <span>veggieshop@example.com</span>
-          </div>
+          {selectedCompanyFromStore?.companyName && (
+            <div className="flex items-center space-x-1">
+              <Building2 size={12} />
+              <span>{selectedCompanyFromStore?.companyName}</span>
+            </div>
+          )}
+
+          {selectedBranchFromStore?.branchName && (
+            <div className="flex items-center space-x-1">
+              <GitBranch size={12} />
+              <span>{selectedBranchFromStore?.branchName}</span>
+            </div>
+          )}
         </div>
 
         {/* Right side */}

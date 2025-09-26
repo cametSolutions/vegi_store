@@ -52,21 +52,6 @@ const Login = () => {
           {/* Login Card */}
           <div className="bg-white rounded-2xl shadow-2xl p-10 backdrop-blur-sm border border-white/20">
             <LoginForm onSubmit={login} isLoading={isLoading} />
-
-            {/* Demo Credentials */}
-            {/* <div className="mt-8 p-5 bg-gray-50 rounded-xl border border-gray-100">
-              <h4 className="text-sm font-medium text-gray-900 mb-2">
-                Demo Credentials:
-              </h4>
-              <div className="text-xs text-gray-600 space-y-1">
-                <p>
-                  <strong>Admin:</strong> admin@freshmarket.com / password123
-                </p>
-                <p>
-                  <strong>Customer:</strong> customer@example.com / customer123
-                </p>
-              </div>
-            </div> */}
           </div>
         </div>
       </div>

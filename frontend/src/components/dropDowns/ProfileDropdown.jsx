@@ -24,11 +24,20 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { userApi } from "../../api/userApi";
 import { useDispatch, useSelector } from "react-redux";
-import { getLocalStorageItem } from "@/helper/localstorage";
+import {
+  getLocalStorageItem,
+  setLocalStorageItem,
+} from "@/helper/localstorage";
 import { truncate } from "../../../../shared/utils/string";
 import { useNavigate } from "react-router-dom";
 import { showLoader, hideLoader } from "@/store/slices/loaderSlice";
 import { toast } from "sonner";
+import {
+  setBranchesInStore,
+  SetSelectedBranchInStore,
+  SetSelectedCompanyInStore,
+} from "@/store/slices/companyBranchSlice";
+import { useAuth } from "@/hooks/useAuth";
 
 // Memoized components for better performance
 const UserInfoSection = ({ user, initials, displayName }) => (
@@ -42,7 +51,7 @@ const UserInfoSection = ({ user, initials, displayName }) => (
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-sm truncate">{displayName}</p>
         <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-        <Badge variant="outline" className="mt-1 text-xs">
+        <Badge variant="secondary" className="mt-2 text-xs rounded-xs">
           {user?.role}
         </Badge>
       </div>
@@ -59,7 +68,8 @@ const CurrentSelection = ({ selectedCompany, selectedBranch }) => (
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">Company:</span>
         <Badge variant="secondary" className="max-w-[150px] truncate">
-          {truncate(selectedCompany?.company?.companyName, 15) || "None Selected"}
+          {truncate(selectedCompany?.company?.companyName, 15) ||
+            "None Selected"}
         </Badge>
       </div>
       <div className="flex items-center justify-between">
@@ -103,7 +113,7 @@ const BranchMenuItem = ({ branch, selectedBranch, onSelect }) => (
 const ProfileDropdown = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  
+
   // Memoized selectors to prevent unnecessary re-renders
   const selectedCompanyFromStore = useSelector(
     (state) => state.companyBranch?.selectedCompany
@@ -114,6 +124,7 @@ const ProfileDropdown = () => {
 
   // Get user data once and memoize
   const userData = useMemo(() => getLocalStorageItem("user"), []);
+  const { isLoading: authLoading, logout } = useAuth();
 
   // Optimized React Query configuration
   const {
@@ -121,7 +132,7 @@ const ProfileDropdown = () => {
     isLoading,
     isError,
     error,
-    refetch
+    refetch,
   } = useQuery({
     queryKey: ["users", userData?._id],
     queryFn: () => userApi.getById(userData?._id),
@@ -133,7 +144,7 @@ const ProfileDropdown = () => {
     refetchOnReconnect: false,
     refetchInterval: false,
     retry: 2, // Slightly more retries for network issues
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     throwOnError: false,
   });
 
@@ -141,48 +152,52 @@ const ProfileDropdown = () => {
   const [selectedBranch, setSelectedBranch] = useState(null);
 
   // Memoized user data processing
-  const loggedUser = useMemo(() => apiResponse?.data || null, [apiResponse?.data]);
+  const loggedUser = useMemo(
+    () => apiResponse?.data || null,
+    [apiResponse?.data]
+  );
 
   // Memoized user utilities
   const { initials, displayName } = useMemo(() => {
     if (!loggedUser?.email) return { initials: "U", displayName: "User" };
-    
-    const name = loggedUser.email.split("@")[0];
+
+    const name = loggedUser?.name || "User";
     return {
-      initials: name.substring(0, 2).toUpperCase(),
-      displayName: name
+      initials: name?.substring(0, 2).toUpperCase(),
+      displayName: name,
     };
   }, [loggedUser?.email]);
 
   // Handle loading states
   useEffect(() => {
-    if (isLoading) {
+    if (isLoading || authLoading ) {
       dispatch(showLoader());
     } else {
       dispatch(hideLoader());
     }
   }, [isLoading, dispatch]);
 
-  /// 
+  ///
 
-  useEffect(()=>{
 
-    console.log("logged user",loggedUser);
 
-    if(loggedUser && !isLoading && !isError && !selectedCompanyFromStore){
-      
+
+  useEffect(() => {
+    if (loggedUser && !isLoading && !isError && !selectedCompanyFromStore) {
+      const { company, branches } = loggedUser.access[0];
+
+      if (company) {
+        dispatch(SetSelectedCompanyInStore(company));
+        setLocalStorageItem("selectedCompany", company);
+      }
+      if (branches && branches.length > 0 && !selectedBranchFromStore) {
+        dispatch(SetSelectedBranchInStore(branches[0]));
+        setLocalStorageItem("selectedBranch", branches[0]);
+        dispatch(setBranchesInStore(branches));
+        setLocalStorageItem("companyBranches", branches);
+      }
     }
-    
-
-  },[loggedUser])
-
-
-
-
-
-
-
-
+  }, [loggedUser]);
 
   // Handle error states
   useEffect(() => {
@@ -215,36 +230,79 @@ const ProfileDropdown = () => {
 
   // Memoized event handlers
   const handleLogOut = useCallback(() => {
-    localStorage.clear();
-    // navigate("/login");
+    logout();
   }, []);
 
-  const handleSelectCompany = useCallback((companyAccess) => {
-    setSelectedCompany(companyAccess);
-    // Uncomment when Redux actions are ready
-    dispatch(setSelectedCompany(companyAccess));
-  }, []);
+  const handleSelectCompany = useCallback(
+    (companyAccess) => {
+      setSelectedCompany(companyAccess);
 
-  const handleSelectBranch = useCallback((branch) => {
-    setSelectedBranch(branch);
-    // Uncomment when Redux actions are ready
-    dispatch(setSelectedBranch(branch));
-  }, []);
+      dispatch(showLoader());
 
-  const handleNavigate = useCallback((path) => {
-    navigate(path);
-  }, [navigate]);
+      const { branches, company } = companyAccess;
+      if (branches && branches.length > 0) {
+        dispatch(setBranchesInStore(branches));
+        setLocalStorageItem("companyBranches", branches);
+      } else {
+        setSelectedBranch(null);
+        dispatch(SetSelectedBranchInStore(null));
+      }
+
+      if (company) {
+        dispatch(SetSelectedCompanyInStore(company));
+        setLocalStorageItem("selectedCompany", company);
+      } else {
+        dispatch(SetSelectedCompanyInStore(null));
+      }
+
+      dispatch(SetSelectedBranchInStore(branches[0] || null));
+      setLocalStorageItem("selectedBranch", branches[0] || null);
+      navigate("/");
+
+      // ✅ mimic delay before hiding loader
+      setTimeout(() => {
+        dispatch(hideLoader());
+      }, 1000);
+    },
+    [dispatch, setSelectedCompany]
+  );
+
+  const handleSelectBranch = useCallback(
+    (branch) => {
+      dispatch(showLoader());
+      setSelectedBranch(branch);
+      dispatch(SetSelectedBranchInStore(branch));
+      setLocalStorageItem("selectedBranch", branch);
+      navigate("/");
+
+      // ✅ mimic delay before hiding loader
+      setTimeout(() => {
+        dispatch(hideLoader());
+      }, 1000);
+    },
+    [dispatch, setSelectedBranch]
+  );
+
+  const handleNavigate = useCallback(
+    (path) => {
+      navigate(path);
+    },
+    [navigate]
+  );
 
   const handleRetry = useCallback(() => {
     refetch();
   }, [refetch]);
 
   // Navigation items configuration
-  const masterMenuItems = useMemo(() => [
-    { path: "/masters/company", label: "Company Master", icon: Building2 },
-    { path: "/masters/branch", label: "Branch Master", icon: GitBranch },
-    { path: "/masters/user", label: "User Master", icon: User }
-  ], []);
+  const masterMenuItems = useMemo(
+    () => [
+      { path: "/masters/company", label: "Company Master", icon: Building2 },
+      { path: "/masters/branch", label: "Branch Master", icon: GitBranch },
+      { path: "/masters/user", label: "User Master", icon: User },
+    ],
+    []
+  );
 
   // Loading state
   if (isLoading) {
@@ -262,9 +320,9 @@ const ProfileDropdown = () => {
   if (isError) {
     return (
       <div className="ml-6">
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           onClick={handleRetry}
           className="text-destructive hover:text-destructive-foreground"
         >
@@ -305,18 +363,18 @@ const ProfileDropdown = () => {
 
         <DropdownMenuContent className="w-80 p-0" align="end" sideOffset={8}>
           {/* User Info Section */}
-          <UserInfoSection 
-            user={loggedUser} 
-            initials={initials} 
-            displayName={displayName} 
+          <UserInfoSection
+            user={loggedUser}
+            initials={initials}
+            displayName={displayName}
           />
 
           <DropdownMenuSeparator />
 
           {/* Current Selection Info */}
-          <CurrentSelection 
-            selectedCompany={selectedCompany} 
-            selectedBranch={selectedBranch} 
+          <CurrentSelection
+            selectedCompany={selectedCompany}
+            selectedBranch={selectedBranch}
           />
 
           <DropdownMenuSeparator />

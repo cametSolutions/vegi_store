@@ -49,3 +49,13 @@ export const Login = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const logout = (req, res) => {
+  res.clearCookie("veg_store_token", {
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === "production" ? "Strict" : "Lax",
+    secure: process.env.NODE_ENV !== "development",
+  });
+
+  return res.status(200).json({ message: "Logged out successfully" });
+};
