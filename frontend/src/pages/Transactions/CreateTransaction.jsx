@@ -14,6 +14,7 @@ import {
   getDocumentLabel,
 } from "./utils/transactionUtils";
 import { useTransactionActions } from "./hooks/useTransactionActions";
+import { Calendar } from "lucide-react";
 
 const CreateTransaction = () => {
   const [transactionData, setTransactionData] = React.useState({
@@ -89,74 +90,100 @@ const CreateTransaction = () => {
   const handlePrint = () => console.log("Print transaction");
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
+    <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b px-6 py-3">
+      <div className="bg-white shadow-sm border-b px-4 py-2">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <currentTransactionType.icon className="text-white w-5 h-5" />
-            </div>
-            Transaction Manager
+          <h1 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+            {/* <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
+              <currentTransactionType.icon className="text-white w-4 h-4" />
+            </div> */}
+            Sales
           </h1>
-          <div className="text-sm text-slate-500">
-            {getDocumentLabel(transactionData.type)}:{" "}
-            <span className="font-semibold text-slate-700">
-              {transactionData.documentNo}
-            </span>
+          <div className="text-xs text-slate-500 flex items-center gap-4">
+            {/* Date Section */}
+            <div className="flex items-center gap-2">
+              <label className="flex items-center text-[9px] font-medium text-slate-700">
+                <Calendar className="inline w-3 h-3 mr-1" />
+                Date
+              </label>
+              <input
+                type="date"
+                value={transactionData.date}
+                onChange={(e) =>
+                  onTransactionChange({
+                    ...transactionData,
+                    date: e.target.value,
+                  })
+                }
+                className="px-2 py-1 border border-slate-300 rounded text-[9px] focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Document Section */}
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] font-bold text-slate-700">
+                {getDocumentLabel(transactionData.type)}:
+              </span>
+              <span className="font-semibold text-slate-700 text-[9px]">
+                {transactionData.documentNo}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex h-[calc(100vh-80px)]">
+      <div className="flex h-[calc(100vh-56px)]">
         {/* Left Panel */}
-        <div className="flex-1 p-4 overflow-y-auto">
-          <TransactionHeader
-            transactionData={transactionData}
-            onTransactionChange={setTransactionData}
-            currentTransactionType={currentTransactionType}
-          />
+        <div className="flex-1 p-1 overflow-hidden flex flex-col">
+          <div className="flex flex-col py-2 bg-white">
+            <TransactionHeader
+              transactionData={transactionData}
+              onTransactionChange={setTransactionData}
+              currentTransactionType={currentTransactionType}
+            />
 
-          <AddItemForm
-            newItem={newItem}
-            onNewItemChange={setNewItem}
-            products={products}
-            onProductSelect={selectProduct}
-            onAddItem={addItem}
-          />
+            <AddItemForm
+              newItem={newItem}
+              onNewItemChange={setNewItem}
+              products={products}
+              onProductSelect={selectProduct}
+              onAddItem={addItem}
+            />
+          </div>
 
-          <ItemsTable
-            items={transactionData.items}
-            onUpdateQuantity={updateItemQuantity}
-            onRemoveItem={removeItem}
-          />
-        </div>
+          {/* Items table should stretch + scroll if needed */}
+          <div className="flex-1 ">
+            <ItemsTable
+              items={transactionData.items}
+              onUpdateQuantity={updateItemQuantity}
+              onRemoveItem={removeItem}
+            />
 
-        {/* Right Panel */}
-        <div className="w-80 p-4 bg-slate-100 border-l">
-          <TransactionSummary
-            total={total}
-            discount={transactionData.discount}
-            onDiscountChange={(discount) =>
-              setTransactionData({ ...transactionData, discount })
-            }
-            netAmount={netAmount}
-            paidAmount={transactionData.paidAmount}
-            onPaidAmountChange={(paidAmount) =>
-              setTransactionData({ ...transactionData, paidAmount })
-            }
-            closingBalance={closingBalance}
-          />
+            <TransactionSummary
+              total={total}
+              discount={transactionData.discount}
+              onDiscountChange={(discount) =>
+                setTransactionData({ ...transactionData, discount })
+              }
+              netAmount={netAmount}
+              paidAmount={transactionData.paidAmount}
+              onPaidAmountChange={(paidAmount) =>
+                setTransactionData({ ...transactionData, paidAmount })
+              }
+              closingBalance={closingBalance}
+            />
 
-          <TransactionActions
-            onSave={handleSave}
-            onView={handleView}
-            onDelete={handleDelete}
-            onCancel={handleCancel}
-            onPrint={handlePrint}
-            isEditMode={false}
-          />
+            <TransactionActions
+              onSave={handleSave}
+              onView={handleView}
+              onDelete={handleDelete}
+              onCancel={handleCancel}
+              onPrint={handlePrint}
+              isEditMode={false}
+            />
+          </div>
         </div>
       </div>
     </div>

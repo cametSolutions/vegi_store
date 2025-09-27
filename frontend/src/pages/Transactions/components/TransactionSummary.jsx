@@ -1,52 +1,52 @@
-const TransactionSummary = ({ 
-  total, 
-  discount, 
-  onDiscountChange, 
-  netAmount, 
-  paidAmount, 
-  onPaidAmountChange, 
-  closingBalance 
+const TransactionSummary = ({
+  total,
+  discount,
+  onDiscountChange,
+  netAmount,
+  paidAmount,
+  onPaidAmountChange,
 }) => {
   return (
-    <div className="bg-white rounded-lg shadow p-4 mb-4">
-      <h3 className="text-lg font-semibold text-slate-800 mb-4">Transaction Summary</h3>
-      <div className="space-y-3 text-sm">
-        <div className="flex justify-between">
-          <span className="text-slate-600">Total Amount:</span>
+    <div className="bg-white shadow-sm p-1">
+      <div className="grid grid-cols-4 gap-4 text-xs">
+        {/* Total */}
+        <div className="flex items-center justify-between">
+          <span className="text-slate-600">Total:</span>
           <span className="font-semibold">₹{total}</span>
         </div>
-        <div className="flex justify-between items-center">
+
+        {/* Discount */}
+        <div className="flex items-center justify-between">
           <span className="text-slate-600">Discount:</span>
           <input
             type="number"
             value={discount}
             onChange={(e) => onDiscountChange(parseFloat(e.target.value) || 0)}
-            className="w-16 px-2 py-1 border border-slate-300 rounded text-right text-xs"
+            className="w-22 px-1 py-0.5 border border-slate-300 rounded text-right text-xs"
           />
         </div>
-        <div className="flex justify-between border-t pt-2">
-          <span className="text-slate-600">Net Amount:</span>
+
+        {/* Net */}
+        <div className="flex items-center justify-between">
+          <span className="text-slate-600">Net:</span>
           <span className="font-semibold">₹{netAmount}</span>
         </div>
-        <div className="flex justify-between items-center">
-          <span className="text-slate-600">Paid Amount:</span>
+
+        {/* Paid */}
+        <div className="flex items-center justify-between">
+          <span className="text-slate-600">Paid:</span>
           <input
             type="number"
             value={paidAmount}
-            onChange={(e) => onPaidAmountChange(parseFloat(e.target.value) || 0)}
-            className="w-16 px-2 py-1 border border-slate-300 rounded text-right text-xs"
+            onChange={(e) =>
+              onPaidAmountChange(parseFloat(e.target.value) || 0)
+            }
+            className="w-26 px-1 py-0.5 border border-slate-300 rounded text-right text-xs"
           />
-        </div>
-        <div className="flex justify-between border-t pt-2 font-bold">
-          <span>Closing Balance:</span>
-          <span className={closingBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}>
-            ₹{closingBalance}
-          </span>
         </div>
       </div>
     </div>
   );
 };
-
 
 export default TransactionSummary;
