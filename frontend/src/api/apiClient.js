@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "sonner";
 
 let baseUrl;
 
@@ -11,13 +12,32 @@ if (ENV === "development") {
   baseUrl = "";
 }
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: baseUrl,
   headers: {
     "Content-Type": "application/json",
   },
   withCredentials: true, // ✅ sends cookies/auth info
 });
+
+// 🔹 Add response interceptor
+let isRedirecting = false;
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401 && !isRedirecting) {
+      isRedirecting = true; // prevent multiple triggers
+      toast.error("Session expired. Please log in again.");
+      setTimeout(() => {
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+        isRedirecting = false; // reset after navigation
+      }, 2000);
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Generic resource API factory
 export const createResourceApi = (resourcePath, customEndpoints) => {

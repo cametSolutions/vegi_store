@@ -49,6 +49,8 @@ export const createUsers = async (req, res) => {
 /// get user by id
 export const getUserById = async (req, res) => {
   try {
+
+    // throw new Error("test")
     const { id } = req.params;
     const user = await UserModel.findById(id)
       .select("-password")

@@ -1,5 +1,6 @@
-import { Route } from "react-router-dom";
+import { Outlet, Route } from "react-router-dom";
 import { lazy } from "react";
+import ProtectedRoute from "../components/Layout/ProtectedRoute";
 
 const PriceLevel = lazy(() => import("../pages/Master/PriceLevel"));
 const CompanyMaster = lazy(() => import("../pages/Master/CompanyMaster"));
@@ -13,7 +14,14 @@ const ItemMaster = lazy(() => import("../pages/Master/ItemMaster"));
 
 export default function MastersRoutes() {
   return (
-    <Route path="masters">
+    <Route
+      path="masters"
+      element={
+        <ProtectedRoute>
+          <Outlet /> {/* Renders child routes */}
+        </ProtectedRoute>
+      }
+    >
       <Route path="price-level" element={<PriceLevel />} />
       <Route path="company" element={<CompanyList />} />
       <Route path="branch" element={<BranchList />} />
