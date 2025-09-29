@@ -32,31 +32,32 @@ const ListTable = ({ data, getStatusColor, getTypeColor }) => {
   });
 
   const columns = [
-    { key: "id", label: "Document" },
+    { key: "id", label: "Bill No" },
     { key: "date", label: "Date" },
-    { key: "type", label: "Type" },
+    // { key: "type", label: "Type" },
     { key: "party", label: "Party" },
     { key: "total", label: "Total", align: "right" },
+    { key: "discount", label: "Discount", align: "right" },
     { key: "paid", label: "Paid", align: "right" },
     { key: "balance", label: "Balance", align: "right" },
-    { key: "status", label: "Status", align: "center", sortable: false },
+    // { key: "status", label: "Status", align: "center", sortable: false },
   ];
 
   return (
-    <div className="w-full border rounded shadow bg-white">
-      <div className="h-[calc(100vh-110px)] overflow-y-auto">
+    <div className="w-full border  shadow bg-white">
+      <div className="h-[calc(100vh-228px)] overflow-y-auto">
         <table className="w-full border-collapse">
           <thead>
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`sticky top-0 bg-gray-300 border-b px-3 py-2 text-${column.align || "left"} text-[9px] font-medium text-gray-500 uppercase z-10 ${
+                  className={`sticky top-0 bg-slate-500 text-white border-b px-3 py-2 text-${column.align || "left"} text-[9px] font-medium text-gray-500 uppercase z-10 ${
                     column.sortable !== false ? "cursor-pointer hover:bg-gray-400" : ""
                   }`}
-                  onClick={
-                    column.sortable !== false ? () => handleSort(column.key) : undefined
-                  }
+                  // onClick={
+                  //   column.sortable !== false ? () => handleSort(column.key) : undefined
+                  // }
                 >
                   <div
                     className={`flex items-center ${
@@ -68,7 +69,7 @@ const ListTable = ({ data, getStatusColor, getTypeColor }) => {
                     } space-x-1`}
                   >
                     <span>{column.label}</span>
-                    {column.sortable !== false && (
+                    {/* {column.sortable !== false && (
                       <SortAscIcon
                         size={12}
                         className={`w-3 h-3 transition-transform ${
@@ -77,27 +78,30 @@ const ListTable = ({ data, getStatusColor, getTypeColor }) => {
                             : ""
                         }`}
                       />
-                    )}
+                    )} */}
                   </div>
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-200 cursor-pointer">
             {sortedData.map((transaction) => (
               <tr key={transaction.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-3 py-2 text-[9px] font-medium text-blue-600">
+                <td className="px-3 py-2 text-[9px] font-medium text-gray-600">
                   {transaction.id}
                 </td>
                 <td className="px-3 py-2 text-[9px] text-gray-600">{transaction.date}</td>
-                <td className="px-3 py-2">
+                {/* <td className="px-3 py-2">
                   <TypeBadge type={transaction.type} getTypeColor={getTypeColor} />
-                </td>
+                </td> */}
                 <td className="px-3 py-2 text-[9px] font-medium text-gray-900 truncate max-w-24">
                   {transaction.party}
                 </td>
                 <td className="px-3 py-2 text-[9px] text-gray-900 text-right font-mono">
                   ₹{transaction.total.toFixed(2)}
+                </td>
+                <td className="px-3 py-2 text-[9px] text-gray-900 text-right font-mono">
+                  ₹{transaction.discount.toFixed(2)}
                 </td>
                 <td className="px-3 py-2 text-[9px] text-gray-900 text-right font-mono">
                   ₹{transaction.paid.toFixed(2)}
@@ -109,9 +113,9 @@ const ListTable = ({ data, getStatusColor, getTypeColor }) => {
                     ₹{transaction.balance.toFixed(2)}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-center">
+                {/* <td className="px-3 py-2 text-center">
                   <StatusBadge status={transaction.status} getStatusColor={getStatusColor} />
-                </td>
+                </td> */}
               </tr>
             ))}
           </tbody>
