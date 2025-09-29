@@ -43,7 +43,7 @@ const AccountMasterSchema = new mongoose.Schema(
     }, { timestamps: true })
 export default AccountMasterSchema
 
-// import mongoose from "mongoose";
+// import mongoose from "mongoose"; 
 
 // const AccountMasterSchema = new mongoose.Schema(
 //   {
