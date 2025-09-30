@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { nanoid } from "nanoid";
 
 const TransactionSchema = new mongoose.Schema(
   {
@@ -27,8 +28,7 @@ const TransactionSchema = new mongoose.Schema(
       type: String,
       unique: true,
       required: [true, "Transaction  number is required"],
-      trim: true,
-      uppercase: true,
+      default: () => nanoid(),
     },
 
     // ==================== PARTY INFORMATION ====================
@@ -135,10 +135,10 @@ const TransactionSchema = new mongoose.Schema(
       default: "pending",
     },
     status: {
-        type: String,
-        enum: ["draft", "confirmed", "delivered", "cancelled"],
-        default: "confirmed",
-      },
+      type: String,
+      enum: ["draft", "confirmed", "delivered", "cancelled"],
+      default: "confirmed",
+    },
 
     // ==================== REFERENCE & NOTES ====================
 
@@ -175,7 +175,12 @@ TransactionSchema.index({
 });
 TransactionSchema.index({ transactionNumber: 1 }, { unique: true });
 TransactionSchema.index({ account: 1, transactionDate: -1 });
-TransactionSchema.index({ company: 1, branch: 1, transactionType: 1, status: 1 });
+TransactionSchema.index({
+  company: 1,
+  branch: 1,
+  transactionType: 1,
+  status: 1,
+});
 TransactionSchema.index({ company: 1, paymentStatus: 1 });
 TransactionSchema.index({ transactionDate: -1 });
 TransactionSchema.index({ "items.item": 1 });
@@ -205,7 +210,7 @@ TransactionSchema.virtual("displayType").get(function () {
 });
 
 TransactionSchema.virtual("accountDisplayName").get(function () {
-    return this.accountType === "customer"
+  return this.accountType === "customer"
     ? "Customer"
     : this.accountType === "supplier"
     ? "Supplier"

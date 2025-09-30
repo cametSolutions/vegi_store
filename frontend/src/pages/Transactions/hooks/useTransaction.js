@@ -1,3 +1,4 @@
+// hooks/useTransaction.js
 import { useState, useCallback } from 'react';
 import {
   calculateItemAmount,
@@ -20,6 +21,9 @@ export const useTransaction = (initialData = null) => {
     rate: 0
   });
 
+  console.log("transactionData",transactionData);
+  
+
   // Calculated values
   const total = calculateTotal(transactionData.items);
   const netAmount = calculateNetAmount(total, transactionData.discount);
@@ -35,16 +39,8 @@ export const useTransaction = (initialData = null) => {
     setTransactionData(prev => ({ ...prev, ...updates }));
   }, []);
 
-  const updateTransactionType = useCallback((type) => {
-    setTransactionData(prev => ({ ...prev, type }));
-  }, []);
-
-  const updateDiscount = useCallback((discount) => {
-    setTransactionData(prev => ({ ...prev, discount }));
-  }, []);
-
-  const updatePaidAmount = useCallback((paidAmount) => {
-    setTransactionData(prev => ({ ...prev, paidAmount }));
+  const updateTransactionField = useCallback((field, value) => {
+    setTransactionData(prev => ({ ...prev, [field]: value }));
   }, []);
 
   // Item management handlers
@@ -106,10 +102,8 @@ export const useTransaction = (initialData = null) => {
     closingBalance,
     
     // Transaction handlers
-    updateTransactionData,
-    updateTransactionType,
-    updateDiscount,
-    updatePaidAmount,
+    updateTransactionData,      // For multiple fields: updateTransactionData({ type: 'sale', date: '2025-01-01' })
+    updateTransactionField,     // For single field: updateTransactionField('type', 'sale')
     
     // Item handlers
     updateNewItem,

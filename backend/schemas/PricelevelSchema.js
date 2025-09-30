@@ -61,12 +61,12 @@ PriceLevelSchema.index({ priceLevelName: "text", description: "text" });
 // ==================== VIRTUALS ====================
 // Count of allocated branches
 PriceLevelSchema.virtual('branchCount').get(function() {
-    return this.branches.length;
+    return this.branches?.length || 0;
 });
 
 // Check if allocated to any branches
 PriceLevelSchema.virtual('isAllocated').get(function() {
-    return this.branches.length > 0;
+    return (this.branches?.length || 0) > 0;
 });
 
 // ==================== INSTANCE METHODS ====================

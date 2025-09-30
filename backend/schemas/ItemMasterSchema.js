@@ -45,7 +45,6 @@ const ItemMasterSchema = new mongoose.Schema(
     itemCode: {
       type: String,
       required: [true, "Item code is required"],
-      unique: true,
       trim: true,
       uppercase: true,
     },

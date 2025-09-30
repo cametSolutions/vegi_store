@@ -117,7 +117,7 @@ const AccountMasterSchema = new mongoose.Schema(
 
     priceLevel: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Pricelevel",
+      ref: "PriceLevel",
       required: [true, "Price level is required"],
     },
     status: {
@@ -224,11 +224,13 @@ AccountMasterSchema.statics.getAccountsByType = function (
 AccountMasterSchema.statics.searchAccounts = function (
   companyId,
   searchTerm,
+  branchId,
   filters = {}
 ) {
   const searchRegex = new RegExp(searchTerm, "i");
   const matchConditions = {
     company: companyId,
+    branch: branchId,
     $or: [{ accountName: searchRegex }, { accountCode: searchRegex }],
     ...filters,
   };
