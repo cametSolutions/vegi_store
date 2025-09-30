@@ -51,7 +51,7 @@ const ItemMasterSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      required: [true, "Category is required"],
+
       enum: {
         values: ["vegetables", "fruits", "leafy-greens", "herbs", "other"],
         message: "Invalid category type",
@@ -65,6 +65,23 @@ const ItemMasterSchema = new mongoose.Schema(
         message: "Invalid unit type",
       },
     },
+
+    // 🆕 Price levels (Retail, Wholesale, Catering, etc.)
+    priceLevels: [
+      {
+        _id: false,
+        priceLevel: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "PriceLevelModel",
+          required: [true, "Price level reference is required"],
+        },
+        rate: {
+          type: Number,
+          required: [true, "Rate is required"],
+          min: [0, "Rate cannot be negative"],
+        },
+      },
+    ],
     stock: {
       type: [
         {

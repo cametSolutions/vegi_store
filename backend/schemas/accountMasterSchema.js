@@ -63,14 +63,14 @@ const AccountMasterSchema = new mongoose.Schema(
       required: [true, "Account name is required"],
       trim: true,
       maxlength: [100, "Account name cannot exceed 100 characters"],
-    },
+    },  
     accountType: {
       type: String,
       required: [true, "Account type is required"],
       enum: {
-        values: ["customer", "supplier", "employee", "other"],
+        values: ["customer",  "other"],
         message:
-          "Account type must be either customer, supplier, employee, or other",
+          "Account type must be either customer or other",
       },
     },
 
