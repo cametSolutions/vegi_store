@@ -5,7 +5,7 @@ export const truncate = (str, maxLength) => {
 };
 
 /// Converts a  first letter of a string to title case
-export const capitalize = (str) => {
+export const capitalizeFirstLetter = (str) => {
   if (!str) return "";
   return str.charAt(0).toUpperCase() + str.slice(1);
 };

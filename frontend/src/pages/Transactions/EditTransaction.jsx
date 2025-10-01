@@ -1,7 +1,7 @@
 // ===== EditTransaction.jsx =====
 import React, { useState, useEffect } from 'react';
 import TransactionTypeSelector from './components/TransactionTypeSelector';
-import TransactionHeader from './components/TransactionHeader';
+import TransactionAccountSelector from './components/TransactionAccountSelector';
 import AddItemForm from './components/AddItemForm';
 import ItemsTable from './components/ItemsTable';
 import TransactionSummary from './components/TransactionSummary';
@@ -9,7 +9,7 @@ import TransactionActions from './components/TransactionActions';
 import {
   transactionTypes,
   products,
-  getTransactionTypeByValue,
+  getTransactionType,
   calculateItemAmount,
   calculateTotal,
   calculateNetAmount,
@@ -87,7 +87,7 @@ const EditTransaction = ({ transactionId }) => {
     );
   }
 
-  const currentTransactionType = getTransactionTypeByValue(transactionData.type);
+  const currentTransactionType = getTransactionType(transactionData.type);
   const total = calculateTotal(transactionData.items);
   const netAmount = calculateNetAmount(total, transactionData.discount);
   const closingBalance = calculateClosingBalance(
@@ -212,7 +212,7 @@ const EditTransaction = ({ transactionId }) => {
           />
         </div>
 
-        <TransactionHeader
+        <TransactionAccountSelector
           transactionData={transactionData}
           onTransactionChange={handleTransactionDataChange}
           currentTransactionType={currentTransactionType}

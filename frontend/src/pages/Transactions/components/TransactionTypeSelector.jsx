@@ -13,7 +13,7 @@ const TransactionTypeSelector = ({ transactionTypes, selectedType, onTypeChange 
     <div className="mb-6">
       <label className="block text-sm font-medium text-slate-700 mb-3">Transaction Type</label>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {transactionTypes.map((type) => {
+        {transactionTypes?.map((type) => {
           const IconComponent = type.icon;
           return (
             <button

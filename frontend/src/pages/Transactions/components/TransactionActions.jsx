@@ -9,6 +9,9 @@ const TransactionActions = ({
   onPrint,
   isEditMode = false,
 }) => {
+
+  console.log("transaction actions component renders");
+
   return (
     <div className="mt-2">
       <div className="grid grid-cols-5 gap-2">

@@ -14,7 +14,7 @@ import {
   
   AccountmasterSchema
 } from "../../validation/accountmasterSchema"
-import { accountmasterApi } from "../../api/accountMasterApi"
+import { accountMasterApi } from "../../api/accountMasterApi"
 import { pricelevelApi } from "../../api/pricelevelApi"
 import { ZodError } from "zod"
 import { useSelector } from "react-redux"
@@ -170,7 +170,7 @@ console.log("formdata",formData)
   useEffect(() => {
     const fetchAccntholder = async () => {
       try {
-        const res = await accountmasterApi.getAll()
+        const res = await accountMasterApi.getAll()
         setaccntholdersList(res.data)
       } catch (error) {
         console.error(error)
@@ -258,7 +258,7 @@ console.log("selectedholder",selectedHolder)
     try {
       let response
       if (selectedHolder) {
-        response = await accountmasterApi.update(
+        response = await accountMasterApi.update(
           {
             id: selectedHolder._id,
             companyId: selectedHolder.companyId,
@@ -267,7 +267,7 @@ console.log("selectedholder",selectedHolder)
           finalFormData
         )
       } else {
-        response = await accountmasterApi.create(finalFormData)
+        response = await accountMasterApi.create(finalFormData)
       }
 
       console.log("response", response.data)
@@ -314,7 +314,7 @@ console.log("selectedholder",selectedHolder)
   const handleDelete = async () => {
     if (selectedHolder) {
       console.log("seelctectdid", selectedHolder)
-      const result = await accountmasterApi.delete({
+      const result = await accountMasterApi.delete({
         id: selectedHolder._id,
         companyId: selectedHolder.companyId,
         branchId: selectedHolder.branchId

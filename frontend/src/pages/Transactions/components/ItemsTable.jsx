@@ -2,6 +2,10 @@ import React from "react";
 import { Plus, Minus, Trash2 } from "lucide-react";
 
 const ItemsTable = ({ items, onUpdateQuantity, onRemoveItem }) => {
+
+   console.log("item table component renders");
+
+  
   return (
     <div className="bg-white rounded-t shadow-sm">
       <div className="h-[calc(100vh-358px)] overflow-y-auto border border-gray-200 rounded">

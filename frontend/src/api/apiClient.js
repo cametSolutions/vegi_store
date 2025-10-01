@@ -141,5 +141,23 @@ export const createResourceApi = (resourcePath, customEndpoints) => {
         throw new Error("An unexpected error occurred");
       }
     },
+
+    search: async (searchTerm, companyId) => {
+      try {
+        const params = new URLSearchParams();
+        if (searchTerm) params.append("searchTerm", searchTerm);
+        if (companyId) params.append("companyId", companyId);
+
+        const response = await api.get(
+          `/${resourcePath}/search?${params.toString()}`
+        );
+        return response.data;
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          throw new Error(error.response?.data?.message || error.message);
+        }
+        throw new Error("An unexpected error occurred");
+      }
+    },
   };
 };
