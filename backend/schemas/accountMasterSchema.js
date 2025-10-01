@@ -43,7 +43,7 @@
 //     }, { timestamps: true })
 // export default AccountMasterSchema
 
-import mongoose from "mongoose"; 
+import mongoose from "mongoose";
 
 const AccountMasterSchema = new mongoose.Schema(
   {
@@ -63,14 +63,13 @@ const AccountMasterSchema = new mongoose.Schema(
       required: [true, "Account name is required"],
       trim: true,
       maxlength: [100, "Account name cannot exceed 100 characters"],
-    },  
+    },
     accountType: {
       type: String,
       required: [true, "Account type is required"],
       enum: {
-        values: ["customer",  "other"],
-        message:
-          "Account type must be either customer or other",
+        values: ["customer", "other"],
+        message: "Account type must be either customer or other",
       },
     },
 
@@ -221,11 +220,13 @@ AccountMasterSchema.statics.getAccountsByType = function (
 };
 
 // Search accounts by name or code
-AccountMasterSchema.statics.searchAccounts = function (
+AccountMasterSchema.statics.searchAccounts = async function (
   companyId,
   searchTerm,
   branchId,
-  filters = {}
+  filters = {},
+  limit = 25,
+  offset = 0
 ) {
   const searchRegex = new RegExp(searchTerm, "i");
   const matchConditions = {
@@ -235,11 +236,25 @@ AccountMasterSchema.statics.searchAccounts = function (
     ...filters,
   };
 
-  return this.find(matchConditions)
-    .populate("branch", "branchName")
-    .populate("priceLevel", "priceLevelName")
-    .sort({ accountName: 1 })
-    .limit(20);
+  // Execute both queries in parallel for better performance
+  const [accounts, totalCount] = await Promise.all([
+    // Get paginated accounts
+    this.find(matchConditions)
+      .populate("branch", "branchName")
+      .populate("priceLevel", "priceLevelName")
+      .sort({ accountName: 1 })
+      .skip(offset)
+      .limit(limit)
+      .lean(), // Use lean() for better performance if you don't need mongoose document methods
+
+    // Get total count
+    this.countDocuments(matchConditions),
+  ]);
+
+  return {
+    accounts,
+    totalCount,
+  };
 };
 
 // Get customer summary for reports

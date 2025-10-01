@@ -27,7 +27,7 @@ const TransactionSchema = new mongoose.Schema(
     transactionNumber: {
       type: String,
       unique: true,
-      required: [true, "Transaction  number is required"],
+      required: [true, "Transaction number is required"],
       default: () => nanoid(),
     },
 
@@ -49,6 +49,7 @@ const TransactionSchema = new mongoose.Schema(
     openingBalance: {
       type: Number,
       default: 0,
+      min: [0, "Opening balance cannot be negative"],
     },
     priceLevel: {
       type: mongoose.Schema.Types.ObjectId,
@@ -94,14 +95,42 @@ const TransactionSchema = new mongoose.Schema(
           required: [true, "Amount is required"],
           min: [0, "Amount cannot be negative"],
         },
+        taxable: {
+          type: Boolean,
+          default: true,
+        },
       },
     ],
 
     // ==================== TOTALS SECTION ====================
-    total: {
+    subtotal: {
       type: Number,
-      required: [true, "Total is required"],
-      min: [0, "Total cannot be negative"],
+      required: [true, "Subtotal is required"],
+      min: [0, "Subtotal cannot be negative"],
+      default: 0, // sum of items amounts
+    },
+    taxableAmount: {
+      type: Number,
+      required: [true, "Taxable amount is required"],
+      min: [0, "Taxable amount cannot be negative"],
+      default: 0, // sum of taxable items
+    },
+    taxAmount: {
+      type: Number,
+      required: [true, "Tax amount is required"],
+      min: [0, "Tax amount cannot be negative"],
+      default: 0,
+    },
+    amountAfterTax: {
+      type: Number,
+      required: [true, "Amount after tax is required"],
+      min: [0, "Amount after tax cannot be negative"],
+      default: 0, // subtotal + taxAmount
+    },
+    discount: {
+      type: Number,
+      default: 0,
+      min: [0, "Discount cannot be negative"],
     },
     discountAmount: {
       type: Number,
@@ -112,15 +141,16 @@ const TransactionSchema = new mongoose.Schema(
       type: Number,
       required: [true, "Net amount is required"],
       min: [0, "Net amount cannot be negative"],
+      default: 0, // amountAfterTax - discountAmount + openingBalance
     },
     paidAmount: {
       type: Number,
       default: 0,
       min: [0, "Paid amount cannot be negative"],
     },
-    balanceAmount: {
+    closingBalanceAmount: {
       type: Number,
-      default: 0,
+      default: 0, // netAmount - paidAmount
     },
 
     // ==================== PAYMENT & STATUS ====================
@@ -141,7 +171,6 @@ const TransactionSchema = new mongoose.Schema(
     },
 
     // ==================== REFERENCE & NOTES ====================
-
     notes: {
       type: String,
       trim: true,

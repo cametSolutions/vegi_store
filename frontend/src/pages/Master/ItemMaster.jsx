@@ -32,7 +32,6 @@ const ItemMaster= () => {
     if (company) {
       const allitems = async () => {
         const result = await itemmasterApi.getAll(company._id)
-        console.log("result", result)
         setviewallitems(
           result.data.map((item) => ({
              // numbering

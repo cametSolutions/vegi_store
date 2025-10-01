@@ -1,11 +1,13 @@
 const TransactionSummary = ({
   total,
-  discount,
-  onDiscountChange,
   netAmount,
+  discount,
   paidAmount,
+  onDiscountChange,
   onPaidAmountChange,
 }) => {
+  console.log("transaction summary component renders");
+
   return (
     <div className="bg-white shadow-sm p-1">
       <div className="grid grid-cols-4 gap-4 text-xs">

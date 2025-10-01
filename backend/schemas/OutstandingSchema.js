@@ -79,7 +79,7 @@ const OutstandingSchema = new mongoose.Schema(
             default: 0,
             min: [0, "Paid amount cannot be negative"],
         },
-        balanceAmount: {
+        closingBalanceAmount: {
             type: Number,
             required: [true, "Balance amount is required"],
             min: [0, "Balance amount cannot be negative"],
@@ -137,7 +137,7 @@ OutstandingSchema.index({ company: 1, branch: 1, outstandingType: 1 });
 // ==================== VIRTUALS ====================
 // Check if overdue
 OutstandingSchema.virtual('isOverdue').get(function() {
-    return new Date() > this.dueDate && this.balanceAmount > 0 && this.status !== 'paid';
+    return new Date() > this.dueDate && this.closingBalanceAmount > 0 && this.status !== 'paid';
 });
 
 // Days overdue
@@ -175,10 +175,10 @@ OutstandingSchema.methods.updatePayment = function(paymentAmount) {
     }
     
     this.paidAmount += paymentAmount;
-    this.balanceAmount = this.totalAmount - this.paidAmount;
+    this.closingBalanceAmount = this.totalAmount - this.paidAmount;
     
     // Update status
-    if (this.balanceAmount === 0) {
+    if (this.closingBalanceAmount === 0) {
         this.status = 'paid';
     } else if (this.paidAmount > 0) {
         this.status = 'partial';
@@ -206,7 +206,7 @@ OutstandingSchema.methods.updateStatus = function(newStatus) {
 // Mark as paid
 OutstandingSchema.methods.markAsPaid = function() {
     this.paidAmount = this.totalAmount;
-    this.balanceAmount = 0;
+    this.closingBalanceAmount = 0;
     this.status = 'paid';
     return this.save();
 };
@@ -243,7 +243,7 @@ OutstandingSchema.statics.getOverdueItems = function(companyId, outstandingType 
     const matchConditions = {
         company: companyId,
         dueDate: { $lt: new Date() },
-        balanceAmount: { $gt: 0 },
+        closingBalanceAmount: { $gt: 0 },
         status: { $ne: 'paid' }
     };
     
@@ -263,12 +263,12 @@ OutstandingSchema.statics.getOutstandingSummary = function(companyId) {
         {
             $group: {
                 _id: '$outstandingType',
-                totalOutstanding: { $sum: '$balanceAmount' },
+                totalOutstanding: { $sum: '$closingBalanceAmount' },
                 totalOverdue: {
                     $sum: {
                         $cond: [
                             { $lt: ['$dueDate', new Date()] },
-                            '$balanceAmount',
+                            '$closingBalanceAmount',
                             0
                         ]
                     }
@@ -283,17 +283,17 @@ OutstandingSchema.statics.getOutstandingSummary = function(companyId) {
 // Update status based on amounts and due date before saving
 OutstandingSchema.pre('save', function(next) {
     // Calculate balance amount
-    this.balanceAmount = this.totalAmount - this.paidAmount;
+    this.closingBalanceAmount = this.totalAmount - this.paidAmount;
     
     // Auto-update status based on payment
-    if (this.balanceAmount === 0) {
+    if (this.closingBalanceAmount === 0) {
         this.status = 'paid';
     } else if (this.paidAmount > 0 && this.status === 'pending') {
         this.status = 'partial';
     }
     
     // Check for overdue status
-    if (this.balanceAmount > 0 && new Date() > this.dueDate && this.status !== 'disputed' && this.status !== 'written_off') {
+    if (this.closingBalanceAmount > 0 && new Date() > this.dueDate && this.status !== 'disputed' && this.status !== 'written_off') {
         this.status = 'overdue';
     }
     

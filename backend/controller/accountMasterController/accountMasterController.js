@@ -87,10 +87,15 @@ export const updateAccntMaster = async (req, res) => {
 
 ////
 // controllers/accountMasterController.js
-
 export const searchAccounts = async (req, res) => {
   try {
-    const { searchTerm, companyId, branchId } = req.query;
+    const { 
+      searchTerm, 
+      companyId, 
+      branchId,
+      limit = 25,  // Default to 25 results
+      offset = 0   // For potential future pagination
+    } = req.query;
 
     // Validate required query parameters
     if (!searchTerm || !companyId || !branchId) {
@@ -100,17 +105,31 @@ export const searchAccounts = async (req, res) => {
       });
     }
 
-    // Call the static method on the Model (not instance)
-    const accounts = await AccountMasterModel.searchAccounts(
+    // Parse limit to integer and cap it
+    const parsedLimit = Math.min(parseInt(limit) || 25, 50); // Max 50
+    const parsedOffset = parseInt(offset) || 0;
+
+    // Call the model method with pagination
+    const result = await AccountMasterModel.searchAccounts(
       companyId,
       searchTerm,
       branchId,
-      {} // Optional filters object
+      {}, // Optional filters
+      parsedLimit,
+      parsedOffset
     );
+
+    // Get total count for informational purposes
+    const totalCount = result?.totalCount || result?.accounts?.length;
+    const accounts = result?.accounts || result;
+
+    
 
     res.status(200).json({
       success: true,
-      count: accounts.length,
+      count: accounts?.length || 0,
+      totalCount: totalCount, // Total matching records
+      hasMore: totalCount > (parsedOffset + accounts?.length), // Are there more results?
       data: accounts,
     });
   } catch (error) {

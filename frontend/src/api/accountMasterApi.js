@@ -4,7 +4,7 @@ import { createResourceApi, api } from "./apiClient";
 // Base account master API using the generic factory
 export const accountMasterApi = createResourceApi("accountmaster", {
   create: "createaccountmaster",
-  getAll: "getallaccountmaster", 
+  getAll: "getallaccountmaster",
   update: "updateaccntmaster",
   delete: "deleteaccntmaster",
 });
@@ -15,14 +15,12 @@ export const accountMasterService = {
   ...accountMasterApi,
 
   // Custom search method specific to account master
-  search: async (searchTerm, companyId,branchId) => {
+  search: async (searchTerm, companyId, branchId, accountType, limit) => {
     try {
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('searchTerm', searchTerm);
-      if (companyId) params.append('companyId', companyId);
-      if (branchId) params.append('branchId', branchId);
-      
-      const response = await api.get(`/accountmaster/searchAccounts?${params.toString()}`);
+      const response = await api.get("/accountmaster/searchAccounts", {
+        params: { searchTerm, companyId, branchId, accountType, limit },
+      });
+
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -31,5 +29,4 @@ export const accountMasterService = {
       throw new Error("An unexpected error occurred");
     }
   },
-
 };

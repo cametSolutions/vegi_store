@@ -3,6 +3,9 @@ import { Plus } from 'lucide-react';
 import { unitOptions } from '../utils/transactionUtils';
 
 const AddItemForm = ({ newItem, onNewItemChange, products, onProductSelect, onAddItem }) => {
+
+  console.log("add item form component renders");
+
   return (
     <div className="bg-white  shadow-sm px-3 mt-1 py-3 ">
       {/* <h3 className="text-sm font-semibold text-slate-800 mb-2">Add Item</h3> */}

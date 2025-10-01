@@ -6,9 +6,12 @@ import { capitalizeFirstLetter } from "../../../../../shared/utils/string";
 
 const TransactionHeader = ({
   currentTransactionType,
-  transactionData,
+  date,
   updateTransactionField,
 }) => {
+
+  console.log("transaction header component renders");
+
   return (
     <div className="bg-white shadow-sm border-b px-4 py-2">
       <div className="flex items-center justify-between">
@@ -27,8 +30,8 @@ const TransactionHeader = ({
             </label>
             <input
               type="date"
-              value={transactionData.date}
-              onChange={(e) => updateTransactionField("date", e.target.value)}
+              value={date}
+              onChange={(e) => updateTransactionField("transactionDate", e.target.value)}
               className="px-2 py-1 border border-slate-300 rounded text-[9px] focus:ring-1 focus:ring-blue-500"
             />
           </div>

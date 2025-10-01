@@ -1,26 +1,32 @@
-import React, { useMemo } from "react";
-import TransactionAccountSelector from "./components/TransactionAccountSelector";
-import AddItemForm from "./components/AddItemForm";
-import ItemsTable from "./components/ItemsTable";
-import TransactionSummary from "./components/TransactionSummary";
-import TransactionActions from "./components/TransactionActions";
-import TransactionHeader from "./components/TransactionHeader";
+import React, { useEffect, useMemo, useCallback } from "react";
+import TransactionAccountSelectorComponent from "./components/TransactionAccountSelector";
+import AddItemFormComponent from "./components/AddItemForm";
+import ItemsTableComponent from "./components/ItemsTable";
+import TransactionSummaryComponent from "./components/TransactionSummary";
+import TransactionActionsComponent from "./components/TransactionActions";
+import TransactionHeaderComponent from "./components/TransactionHeader";
 import { products, getTransactionType } from "./utils/transactionUtils";
 import { useTransaction } from "./hooks/useTransaction";
 import { useTransactionActions } from "./hooks/useTransactionActions";
 import { useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 
+// Memoized components
+const TransactionHeader = React.memo(TransactionHeaderComponent);
+const TransactionAccountSelector = React.memo(
+  TransactionAccountSelectorComponent
+);
+const AddItemForm = React.memo(AddItemFormComponent);
+const ItemsTable = React.memo(ItemsTableComponent);
+const TransactionSummary = React.memo(TransactionSummaryComponent);
+const TransactionActions = React.memo(TransactionActionsComponent);
+
 const CreateTransaction = () => {
   const location = useLocation();
 
-  // Use the centralized transaction hook
   const {
     transactionData,
     newItem,
-    total,
-    netAmount,
-    closingBalance,
     updateTransactionData,
     updateTransactionField,
     updateNewItem,
@@ -28,15 +34,20 @@ const CreateTransaction = () => {
     addItem,
     updateItemQuantity,
     removeItem,
+    setTransactionData,
+    handleDiscountChange,
+    handlePaidAmountChange,
   } = useTransaction();
 
-  // Get current transaction type from location or state
   const currentTransactionType = useMemo(
     () => getTransactionType(location, transactionData.type),
     [location, transactionData.type]
   );
 
-  /// to get company and branch form store
+  useEffect(() => {
+    updateTransactionField("currentTransactionType", currentTransactionType);
+  }, [currentTransactionType, updateTransactionField]);
+
   const selectedCompanyFromStore = useSelector(
     (state) => state.companyBranch?.selectedCompany
   );
@@ -44,22 +55,42 @@ const CreateTransaction = () => {
     (state) => state.companyBranch?.selectedBranch
   );
 
+  // Recalculate totals automatically
+  // useEffect(() => {
+  //   setTransactionData((prev) => calculateTransactionTotals(prev));
+  // }, [
+  //   transactionData.openingBalance,
+  //   // transactionData.items,
+  //   // transactionData.discount,
+  //   // transactionData.discountType,
+  //   // transactionData.paidAmount,
+  //   // transactionData.taxRate,
+  //   setTransactionData,
+  // ]);
+
+  console.log("transactionData", transactionData);
+
+  // Memoized callbacks to prevent child re-renders
+
   return (
     <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
       {/* Header */}
       <TransactionHeader
         currentTransactionType={currentTransactionType}
-        transactionData={transactionData}
+        date={transactionData.transactionDate}
         updateTransactionField={updateTransactionField}
       />
 
       {/* Main Content */}
       <div className="flex h-[calc(100vh-56px)]">
-        {/* Left Panel */}
         <div className="flex-1 p-1 overflow-hidden flex flex-col">
           <div className="flex flex-col py-2 bg-white">
             <TransactionAccountSelector
-              transactionData={transactionData}
+              accountType={transactionData?.accountType}
+              accountName={transactionData?.accountName}
+              openingBalance={transactionData?.openingBalance}
+              accountId={transactionData?.accountId}
+              // transactionData={transactionData}
               updateTransactionField={updateTransactionField}
               updateTransactionData={updateTransactionData}
               branch={selectedBranchFromStore?._id}
@@ -75,7 +106,6 @@ const CreateTransaction = () => {
             />
           </div>
 
-          {/* Items table with flexible height and scrolling */}
           <div className="flex-1">
             <ItemsTable
               items={transactionData.items}
@@ -84,17 +114,12 @@ const CreateTransaction = () => {
             />
 
             <TransactionSummary
-              total={total}
+              total={transactionData.total}
+              netAmount={transactionData.netAmount}
               discount={transactionData.discount}
-              onDiscountChange={(discount) =>
-                updateTransactionField("discount", discount)
-              }
-              netAmount={netAmount}
               paidAmount={transactionData.paidAmount}
-              onPaidAmountChange={(paidAmount) =>
-                updateTransactionField("paidAmount", paidAmount)
-              }
-              closingBalance={closingBalance}
+              onDiscountChange={handleDiscountChange}
+              onPaidAmountChange={handlePaidAmountChange}
             />
 
             <TransactionActions
