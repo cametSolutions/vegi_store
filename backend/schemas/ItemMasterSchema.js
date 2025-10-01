@@ -225,6 +225,28 @@ ItemMasterSchema.statics.getOutOfStockItems = function (branchId) {
   });
 };
 
+//// search by item Code or itemName 
+// Enhanced search with better matching logic
+ItemMasterSchema.statics.search = function (searchTerm, companyId, branchId, limit = 25) {
+  const searchRegex = new RegExp(searchTerm, 'i');
+  
+  return this.find({
+    $or: [
+      { itemCode: searchRegex },
+      { itemName: searchRegex },
+    ],
+    company: companyId,
+    "stock.branch": branchId,
+  })
+  .sort({
+    // Prioritize exact code matches first
+    itemCode: 1,
+    itemName: 1
+  })
+  .limit(parseInt(limit))
+  // .select('itemCode itemName unit rate sellingPrice category hsn gst stock')
+  .lean(); // Use lean() for better performance if you don't need mongoose document methods
+};
 // Get branch-wise summary for all items
 ItemMasterSchema.statics.getBranchWiseSummary = function (
   companyId,

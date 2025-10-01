@@ -103,6 +103,8 @@ const CreateTransaction = () => {
               products={products}
               onProductSelect={selectProduct}
               onAddItem={addItem}
+              branch={selectedBranchFromStore?._id}
+              company={selectedCompanyFromStore?._id}
             />
           </div>
 

@@ -7,7 +7,7 @@ import { units } from "../../utils/units"
 import { ItemSchema} from "../../validation/itemmasterSchema"
 import { useSelector } from "react-redux"
 import BranchSelector from "../../components/selectComponent/BranchSelector"
-import { itemmasterApi } from "../../api/itemMasterApi"
+import { itemMasterApi } from "../../api/itemMasterApi"
 import { showSuccessToast, showErrorToast } from "../../components/toast/toast"
 
 const ItemMaster= () => {
@@ -31,7 +31,7 @@ const ItemMaster= () => {
   useEffect(() => {
     if (company) {
       const allitems = async () => {
-        const result = await itemmasterApi.getAll(company._id)
+        const result = await itemMasterApi.getAll(company._id)
         setviewallitems(
           result.data.map((item) => ({
              // numbering
@@ -75,7 +75,7 @@ const ItemMaster= () => {
 
     try {
       setLoading(true)
-      const response = await itemmasterApi.create({
+      const response = await itemMasterApi.create({
         itemName,
         itemCode,
         companyId: company._id,
