@@ -16,6 +16,8 @@ const TransactionHeader = React.memo(TransactionHeaderComponent);
 const TransactionAccountSelector = React.memo(
   TransactionAccountSelectorComponent
 );
+
+///
 const AddItemForm = React.memo(AddItemFormComponent);
 const ItemsTable = React.memo(ItemsTableComponent);
 const TransactionSummary = React.memo(TransactionSummaryComponent);
