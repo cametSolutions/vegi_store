@@ -3,15 +3,15 @@ import { User, Search, Loader2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getPartyLabel, useTransactionTotals } from "../utils/transactionUtils";
 import { useDebounce } from "../../../hooks/useDebounce";
-import { accountMasterQueries } from "@/hooks/queries/useAccountMaster";
+import { accountMasterQueries } from "@/hooks/queries/accountMaster.queries";
 import { truncate } from "../../../../../shared/utils/string";
 
 /**
  * TransactionAccountSelector Component
- * 
+ *
  * A sophisticated account selector with search autocomplete functionality.
  * Supports customer/party selection with real-time search and account type toggling.
- * 
+ *
  * @component
  * @param {Object} props - Component props
  * @param {string} props.accountType - Type of account ("customer" or "others")
@@ -28,7 +28,8 @@ const TransactionAccountSelector = ({
   accountName,
   openingBalance,
   accountId,
-  updateTransactionField,
+  transactionType,
+
   updateTransactionData,
   branch,
   company,
@@ -56,7 +57,7 @@ const TransactionAccountSelector = ({
   // ============================================================================
   // COMPUTED VALUES
   // ============================================================================
-  const partyLabel = getPartyLabel(accountType);
+  const partyLabel = getPartyLabel(transactionType);
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY);
   const isSearchEnabled = !!(
     company &&
@@ -101,9 +102,11 @@ const TransactionAccountSelector = ({
    */
   useEffect(() => {
     const handleClickOutside = (e) => {
-      const isOutsideDropdown = dropdownRef.current && !dropdownRef.current.contains(e.target);
-      const isOutsideInput = inputRef.current && !inputRef.current.contains(e.target);
-      
+      const isOutsideDropdown =
+        dropdownRef.current && !dropdownRef.current.contains(e.target);
+      const isOutsideInput =
+        inputRef.current && !inputRef.current.contains(e.target);
+
       if (isOutsideDropdown && isOutsideInput) {
         setShowDropdown(false);
       }
@@ -121,33 +124,37 @@ const TransactionAccountSelector = ({
    * Handle search input changes
    * Clears selected account when user types
    */
-  const handleInputChange = useCallback((e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    setShowDropdown(true);
-  }, [updateTransactionData]);
+  const handleInputChange = useCallback(
+    (e) => {
+      const value = e.target.value;
+      setSearchTerm(value);
+      setShowDropdown(true);
+    },
+    [updateTransactionData]
+  );
 
   /**
    * Handle account selection from dropdown
    * Updates transaction with selected account details
    */
-  const handleSelectAccount = useCallback((account) => {
-    const truncatedName = truncate(account.accountName, TRUNCATE_LENGTH);
-    setSearchTerm(truncatedName);
-    
-    updateTransactionData({
-      accountName: account.accountName,
-      accountId: account._id,
-      openingBalance: account.openingBalance || 0,
-      netAmount: 0,
-      email: account.email,
-      phone: account.phoneNo,
-    });
+  const handleSelectAccount = useCallback(
+    (account) => {
+      const truncatedName = truncate(account.accountName, TRUNCATE_LENGTH);
+      setSearchTerm(truncatedName);
 
+      updateTransactionData({
+        accountName: account.accountName,
+        accountId: account._id,
+        openingBalance: account.openingBalance || 0,
+        netAmount: 0,
+        email: account.email,
+        phone: account.phoneNo,
+      });
 
-    
-    setShowDropdown(false);
-  }, [updateTransactionData]);
+      setShowDropdown(false);
+    },
+    [updateTransactionData]
+  );
 
   /**
    * Show dropdown when input is focused (if search term is valid)
@@ -161,18 +168,21 @@ const TransactionAccountSelector = ({
   /**
    * Handle account type change (customer/others)
    */
-  const handleAccountTypeChange = useCallback((newType) => {
-    updateTransactionData({
-      accountType: newType,
-      accountName: "",
-      accountId: "",
-      openingBalance: 0,
-      netAmount: 0,
-      email: "",
-      phone: "",
-    });
-    setSearchTerm("");
-  }, [updateTransactionData]);
+  const handleAccountTypeChange = useCallback(
+    (newType) => {
+      updateTransactionData({
+        accountType: newType,
+        accountName: "",
+        accountId: "",
+        openingBalance: 0,
+        netAmount: 0,
+        email: "",
+        phone: "",
+      });
+      setSearchTerm("");
+    },
+    [updateTransactionData]
+  );
 
   /**
    * Clear selected account
@@ -203,7 +213,7 @@ const TransactionAccountSelector = ({
         <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 animate-spin text-blue-500" />
       );
     }
-    
+
     if (accountId) {
       return (
         <X
@@ -212,13 +222,13 @@ const TransactionAccountSelector = ({
         />
       );
     }
-    
+
     if (searchTerm.length >= MIN_SEARCH_LENGTH) {
       return (
         <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
       );
     }
-    
+
     return null;
   };
 
@@ -330,7 +340,7 @@ const TransactionAccountSelector = ({
         <label className="block text-[9px] font-medium text-slate-700 mb-1">
           {partyLabel} Name
         </label>
-        
+
         <div className="relative">
           <input
             ref={inputRef}

@@ -22,7 +22,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { userApi } from "../../api/userApi";
+import { userApi } from "../../api/services/user.service";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getLocalStorageItem,
@@ -37,7 +37,8 @@ import {
   SetSelectedBranchInStore,
   SetSelectedCompanyInStore,
 } from "@/store/slices/companyBranchSlice";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/queries/auth.queries";
+import { userQueries } from "@/hooks/queries/user.queries";
 
 // Memoized components for better performance
 const UserInfoSection = ({ user, initials, displayName }) => (
@@ -134,8 +135,11 @@ const ProfileDropdown = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["users", userData?._id],
-    queryFn: () => userApi.getById(userData?._id),
+    ...userQueries.getUserById(
+      userData?._id,
+      userData?.companyId,
+      userData?.branchId
+    ),
     enabled: !!userData?._id, // Only fetch if we have a user ID
     staleTime: 1000 * 60 * 10, // Cache for 10 minutes
     gcTime: 1000 * 60 * 15, // Keep in cache for 15 minutes (replaces cacheTime)
@@ -170,7 +174,7 @@ const ProfileDropdown = () => {
 
   // Handle loading states
   useEffect(() => {
-    if (isLoading || authLoading ) {
+    if (isLoading || authLoading) {
       dispatch(showLoader());
     } else {
       dispatch(hideLoader());
@@ -178,9 +182,6 @@ const ProfileDropdown = () => {
   }, [isLoading, dispatch]);
 
   ///
-
-
-
 
   useEffect(() => {
     if (loggedUser && !isLoading && !isError && !selectedCompanyFromStore) {

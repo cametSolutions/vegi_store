@@ -1,4 +1,4 @@
-import { api } from "@/api/apiClient";
+import { api } from "@/api/client/apiClient";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
 import { toast } from "sonner";

@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { LoginForm } from "../components/LoginForm";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../hooks/queries/auth.queries";
 import { getLocalStorageItem } from "@/helper/localstorage";
 import { useEffect } from "react";
 const Login = () => {

@@ -7,7 +7,7 @@ import { units } from "../../utils/units"
 import { ItemSchema} from "../../validation/itemmasterSchema"
 import { useSelector } from "react-redux"
 import BranchSelector from "../../components/selectComponent/BranchSelector"
-import { itemMasterApi } from "../../api/itemMasterApi"
+import { itemMasterApi } from "../../api/services/items.service"
 import { showSuccessToast, showErrorToast } from "../../components/toast/toast"
 
 const ItemMaster= () => {

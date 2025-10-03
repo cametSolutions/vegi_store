@@ -90,6 +90,8 @@ const CreateTransaction = () => {
               accountName={transactionData?.accountName}
               openingBalance={transactionData?.openingBalance}
               accountId={transactionData?.accountId}
+              transactionType={transactionData?.transactionType}
+
               // transactionData={transactionData}
               updateTransactionField={updateTransactionField}
               updateTransactionData={updateTransactionData}

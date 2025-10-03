@@ -14,7 +14,7 @@ const TransactionActions = ({
 
   return (
     <div className="mt-2">
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         {/* Primary Action - Darkest Blue */}
         <button
           onClick={onSave}
@@ -25,13 +25,13 @@ const TransactionActions = ({
         </button>
 
         {/* Secondary Action - Medium Blue */}
-        <button
+        {/* <button
           onClick={onView}
           className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-2.5 rounded flex items-center justify-center gap-1 transition-colors text-[9px]"
         >
           <Eye className="w-3 h-3" />
           View
-        </button>
+        </button> */}
 
         {/* Destructive - Red (Exception) */}
         <button

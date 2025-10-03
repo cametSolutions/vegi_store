@@ -1,5 +1,5 @@
 import DynamicForm from "../../components/form/DynamicForm"
-import { userApi } from "../../api/userApi"
+import { userApi } from "../../api/services/user.service"
 import { companyApi } from "../../api/companyApi"
 import { branchApi } from "../../api/branchApi"
 import { UserSchema} from "../../validation/userSchema"

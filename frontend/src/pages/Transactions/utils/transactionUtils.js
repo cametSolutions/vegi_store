@@ -32,13 +32,6 @@ export const products = [
   { code: "V008", name: "Okra", rate: 50 },
 ];
 
-export const unitOptions = [
-  { value: "kg", label: "kg" },
-  { value: "piece", label: "piece" },
-  { value: "dozen", label: "dozen" },
-  { value: "liter", label: "liter" },
-  { value: "box", label: "box" },
-];
 
 // ==================== LABEL HELPERS ====================
 export const getTransactionType = (location) => {
