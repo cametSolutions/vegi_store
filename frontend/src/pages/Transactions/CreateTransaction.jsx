@@ -11,6 +11,8 @@ import { useTransactionActions } from "./hooks/useTransactionActions";
 import { useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 
+
+
 // Memoized components
 const TransactionHeader = React.memo(TransactionHeaderComponent);
 const TransactionAccountSelector = React.memo(
@@ -118,7 +120,7 @@ const CreateTransaction = () => {
             />
 
             <TransactionSummary
-              total={transactionData.total}
+              total={transactionData.subtotal}
               netAmount={transactionData.netAmount}
               discount={transactionData.discount}
               paidAmount={transactionData.paidAmount}

@@ -8,22 +8,24 @@
   textarea:focus,
   select:focus,
   button:focus {
-    outline: none !important;
-    box-shadow: none !important;
+    outline: none; /* remove default browser outline */
+    border-color: #93c5fd !important; /* Tailwind purple-300 */
+    box-shadow: 0 0 0 1px #93c5fd !important; /* Tailwind purple-200 */
   }
-  
+
   /* Remove number input spinners */
   input[type="number"]::-webkit-outer-spin-button,
   input[type="number"]::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
   }
-  
+
   /* Firefox */
   input[type="number"] {
     -moz-appearance: textfield;
   }
 }
+
 
  
 @theme inline {

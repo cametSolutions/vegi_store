@@ -6,20 +6,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
 import { truncate } from "../../../../../shared/utils/string";
+import { NumericFormat } from "react-number-format";
 
-const AddItemForm = ({
-  onAddItem,
-  branch,
-  company,
-  priceLevel,
-}) => {
+const AddItemForm = ({ onAddItem, branch, company, priceLevel }) => {
   // Local state for form fields
   const [localItem, setLocalItem] = useState({
     code: "",
     name: "",
     unit: units[0]?.value || "",
-    qty: 0,
-    rate: 0,
+    qty: "0",
+    rate: "0",
     availableStock: "",
   });
 
@@ -47,7 +43,7 @@ const AddItemForm = ({
   useEffect(() => {
     if (isError && error) {
       toast.error("Search Error", {
-        description:  "Failed to search for item. Please try again.",
+        description: "Failed to search for item. Please try again.",
       });
       setShouldSearch(false);
     }
@@ -59,14 +55,15 @@ const AddItemForm = ({
       // Check if API response has data array with items
       if (searchResponse?.data && searchResponse.data.length > 0) {
         const foundProduct = searchResponse.data[0];
-        
+
         // Find the appropriate rate based on priceLevel
         let rate = "";
         if (foundProduct.priceLevels && foundProduct.priceLevels.length > 0) {
           if (priceLevel) {
             const priceLevelData = foundProduct.priceLevels.find(
-              (pl) => pl.priceLevel._id === priceLevel || 
-                      pl.priceLevel.priceLevelName === priceLevel
+              (pl) =>
+                pl.priceLevel._id === priceLevel ||
+                pl.priceLevel.priceLevelName === priceLevel
             );
             rate = priceLevelData?.rate || foundProduct.priceLevels[0].rate;
           } else {
@@ -163,22 +160,25 @@ const AddItemForm = ({
               value={searchTerm}
               onChange={handleCodeChange}
               onKeyDown={handleCodeKeyDown}
-              className="w-full px-1.5 py-1 pr-6 border border-slate-300 rounded text-[9px] focus:ring-1 focus:ring-blue-500"
+              className="w-full px-1.5 py-1 pr-6 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
               placeholder="V001"
             />
             {isFetching && (
               <Loader2 className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-blue-600 animate-spin" />
             )}
           </div>
-          
+
           {/* Dropdown for "Not Found" */}
           {showDropdown && !isFetching && (
-            <div className="absolute z-50 mt-1 w-full bg-white border border-slate-300 rounded shadow-lg">
+            <div className="absolute z-50 mt-1 w-full bg-white border border-slate-300 rounded-xs shadow-lg">
               <div className="px-2 py-1.5 text-[9px] text-red-600 border-b border-slate-200">
                 Product not found
               </div>
               <div className="px-2 py-1.5 text-[9px] text-slate-600">
-                <span className="font-medium">"{truncate(debouncedSearchTerm,10)}"</span> does not exist in inventory
+                <span className="font-medium">
+                  "{truncate(debouncedSearchTerm, 10)}"
+                </span>{" "}
+                does not exist in inventory
               </div>
             </div>
           )}
@@ -196,7 +196,7 @@ const AddItemForm = ({
             onChange={(e) =>
               setLocalItem({ ...localItem, name: e.target.value })
             }
-            className="w-full px-1.5 py-1 border border-slate-300 rounded text-[9px] focus:ring-1 focus:ring-blue-500"
+            className="w-full px-1.5 py-1 border border-slate-300 bg-slate-200  text-[9px] focus:ring-1 focus:ring-blue-500"
             placeholder="Name"
           />
         </div>
@@ -211,7 +211,7 @@ const AddItemForm = ({
             onChange={(e) =>
               setLocalItem({ ...localItem, unit: e.target.value })
             }
-            className="w-full px-1.5 py-1 border border-slate-300 rounded text-[9px] focus:ring-1 focus:ring-blue-500"
+            className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
           >
             {units.map((unit) => (
               <option key={unit?.value} value={unit?.value}>
@@ -226,16 +226,19 @@ const AddItemForm = ({
           <label className="block text-[9px] font-medium text-slate-700 mb-1">
             Qty
           </label>
-          <input
-            type="number"
+          <NumericFormat
+            // type="number"
             value={localItem.qty}
+            allowLeadingZeros={false}
+            allowNegative={false}
+            decimalScale={3}
             onChange={(e) =>
               setLocalItem({
                 ...localItem,
-                qty: parseFloat(e.target.value) || 0,
+                qty: e.target.value || 0,
               })
             }
-            className="w-full px-1.5 py-1 border border-slate-300 rounded text-[9px] focus:ring-1 focus:ring-blue-500"
+            className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
             placeholder="0"
           />
         </div>
@@ -245,16 +248,21 @@ const AddItemForm = ({
           <label className="block text-[9px] font-medium text-slate-700 mb-1">
             Rate
           </label>
-          <input
-            type="number"
+          <NumericFormat
+          disabled
             value={localItem.rate}
+            allowLeadingZeros={false}
+            allowNegative={false}
+            decimalScale={2}
+            prefix="₹"
+            fixedDecimalScale 
             onChange={(e) =>
               setLocalItem({
                 ...localItem,
                 rate: parseFloat(e.target.value) || 0,
               })
             }
-            className="w-full px-1.5 py-1 border border-slate-300 rounded text-[9px] focus:ring-1 focus:ring-blue-500"
+            className="w-full px-1.5 py-1 border bg-slate-200 border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
             placeholder="0"
           />
         </div>
@@ -262,7 +270,7 @@ const AddItemForm = ({
         {/* ADD BUTTON */}
         <button
           onClick={handleAddClick}
-          className="bg-teal-600 hover:bg-teal-700 text-white px-2 py-1 rounded flex items-center justify-center transition-colors"
+          className="bg-teal-600 hover:bg-teal-700 text-white px-2 py-1 rounded-xs flex items-center justify-center transition-colors"
         >
           <Plus className="w-3 h-4" />
         </button>

@@ -5,6 +5,7 @@ import { getPartyLabel, useTransactionTotals } from "../utils/transactionUtils";
 import { useDebounce } from "../../../hooks/useDebounce";
 import { accountMasterQueries } from "@/hooks/queries/accountMaster.queries";
 import { truncate } from "../../../../../shared/utils/string";
+import { NumericFormat } from "react-number-format";
 
 /**
  * TransactionAccountSelector Component
@@ -349,7 +350,7 @@ const TransactionAccountSelector = ({
             onChange={handleInputChange}
             onFocus={handleInputFocus}
             placeholder={`Search ${partyLabel.toLowerCase()} name`}
-            className="w-full px-2 py-1 pr-7 border border-slate-300 rounded text-[9px] focus:ring-1 focus:ring-blue-500"
+            className="w-full px-2 py-1 pr-7 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
             autoComplete="off"
           />
           {renderInputIcon()}
@@ -359,7 +360,7 @@ const TransactionAccountSelector = ({
         {showDropdown && searchTerm.length >= MIN_SEARCH_LENGTH && (
           <div
             ref={dropdownRef}
-            className="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded shadow-lg max-h-48 overflow-y-auto"
+            className="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-xs shadow-lg max-h-48 overflow-y-auto"
           >
             {renderDropdownContent()}
           </div>
@@ -380,8 +381,10 @@ const TransactionAccountSelector = ({
         <label className="block text-[9px] font-medium text-slate-700 mb-1">
           Opening Balance
         </label>
-        <input
-          type="number"
+        <NumericFormat
+          prefix="₹"
+          thousandsGroupStyle="lakh"
+          thousandSeparator=","
           value={openingBalance}
           disabled
           // onChange={(e) =>
@@ -390,7 +393,7 @@ const TransactionAccountSelector = ({
           //     parseFloat(e.target.value) || 0
           //   )
           // }
-          className="w-full px-2 py-1 border border-slate-300 rounded text-[9px] focus:ring-1 focus:ring-blue-500"
+          className="w-full px-2 py-1 border border-slate-300 bg-slate-200 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
         />
       </div>
     </div>
