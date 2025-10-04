@@ -1,5 +1,6 @@
 import axios from "axios";
-import { api, createResourceApi } from "../client/apiClient.js";
+import { api } from "../client/apiClient.js";
+import { createResourceApi } from "../client/apiFactory.js";
 export const userApi = createResourceApi("user", {
   create: "createusers", //POST route
   getAll: "users", //GET route

@@ -1,41 +1,61 @@
 import AccountMasterModel from "../../model/masters/AccountMasterModel.js";
 
 export const createAccountMaster = async (req, res) => {
-    try {
-        const { companyId, branchId, accountName, accountType, address, openingBalance, openingBalanceType, phoneNo, pricelevel } = req.body
-    
-        if (!companyId || !branchId) {
-            return res.status(400).json({ message: "Companyid or branchid is missing" })
-        }
-        const existingAccountholder = await AccountMasterModel.findOne({ companyId, branchId, accountName })
-        if (existingAccountholder) {
-            return res.status(409).json({ message: "This account holder is already registered in the same branch" })
-        }
-        const newAccntholder = new AccountMasterModel({
-            companyId,
-            branchId,
-            accountName,
-            accountType,
-            address,
-            phoneNo,
-            pricelevel,
-            openingBalance,
-            openingBalanceType
-        })
-        const savedholder = await newAccntholder.save()
-        if (savedholder) {
-            const newholderlist = await AccountMasterModel.find({}).populate({ path: "pricelevel", select: "_id priceLevelName" })
-            res.status(201).json({
-                message: "Account holder created succesfully",
-                data: newholderlist
-            })
-        }
+  try {
+    const {
+      companyId,
+      branchId,
+      accountName,
+      accountType,
+      address,
+      openingBalance,
+      openingBalanceType,
+      phoneNo,
+      pricelevel,
+    } = req.body;
 
-    } catch (error) {
-        console.log("error:", error.message)
-        return res.status(500).json({ message: "Internal server error" })
+    if (!companyId || !branchId) {
+      return res
+        .status(400)
+        .json({ message: "Companyid or branchid is missing" });
     }
-}
+    const existingAccountholder = await AccountMasterModel.findOne({
+      companyId,
+      branchId,
+      accountName,
+    });
+    if (existingAccountholder) {
+      return res.status(409).json({
+        message: "This account holder is already registered in the same branch",
+      });
+    }
+    const newAccntholder = new AccountMasterModel({
+      companyId,
+      branchId,
+      accountName,
+      accountType,
+      address,
+      phoneNo,
+      pricelevel,
+      openingBalance,
+      openingBalanceType,
+    });
+    const savedholder = await newAccntholder.save();
+    if (savedholder) {
+      const newholderlist = await AccountMasterModel.find({}).populate({
+        path: "pricelevel",
+        select: "_id priceLevelName",
+      });
+      res.status(201).json({
+        message: "Account holder created succesfully",
+        data: newholderlist,
+      });
+    }
+  } catch (error) {
+    console.log("error:", error.message);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
 export const getallaccountHolder = async (req, res) => {
   try {
     const result = await AccountMasterModel.find({}).populate({
@@ -126,19 +146,20 @@ export const updateAccntMaster = async (req, res) => {
 // controllers/accountMasterController.js
 export const searchAccounts = async (req, res) => {
   try {
-    const { 
-      searchTerm, 
-      companyId, 
+    const {
+      searchTerm,
+      companyId,
       branchId,
-      limit = 25,  // Default to 25 results
-      offset = 0   // For potential future pagination
+      accountType,
+      limit = 25, // Default to 25 results
+      offset = 0, // For potential future pagination
     } = req.query;
 
     // Validate required query parameters
-    if (!searchTerm || !companyId || !branchId) {
+    if (!searchTerm || !companyId || !branchId || !accountType) {
       return res.status(400).json({
         success: false,
-        message: "searchTerm, companyId, and branchId are required",
+        message: "searchTerm, companyId, branchId and accountType are required",
       });
     }
 
@@ -151,6 +172,7 @@ export const searchAccounts = async (req, res) => {
       companyId,
       searchTerm,
       branchId,
+      accountType,
       {}, // Optional filters
       parsedLimit,
       parsedOffset
@@ -160,13 +182,11 @@ export const searchAccounts = async (req, res) => {
     const totalCount = result?.totalCount || result?.accounts?.length;
     const accounts = result?.accounts || result;
 
-    
-
     res.status(200).json({
       success: true,
       count: accounts?.length || 0,
       totalCount: totalCount, // Total matching records
-      hasMore: totalCount > (parsedOffset + accounts?.length), // Are there more results?
+      hasMore: totalCount > parsedOffset + accounts?.length, // Are there more results?
       data: accounts,
     });
   } catch (error) {

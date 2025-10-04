@@ -55,6 +55,9 @@ const TransactionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Pricelevel",
     },
+    priceLevelName: {
+      type: String,
+    },
 
     // ==================== ITEMS ARRAY ====================
     items: [

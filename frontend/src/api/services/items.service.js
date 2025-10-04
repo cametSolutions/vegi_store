@@ -1,8 +1,9 @@
 import axios from "axios";
-import { api, createResourceApi } from "../client/apiClient";
+import { api } from "../client/apiClient";
+import { createResourceApi } from "../client/apiFactory";
 export const itemMasterApi = createResourceApi("item", {
-  create: "createitem", //POST route
-  getAll: "getallitems", //GET route
+  create: "create", //POST route
+  getAll: "getall", //GET route
   update: "update", //PUT route
   delete: "delete", //DELETE route
 });

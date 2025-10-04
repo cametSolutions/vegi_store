@@ -224,6 +224,7 @@ AccountMasterSchema.statics.searchAccounts = async function (
   companyId,
   searchTerm,
   branchId,
+  accountType,
   filters = {},
   limit = 25,
   offset = 0
@@ -231,6 +232,7 @@ AccountMasterSchema.statics.searchAccounts = async function (
   const searchRegex = new RegExp(searchTerm, "i");
   const matchConditions = {
     company: companyId,
+    accountType,
     branch: branchId,
     $or: [{ accountName: searchRegex }, { accountCode: searchRegex }],
     ...filters,

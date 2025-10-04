@@ -1,6 +1,7 @@
 // services/accountMasterService.js
 import axios from "axios";
-import { createResourceApi, api } from "../client/apiClient.js";
+import {  api } from "../client/apiClient.js";
+import { createResourceApi } from "../client/apiFactory.js";
 
 // Base account master API using the generic factory
 export const accountMasterApi = createResourceApi("accountmaster", {

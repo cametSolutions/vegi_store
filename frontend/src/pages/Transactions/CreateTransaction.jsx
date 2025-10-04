@@ -11,8 +11,6 @@ import { useTransactionActions } from "./hooks/useTransactionActions";
 import { useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 
-
-
 // Memoized components
 const TransactionHeader = React.memo(TransactionHeaderComponent);
 const TransactionAccountSelector = React.memo(
@@ -93,7 +91,8 @@ const CreateTransaction = () => {
               openingBalance={transactionData?.openingBalance}
               accountId={transactionData?.accountId}
               transactionType={transactionData?.transactionType}
-
+              priceLevel={transactionData?.priceLevel}
+              priceLevelName={transactionData?.priceLevelName}
               // transactionData={transactionData}
               updateTransactionField={updateTransactionField}
               updateTransactionData={updateTransactionData}

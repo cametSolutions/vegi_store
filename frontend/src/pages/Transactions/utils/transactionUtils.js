@@ -69,6 +69,8 @@ export const createEmptyTransaction = () => ({
   transactionNumber: "",
   accountType: "customer",
   accountName: "",
+  priceLevel: "",
+  priceLevelName: "",
   items: [],
 
   // Amount breakdown
