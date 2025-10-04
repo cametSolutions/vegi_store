@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { units } from "../../../../constants/units";
 import { itemMasterQueries } from "../../../hooks/queries/item.queries";
@@ -8,15 +8,22 @@ import { toast } from "sonner";
 import { truncate } from "../../../../../shared/utils/string";
 import { NumericFormat } from "react-number-format";
 
-const AddItemForm = ({ onAddItem, branch, company, priceLevel }) => {
+const AddItemForm = ({
+  items,
+  branch,
+  company,
+  priceLevel,
+  updateTransactionField,
+}) => {
   // Local state for form fields
   const [localItem, setLocalItem] = useState({
-    code: "",
-    name: "",
+    item: null,
+    itemCode: "",
+    itemName: "",
     unit: units[0]?.value || "",
-    qty: "0",
+    quantity: "0",
     rate: "0",
-    availableStock: "",
+    // availableStock: "",
   });
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -24,6 +31,7 @@ const AddItemForm = ({ onAddItem, branch, company, priceLevel }) => {
   const [showDropdown, setShowDropdown] = useState(false);
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const codeInputRef = useRef(null);
 
   // TanStack Query - enabled based on shouldSearch flag
   const {
@@ -65,9 +73,10 @@ const AddItemForm = ({ onAddItem, branch, company, priceLevel }) => {
                 pl.priceLevel._id === priceLevel ||
                 pl.priceLevel.priceLevelName === priceLevel
             );
-            rate = priceLevelData?.rate || foundProduct.priceLevels[0].rate;
+
+            rate = priceLevelData?.rate || 0;
           } else {
-            rate = foundProduct.priceLevels[0].rate;
+            rate = 0;
           }
         }
 
@@ -82,11 +91,12 @@ const AddItemForm = ({ onAddItem, branch, company, priceLevel }) => {
 
         setLocalItem({
           ...localItem,
-          code: foundProduct.itemCode || debouncedSearchTerm,
-          name: foundProduct.itemName || "",
+          item: foundProduct?._id,
+          itemCode: foundProduct.itemCode || debouncedSearchTerm,
+          itemName: foundProduct.itemName || "",
           unit: foundProduct.unit || "",
-          rate: rate || "",
-          availableStock: currentStock,
+          rate: rate.toString() || "",
+          // availableStock: currentStock,
         });
         setShowDropdown(false);
         setShouldSearch(false);
@@ -94,7 +104,7 @@ const AddItemForm = ({ onAddItem, branch, company, priceLevel }) => {
         // No items found - show dropdown
         setLocalItem({
           ...localItem,
-          code: debouncedSearchTerm,
+          itemCode: debouncedSearchTerm,
         });
         setShowDropdown(true);
         setShouldSearch(false);
@@ -103,7 +113,7 @@ const AddItemForm = ({ onAddItem, branch, company, priceLevel }) => {
     // eslint-disable-next-line
   }, [searchResponse, isFetching, shouldSearch]);
 
-  // Handle Tab on code field
+  // Handle Tab on itemCode field
   const handleCodeKeyDown = (e) => {
     if (e.key === "Enter" && searchTerm.trim() !== "") {
       e.preventDefault();
@@ -112,38 +122,84 @@ const AddItemForm = ({ onAddItem, branch, company, priceLevel }) => {
     }
   };
 
-  // Handle code input change
+  // Handle itemCode input change
   const handleCodeChange = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
     setShowDropdown(false);
-    setLocalItem({ ...localItem, code: value });
+    setLocalItem({ ...localItem, itemCode: value });
+  };
+
+  // Handle Enter key on quantity field
+  const handleQuantityKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddClick();
+    }
+  };
+
+  // Handle Enter key on rate field
+  const handleRateKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddClick();
+    }
   };
 
   // Handle add button click
   const handleAddClick = () => {
     // Validate before adding
-    if (!localItem.code || !localItem.name) {
+    if (!localItem.itemCode || !localItem.itemName || !localItem.item) {
       toast.error("Validation Error", {
-        description: "Please fill in code and name fields",
+        description: "Please fill in itemCode and itemName fields",
       });
       return;
     }
 
-    // Pass the item to parent
-    onAddItem(localItem);
+    // Convert quantity and rate to numbers and calculate amount
+    const quantity = parseFloat(localItem.quantity) || 0;
+    const rate = parseFloat(localItem.rate) || 0;
+    const amount = quantity * rate;
 
-    // Reset local state
+    // Update localItem amount
+    const newItem = {
+      ...localItem,
+      quantity: quantity?.toString(), // keep as string if needed in form state
+      rate: rate?.toString(), // keep as number or string based on your usage
+      amount,
+    };
+
+    // Check if item already exists
+    const existingItemIndex = items.findIndex(
+      (item) => item?.item === newItem?.item
+    );
+
+    let newItems;
+    if (existingItemIndex !== -1) {
+      // Item exists - update and move to top
+      const updatedItems = [...items];
+      updatedItems.splice(existingItemIndex, 1); // Remove from current position
+      newItems = [newItem, ...updatedItems]; // Add newItem to top
+    } else {
+      // New item - add to top
+      newItems = [newItem, ...items];
+    }
+
+    // Update parent state
+    updateTransactionField("items", newItems);
+
+    // Reset form
     setLocalItem({
-      code: "",
-      name: "",
+      item: null,
+      itemCode: "",
+      itemName: "",
       unit: units[0]?.value || "",
-      qty: 0,
-      rate: 0,
-      availableStock: "",
+      quantity: "0",
+      rate: "0",
+      amount: "0",
     });
     setSearchTerm("");
-    setShowDropdown(false);
+    codeInputRef.current.focus();
   };
 
   return (
@@ -156,6 +212,7 @@ const AddItemForm = ({ onAddItem, branch, company, priceLevel }) => {
           </label>
           <div className="relative">
             <input
+              ref={codeInputRef}
               type="text"
               value={searchTerm}
               onChange={handleCodeChange}
@@ -192,9 +249,9 @@ const AddItemForm = ({ onAddItem, branch, company, priceLevel }) => {
           <input
             type="text"
             disabled
-            value={localItem.name}
+            value={localItem.itemName}
             onChange={(e) =>
-              setLocalItem({ ...localItem, name: e.target.value })
+              setLocalItem({ ...localItem, itemName: e.target.value })
             }
             className="w-full px-1.5 py-1 border border-slate-300 bg-slate-200  text-[9px] focus:ring-1 focus:ring-blue-500"
             placeholder="Name"
@@ -228,14 +285,15 @@ const AddItemForm = ({ onAddItem, branch, company, priceLevel }) => {
           </label>
           <NumericFormat
             // type="number"
-            value={localItem.qty}
+            value={localItem.quantity}
             allowLeadingZeros={false}
             allowNegative={false}
             decimalScale={3}
+            onKeyDown={handleQuantityKeyDown}
             onChange={(e) =>
               setLocalItem({
                 ...localItem,
-                qty: e.target.value || 0,
+                quantity: e.target.value || "0",
               })
             }
             className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
@@ -249,27 +307,40 @@ const AddItemForm = ({ onAddItem, branch, company, priceLevel }) => {
             Rate
           </label>
           <NumericFormat
-          disabled
-            value={localItem.rate}
+            value={localItem.rate.toString()}
             allowLeadingZeros={false}
             allowNegative={false}
-            decimalScale={2}
-            prefix="₹"
-            fixedDecimalScale 
-            onChange={(e) =>
+            // decimalScale={2}
+            // prefix="₹"
+            fixedDecimalScale
+            onKeyDown={handleRateKeyDown}
+            onChange={(e) => {
               setLocalItem({
                 ...localItem,
-                rate: parseFloat(e.target.value) || 0,
-              })
-            }
-            className="w-full px-1.5 py-1 border bg-slate-200 border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
-            placeholder="0"
+                rate: e.target.value || "0",
+              });
+            }}
+            // onValueChange={(values) => {
+            //   const { floatValue } = values;
+            //   setLocalItem({
+            //     ...localItem,
+            //     rate: floatValue || "0",
+            //   });
+            // }}
+            className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
+            placeholder="₹0.00"
           />
         </div>
 
         {/* ADD BUTTON */}
         <button
           onClick={handleAddClick}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleAddClick();
+            }
+          }}
           className="bg-teal-600 hover:bg-teal-700 text-white px-2 py-1 rounded-xs flex items-center justify-center transition-colors"
         >
           <Plus className="w-3 h-4" />

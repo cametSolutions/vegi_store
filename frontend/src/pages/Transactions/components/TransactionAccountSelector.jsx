@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, use } from "react";
 import { User, Search, Loader2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getPartyLabel, useTransactionTotals } from "../utils/transactionUtils";
@@ -8,6 +8,8 @@ import { priceLevelQueries } from "@/hooks/queries/priceLevel.queries";
 import { truncate } from "../../../../../shared/utils/string";
 import { NumericFormat } from "react-number-format";
 import { toast } from "sonner";
+import { useDispatch } from "react-redux";
+import { hideLoader, showLoader } from "@/store/slices/loaderSlice";
 
 /**
  * TransactionAccountSelector Component
@@ -47,6 +49,7 @@ const TransactionAccountSelector = ({
   const MIN_SEARCH_LENGTH = 2; // Minimum characters required to trigger search
   const DEBOUNCE_DELAY = 300; // Debounce delay in milliseconds
   const TRUNCATE_LENGTH = 30; // Max length for displayed account names
+  const dispatch = useDispatch();
 
   // ============================================================================
   // STATE MANAGEMENT
@@ -107,6 +110,7 @@ const TransactionAccountSelector = ({
   // Query for price levels - fetch once on initial load
   const {
     data: priceLevelsResponse,
+    isLoading: isPriceLevelLoading,
     isError: isPriceLevelError,
     refetch: refetchPriceLevels,
   } = useQuery({
@@ -150,17 +154,22 @@ const TransactionAccountSelector = ({
    * Show error toast and provide retry option for price level fetch errors
    */
   useEffect(() => {
-    if (isPriceLevelError) {
-      toast.error("Failed to load price levels", {
-        description: "Unable to fetch price levels. Please try again.",
-        action: {
-          label: "Retry",
-          onClick: () => refetchPriceLevels(),
-        },
-        duration: 5000,
-      });
+    if (isPriceLevelLoading) {
+      dispatch(showLoader());
+    } else {
+      dispatch(hideLoader());
+      if (isPriceLevelError) {
+        toast.error("Failed to load price levels", {
+          description: "Unable to fetch price levels. Please try again.",
+          action: {
+            label: "Retry",
+            onClick: () => refetchPriceLevels(),
+          },
+          duration: 5000,
+        });
+      }
     }
-  }, [isPriceLevelError, refetchPriceLevels]);
+  }, [isPriceLevelLoading, isPriceLevelError, refetchPriceLevels, dispatch]);
 
   /**
    * Auto-populate Cash account when "cash" is selected

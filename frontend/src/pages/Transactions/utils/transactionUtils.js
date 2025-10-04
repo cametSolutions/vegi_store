@@ -22,14 +22,14 @@ export const transactionTypes = [
 ];
 
 export const products = [
-  { code: "V001", name: "Tomato", rate: 40 },
-  { code: "V002", name: "Onion", rate: 30 },
-  { code: "V003", name: "Potato", rate: 25 },
-  { code: "V004", name: "Carrot", rate: 45 },
-  { code: "V005", name: "Cabbage", rate: 20 },
-  { code: "V006", name: "Cauliflower", rate: 35 },
-  { code: "V007", name: "Brinjal", rate: 30 },
-  { code: "V008", name: "Okra", rate: 50 },
+  { itemCode: "V001", itemName: "Tomato", rate: 40 },
+  { itemCode: "V002", itemName: "Onion", rate: 30 },
+  { itemCode: "V003", itemName: "Potato", rate: 25 },
+  { itemCode: "V004", itemName: "Carrot", rate: 45 },
+  { itemCode: "V005", itemName: "Cabbage", rate: 20 },
+  { itemCode: "V006", itemName: "Cauliflower", rate: 35 },
+  { itemCode: "V007", itemName: "Brinjal", rate: 30 },
+  { itemCode: "V008", itemName: "Okra", rate: 50 },
 ];
 
 

@@ -26,17 +26,18 @@ const CreateTransaction = () => {
 
   const {
     transactionData,
-    newItem,
     updateTransactionData,
     updateTransactionField,
+    updateItemQuantity,
+    removeItem,
+    handleDiscountChange,
+    handlePaidAmountChange,
+    newItem,
+
     updateNewItem,
     selectProduct,
     addItem,
-    updateItemQuantity,
-    removeItem,
     setTransactionData,
-    handleDiscountChange,
-    handlePaidAmountChange,
   } = useTransaction();
 
   const currentTransactionType = useMemo(
@@ -54,19 +55,6 @@ const CreateTransaction = () => {
   const selectedBranchFromStore = useSelector(
     (state) => state.companyBranch?.selectedBranch
   );
-
-  // Recalculate totals automatically
-  // useEffect(() => {
-  //   setTransactionData((prev) => calculateTransactionTotals(prev));
-  // }, [
-  //   transactionData.openingBalance,
-  //   // transactionData.items,
-  //   // transactionData.discount,
-  //   // transactionData.discountType,
-  //   // transactionData.paidAmount,
-  //   // transactionData.taxRate,
-  //   setTransactionData,
-  // ]);
 
   console.log("transactionData", transactionData);
 
@@ -101,19 +89,17 @@ const CreateTransaction = () => {
             />
 
             <AddItemForm
-              newItem={newItem}
-              onNewItemChange={updateNewItem}
-              products={products}
-              onProductSelect={selectProduct}
-              onAddItem={addItem}
+              items={transactionData?.items}
               branch={selectedBranchFromStore?._id}
               company={selectedCompanyFromStore?._id}
+              priceLevel={transactionData?.priceLevel}
+              updateTransactionField={updateTransactionField}
             />
           </div>
 
           <div className="flex-1">
             <ItemsTable
-              items={transactionData.items}
+              items={transactionData?.items}
               onUpdateQuantity={updateItemQuantity}
               onRemoveItem={removeItem}
             />

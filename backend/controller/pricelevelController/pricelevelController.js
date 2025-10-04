@@ -1,10 +1,13 @@
 import mongoose from "mongoose";
 import PricelevelModel from "../../model/masters/PricelevelModel.js";
+import { sleep } from "../../../shared/utils/delay.js";
 
 export const getallPriceLevel = async (req, res) => {
   const { companyId, branchId } = req.query;
 
   try {
+    // throw new Error("not implememted")
+    // await sleep(5000);
     const result = await PricelevelModel.find({
       company: new mongoose.Types.ObjectId(companyId),
       branches: new mongoose.Types.ObjectId(branchId),
