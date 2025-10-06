@@ -10,9 +10,9 @@ const TransactionPanel = () => {
       <div className="">
         <CreateTransaction />
       </div>
-      {/* <div className="w-1/2">
+      <div className="w-1/2">
         <TransactionList />
-      </div> */}
+      </div>
     </div>
   );
 };

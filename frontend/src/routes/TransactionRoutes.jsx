@@ -2,7 +2,7 @@ import { Outlet, Route } from "react-router-dom";
 import { lazy } from "react";
 import ProtectedRoute from "../components/Layout/ProtectedRoute";
 import TransactionPanel from "@/pages/Transactions/TransactionPanel";
-
+import CashTransactionPanel from "@/pages/CashTransaction/CashTransactionPanel";
 const CreateTransaction = lazy(() =>
   import("../pages/Transactions/CreateTransaction")
 );
@@ -18,6 +18,7 @@ export default function TransactionRoutes() {
       }
     >
       <Route path="sale/create" element={<TransactionPanel />} />
+      <Route path="reciept/create" element={<CashTransactionPanel />} />
       {/* Add more transaction routes here */}
     </Route>
   );

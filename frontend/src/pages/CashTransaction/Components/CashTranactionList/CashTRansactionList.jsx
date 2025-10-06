@@ -1,8 +1,8 @@
 import ListFooter from "../../../CommonTransactionListComponents/ListFooter";
 import ListHeader from "../../../CommonTransactionListComponents/ListHeader";
 import ListSearch from "../../../CommonTransactionListComponents/ListSearch";
-import ListTable from "./ListTable";
-import { useTransactionListActions } from "../../hooks/useTransactionListActions";
+import CashTRansactioListTable from "./CashTRansactionListTable";
+import { useTransactionListActions } from "../../../Transactions/hooks/useTransactionListActions";
 
 const TransactionList = () => {
   const {
@@ -35,10 +35,8 @@ const TransactionList = () => {
       {/* Table Section (Scrollable) */}
       <div className="flex-1 overflow-y-hidden overflow-x-auto">
         <table className="w-full">
-          <ListTable
-            data={sortedData}
-            getStatusColor={getStatusColor}
-            getTypeColor={getTypeColor}
+          <CashTRansactioListTable
+           
           />
         </table>
       </div>
