@@ -207,10 +207,11 @@ ItemMasterSchema.statics.searchItems = async function (
   let searchCondition;
 
   if (exactMatch) {
-    searchCondition = {
-      $or: [{ itemCode: searchTerm }, { itemName: searchTerm }],
-    };
-  } else {
+  const searchRegex = new RegExp(`^${searchTerm}$`, "i"); // exact match, ignore case
+  searchCondition = {
+    $or: [{ itemCode: searchRegex }, { itemName: searchRegex }],
+  };
+}else {
     const searchRegex = new RegExp(searchTerm, "i");
     searchCondition = {
       $or: [{ itemCode: searchRegex }, { itemName: searchRegex }],
@@ -238,6 +239,9 @@ ItemMasterSchema.statics.searchItems = async function (
       select: "branchName ", // adjust fields to populate as needed
     })
     .lean();
+
+    // console.log("items", items);
+    
 
   // Filter stock by branchId for each item
   const filteredItems = items.map(item => ({

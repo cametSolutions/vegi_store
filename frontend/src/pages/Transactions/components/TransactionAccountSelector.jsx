@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, use } from "react";
 import { User, Search, Loader2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getPartyLabel, useTransactionTotals } from "../utils/transactionUtils";
+import { getPartyLabel } from "../utils/transactionUtils";
 import { useDebounce } from "../../../hooks/useDebounce";
 import { accountMasterQueries } from "@/hooks/queries/accountMaster.queries";
 import { priceLevelQueries } from "@/hooks/queries/priceLevel.queries";
@@ -570,12 +570,7 @@ const TransactionAccountSelector = ({
         <select
           value={priceLevel || ""}
           onChange={handlePriceLevelChange}
-          disabled={accountType === "customer" && accountId}
-          className={`w-full px-2 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500 ${
-            accountType === "customer" && accountId
-              ? "bg-slate-200 "
-              : "bg-white"
-          }
+          className={`w-full px-2 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500
           
           `}
         >

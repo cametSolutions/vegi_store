@@ -79,7 +79,6 @@ export const getallItems = async (req, res) => {
 //// for searching an item
 
 export const searchItems = async (req, res) => {
-
   const {
     searchTerm,
     companyId,
@@ -96,7 +95,8 @@ export const searchItems = async (req, res) => {
       limit,
       exactMatch === "true" // string to boolean conversion for query param
     );
-    res.json({ data: items ,message:"items found"});
+
+    res.json({ data: items, message: "items found" });
   } catch (error) {
     res.status(500).json({ error: "Internal Server Error" });
   }

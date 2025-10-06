@@ -9,6 +9,7 @@
   select:focus,
   button:focus {
     outline: none; /* remove default browser outline */
+    
     border-color: #93c5fd !important; /* Tailwind purple-300 */
     box-shadow: 0 0 0 1px #93c5fd !important; /* Tailwind purple-200 */
   }

@@ -32,7 +32,6 @@ export const products = [
   { itemCode: "V008", itemName: "Okra", rate: 50 },
 ];
 
-
 // ==================== LABEL HELPERS ====================
 export const getTransactionType = (location) => {
   const pathName = location?.pathname || "";
@@ -73,15 +72,15 @@ export const createEmptyTransaction = () => ({
   priceLevelName: "",
   items: [],
 
-  // Amount breakdown
-  subtotal: 0, // sum of product amounts (price * qty)
-  taxableAmount: 0, // subtotal of taxable products
-  taxAmount: 0, // total tax on taxableAmount
-  amountAfterTax: 0, // subtotal + taxAmount
+  // Amount breakdown totals (numeric)
+  subtotal: 0, // sum of product base amounts (price * qty)
+  totalTaxableAmount: 0, // subtotal of taxable product base amounts
+  totalTaxAmount: 0, // total tax amount summed from items
+  totalAmountAfterTax: 0, // total of amounts after tax from all items
   discount: 0, // discount % or fixed amount
-  discountAmount: 0, // discount value
-  openingBalance: 0, // previous dues of customer
-  netAmount: 0, // amountAfterTax - discountAmount + openingBalance
+  discountAmount: 0, // discount value in currency
+  openingBalance: 0, // previous customer dues
+  netAmount: 0, // totalAmountAfterTax - discountAmount + openingBalance
   paidAmount: 0, // amount paid by customer
   closingBalanceAmount: 0, // netAmount - paidAmount
 
@@ -95,14 +94,14 @@ export const calculateTransactionTotals = (transaction) => {
 
   // 1️⃣ Subtotal
   const subtotal = transaction.items.reduce(
-    (sum, item) => sum + item.amount,
+    (sum, item) => sum + parseFloat(item?.amountAfterTax),
     0
   );
 
   // 2️⃣ Taxable Amount (default taxable = true)
   const taxableAmount = transaction.items
-    .filter((item) => item.taxable !== false)
-    .reduce((sum, item) => sum + item.amount, 0);
+    // .filter((item) => item.taxable !== false)
+    .reduce((sum, item) => sum + parseFloat(item?.baseAmount), 0);
 
   // 3️⃣ Tax Amount
   const taxRate = transaction.taxRate || 0;
@@ -151,12 +150,11 @@ export const calculateClosingBalance = (
 };
 
 // ==================== REACT-HOOK FRIENDLY MEMOIZED CALC ====================
-import { useMemo } from "react";
+// import { useMemo } from "react";
 
-
-export const useTransactionTotals = (transaction) => {
-  return useMemo(() => {
-    console.log("heavy calculations2"); // runs only when transaction changes
-    return calculateTransactionTotals(transaction);
-  }, [transaction.openingBalance]);
-};
+// export const useTransactionTotals = (transaction) => {
+//   return useMemo(() => {
+//     console.log("heavy calculations2"); // runs only when transaction changes
+//     return calculateTransactionTotals(transaction);
+//   }, [transaction.openingBalance, transaction.items]);
+// };

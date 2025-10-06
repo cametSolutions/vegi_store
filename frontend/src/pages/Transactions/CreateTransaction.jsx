@@ -94,6 +94,7 @@ const CreateTransaction = () => {
               company={selectedCompanyFromStore?._id}
               priceLevel={transactionData?.priceLevel}
               updateTransactionField={updateTransactionField}
+              addItem={addItem}
             />
           </div>
 

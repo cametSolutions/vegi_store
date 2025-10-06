@@ -14,6 +14,7 @@ const AddItemForm = ({
   company,
   priceLevel,
   updateTransactionField,
+  addItem,
 }) => {
   // Local state for form fields
   const [localItem, setLocalItem] = useState({
@@ -23,7 +24,9 @@ const AddItemForm = ({
     unit: units[0]?.value || "",
     quantity: "0",
     rate: "0",
-    // availableStock: "",
+    taxable: false, // boolean to indicate if item is taxable (default false)
+    taxRate: "0", // string, tax rate percent (e.g., "5" for 5%)
+    taxAmount: "0", // string, calculated tax baseAmount for the item
   });
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,7 +43,7 @@ const AddItemForm = ({
     isError,
     error,
   } = useQuery({
-    ...itemMasterQueries.search(debouncedSearchTerm, company, branch, 25),
+    ...itemMasterQueries.search(debouncedSearchTerm, company, branch, 25, true),
     enabled: shouldSearch && debouncedSearchTerm.trim() !== "",
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -60,7 +63,6 @@ const AddItemForm = ({
   // Update form fields if found
   useEffect(() => {
     if (shouldSearch && !isFetching) {
-      // Check if API response has data array with items
       if (searchResponse?.data && searchResponse.data.length > 0) {
         const foundProduct = searchResponse.data[0];
 
@@ -73,7 +75,6 @@ const AddItemForm = ({
                 pl.priceLevel._id === priceLevel ||
                 pl.priceLevel.priceLevelName === priceLevel
             );
-
             rate = priceLevelData?.rate || 0;
           } else {
             rate = 0;
@@ -89,29 +90,64 @@ const AddItemForm = ({
           currentStock = branchStock?.currentStock || "";
         }
 
-        setLocalItem({
-          ...localItem,
+        // Update localItem, including rate
+        setLocalItem((prev) => ({
+          ...prev,
           item: foundProduct?._id,
           itemCode: foundProduct.itemCode || debouncedSearchTerm,
           itemName: foundProduct.itemName || "",
           unit: foundProduct.unit || "",
           rate: rate.toString() || "",
+          taxable:false,
+          taxRate: "0",
+          taxAmount: "0",
           // availableStock: currentStock,
-        });
+        }));
         setShowDropdown(false);
         setShouldSearch(false);
       } else {
         // No items found - show dropdown
-        setLocalItem({
-          ...localItem,
+        setLocalItem((prev) => ({
+          ...prev,
           itemCode: debouncedSearchTerm,
-        });
+        }));
         setShowDropdown(true);
         setShouldSearch(false);
       }
     }
+    // Include priceLevel as a dependency
     // eslint-disable-next-line
   }, [searchResponse, isFetching, shouldSearch]);
+
+  useEffect(() => {
+    if (!localItem.item) return; // No item loaded, no update needed
+
+    // Find the loaded product from the last searchResponse (or maintain it separately)
+
+    const foundProduct = searchResponse?.data[0];
+
+    if (!foundProduct || !foundProduct.priceLevels) return;
+
+    let newRate = "";
+    if (priceLevel) {
+      const priceLevelData = foundProduct.priceLevels.find(
+        (pl) =>
+          pl.priceLevel._id === priceLevel ||
+          pl.priceLevel.priceLevelName === priceLevel
+      );
+      newRate = priceLevelData?.rate || "0";
+    } else {
+      newRate = "0";
+    }
+
+    // Update the localItem rate if it differs from current
+    if (localItem.rate !== newRate.toString()) {
+      setLocalItem((prev) => ({
+        ...prev,
+        rate: newRate.toString(),
+      }));
+    }
+  }, [priceLevel, localItem.item, searchResponse]);
 
   // Handle Tab on itemCode field
   const handleCodeKeyDown = (e) => {
@@ -148,7 +184,6 @@ const AddItemForm = ({
 
   // Handle add button click
   const handleAddClick = () => {
-    // Validate before adding
     if (!localItem.itemCode || !localItem.itemName || !localItem.item) {
       toast.error("Validation Error", {
         description: "Please fill in itemCode and itemName fields",
@@ -156,39 +191,9 @@ const AddItemForm = ({
       return;
     }
 
-    // Convert quantity and rate to numbers and calculate amount
-    const quantity = parseFloat(localItem.quantity) || 0;
-    const rate = parseFloat(localItem.rate) || 0;
-    const amount = quantity * rate;
-
-    // Update localItem amount
-    const newItem = {
-      ...localItem,
-      quantity: quantity?.toString(), // keep as string if needed in form state
-      rate: rate?.toString(), // keep as number or string based on your usage
-      amount,
-    };
-
-    // Check if item already exists
-    const existingItemIndex = items.findIndex(
-      (item) => item?.item === newItem?.item
-    );
-
-    let newItems;
-    if (existingItemIndex !== -1) {
-      // Item exists - update and move to top
-      const updatedItems = [...items];
-      updatedItems.splice(existingItemIndex, 1); // Remove from current position
-      newItems = [newItem, ...updatedItems]; // Add newItem to top
-    } else {
-      // New item - add to top
-      newItems = [newItem, ...items];
-    }
-
-    // Update parent state
+    const newItems = addItem(items, localItem);
     updateTransactionField("items", newItems);
 
-    // Reset form
     setLocalItem({
       item: null,
       itemCode: "",
@@ -196,7 +201,11 @@ const AddItemForm = ({
       unit: units[0]?.value || "",
       quantity: "0",
       rate: "0",
-      amount: "0",
+      baseAmount: "0",
+      amountAfterTax: "0",
+      taxable: false, // boolean to indicate if item is taxable (default false)
+      taxRate: "0", // string, tax rate percent (e.g., "5" for 5%)
+      taxAmount: "0", // string, calculated tax baseAmount for the item
     });
     setSearchTerm("");
     codeInputRef.current.focus();
