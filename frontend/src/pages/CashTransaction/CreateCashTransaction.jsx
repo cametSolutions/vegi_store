@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useCallback } from "react";
 import TransactionActionsComponent from "../CommonTransactionComponents/TransactionActions";
-import TransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
+import CashTransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
 import BankPaymentDetails from "./Components/BankPaymentReciept";
 import CashTransactionAccountSelector from "./Components/CashTransactionAccountSelector";
 import { useLocation } from "react-router-dom";
@@ -11,7 +11,7 @@ import { useCashTransactionAction } from "./hooks/useCashTransactionAction";
 
 
 
-const TransactionHeader = React.memo(TransactionHeaderComponent);
+const TransactionHeader = React.memo(CashTransactionHeaderComponent);
 const TransactionActions = React.memo(TransactionActionsComponent);
 const TransactionAccountSelector = React.memo(CashTransactionAccountSelector);
 const TransactionBankPaymentDetails = React.memo(BankPaymentDetails);
@@ -21,12 +21,12 @@ const CreateCashTransaction = () => {
 
 
  const {
-    transactionData,
+    CashtransactionData,
    
-    updateTransactionData,
+    updateCashtransactionData,
     updateTransactionField,
    
-    setTransactionData,
+    setCashtransactionData,
     
   } = useCashTransaction();
 
@@ -39,21 +39,21 @@ const CreateCashTransaction = () => {
     (state) => state.companyBranch?.selectedBranch
   );
   const currentTransactionType = useMemo(
-    () => getTransactionType(location, transactionData.transactionType),
-    [location, transactionData.transactionType]
+    () => getTransactionType(location, CashtransactionData.transactionType),
+    [location, CashtransactionData.transactionType]
   );
 
    useEffect(() => {
       updateTransactionField("currentTransactionType", currentTransactionType);
     }, [currentTransactionType, updateTransactionField]);
-  console.log("cashTransactionData", transactionData);
+  console.log("cashCashtransactionData", CashtransactionData);
   return (
     <div>
       <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
         {/* Header */}
         <TransactionHeader
           currentTransactionType={currentTransactionType}
-          date={transactionData.date}
+          date={CashtransactionData.date}
           updateTransactionField={updateTransactionField}
         />
         
@@ -61,15 +61,15 @@ const CreateCashTransaction = () => {
           {/* Receipt Details - Top */}
           <div className=" bg-white rounded-lg shadow-sm ">
             <TransactionAccountSelector
-             accountName={transactionData?.accountName}
-    amount={transactionData?.amount}
-    previousBalanceAmount={transactionData?.previousBalanceAmount}
-    narration={transactionData?.narration}
-    closingBalanceAmount={transactionData?.closingBalanceAmount}
-      accountType={transactionData?.accountType}
-    accountId={transactionData?.accountId}
+             accountName={CashtransactionData?.accountName}
+    amount={CashtransactionData?.amount}
+    previousBalanceAmount={CashtransactionData?.previousBalanceAmount}
+    narration={CashtransactionData?.narration}
+    closingBalanceAmount={CashtransactionData?.closingBalanceAmount}
+      accountType={CashtransactionData?.accountType}
+    accountId={CashtransactionData?.accountId}
      updateTransactionField={updateTransactionField}
-              updateTransactionData={updateTransactionData}
+              updateCashtransactionData={updateCashtransactionData}
               branch={selectedBranchFromStore?._id}
               company={selectedCompanyFromStore?._id}
             />
@@ -78,12 +78,12 @@ const CreateCashTransaction = () => {
           {/* Bank Payment Details - Middle */}
           <div className="flex-1 bg-white rounded-lg shadow-sm ">
             <TransactionBankPaymentDetails
-                chequeNumber={transactionData?.chequeNumber}
-    bank={transactionData?.bank}
-    description={transactionData?.description}
-    paymentMode={transactionData?.paymentMode}
+                chequeNumber={CashtransactionData?.chequeNumber}
+    bank={CashtransactionData?.bank}
+    description={CashtransactionData?.description}
+    paymentMode={CashtransactionData?.paymentMode}
      updateTransactionField={updateTransactionField}
-              updateTransactionData={updateTransactionData}
+              updateCashtransactionData={updateCashtransactionData}
               branch={selectedBranchFromStore?._id}
               company={selectedCompanyFromStore?._id} 
               />

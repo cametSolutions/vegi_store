@@ -6,24 +6,24 @@ import {
 } from "../Utils/CashTransactionUtils";
 
 export const useCashTransaction = (initialData = null) => {
-  const [transactionData, setTransactionData] = useState(
+  const [CashtransactionData, setCashtransactionData] = useState(
     initialData || createEmptyTransaction()
   );
 
 
-   const updateTransactionData = useCallback((updates) => {
-    setTransactionData((prev) => ({ ...prev, ...updates }));
+   const updateCashtransactionData = useCallback((updates) => {
+    setCashtransactionData((prev) => ({ ...prev, ...updates }));
   }, []);
 
   const updateTransactionField = useCallback((field, value) => {
-    setTransactionData((prev) => ({ ...prev, [field]: value }));
+    setCashtransactionData((prev) => ({ ...prev, [field]: value }));
   }, []);
 
     return {
-    transactionData,
-   updateTransactionData,
+    CashtransactionData,
+   updateCashtransactionData,
     updateTransactionField,
    
-    setTransactionData,
+    setCashtransactionData,
   };
 };
