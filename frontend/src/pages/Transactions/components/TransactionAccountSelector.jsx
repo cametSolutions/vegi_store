@@ -1,23 +1,30 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, use } from "react";
 import { User, Search, Loader2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getPartyLabel, useTransactionTotals } from "../utils/transactionUtils";
+import { getPartyLabel } from "../utils/transactionUtils";
 import { useDebounce } from "../../../hooks/useDebounce";
-import { accountMasterQueries } from "@/hooks/queries/useAccountMaster";
+import { accountMasterQueries } from "@/hooks/queries/accountMaster.queries";
+import { priceLevelQueries } from "@/hooks/queries/priceLevel.queries";
 import { truncate } from "../../../../../shared/utils/string";
+import { NumericFormat } from "react-number-format";
+import { toast } from "sonner";
+import { useDispatch } from "react-redux";
+import { hideLoader, showLoader } from "@/store/slices/loaderSlice";
 
 /**
  * TransactionAccountSelector Component
- * 
+ *
  * A sophisticated account selector with search autocomplete functionality.
  * Supports customer/party selection with real-time search and account type toggling.
- * 
+ *
  * @component
  * @param {Object} props - Component props
- * @param {string} props.accountType - Type of account ("customer" or "others")
+ * @param {string} props.accountType - Type of account ("customer" or "cash")
  * @param {string} props.accountName - Selected account name
  * @param {number} props.openingBalance - Opening balance value
  * @param {string} props.accountId - Selected account ID
+ * @param {string} props.priceLevel - Selected price level ID
+ * @param {string} props.priceLevelName - Selected price level name
  * @param {Function} props.updateTransactionField - Updates single field
  * @param {Function} props.updateTransactionData - Updates multiple fields at once
  * @param {string} props.branch - Branch identifier
@@ -28,10 +35,13 @@ const TransactionAccountSelector = ({
   accountName,
   openingBalance,
   accountId,
-  updateTransactionField,
+  transactionType,
+  priceLevel,
+  priceLevelName,
   updateTransactionData,
   branch,
   company,
+  modifyOnPriceLevelChange,
 }) => {
   // ============================================================================
   // CONSTANTS
@@ -40,6 +50,7 @@ const TransactionAccountSelector = ({
   const MIN_SEARCH_LENGTH = 2; // Minimum characters required to trigger search
   const DEBOUNCE_DELAY = 300; // Debounce delay in milliseconds
   const TRUNCATE_LENGTH = 30; // Max length for displayed account names
+  const dispatch = useDispatch();
 
   // ============================================================================
   // STATE MANAGEMENT
@@ -56,7 +67,7 @@ const TransactionAccountSelector = ({
   // ============================================================================
   // COMPUTED VALUES
   // ============================================================================
-  const partyLabel = getPartyLabel(accountType);
+  const partyLabel = getPartyLabel(transactionType);
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY);
   const isSearchEnabled = !!(
     company &&
@@ -67,8 +78,9 @@ const TransactionAccountSelector = ({
   );
 
   // ============================================================================
-  // API QUERY
+  // API QUERIES
   // ============================================================================
+  // Query for customer search
   const {
     data: apiResponse,
     isLoading,
@@ -81,10 +93,32 @@ const TransactionAccountSelector = ({
       "customer",
       RESULT_LIMIT
     ),
-    enabled: isSearchEnabled,
+    enabled: isSearchEnabled ,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     placeholderData: { success: false, count: 0, data: [] },
+  });
+
+  // Query for "Cash" account when "cash" is selected
+  const { data: cashAccountResponse } = useQuery({
+    ...accountMasterQueries.search("Cash", company, branch, "cash", 1),
+    enabled: !!(company && accountType === "cash" && !accountId),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    select: (data) => data?.data?.[0], // Select first result
+  });
+
+  // Query for price levels - fetch once on initial load
+  const {
+    data: priceLevelsResponse,
+    isLoading: isPriceLevelLoading,
+    isError: isPriceLevelError,
+    refetch: refetchPriceLevels,
+  } = useQuery({
+    ...priceLevelQueries.getAll(company, branch),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 
   // Extract data from API response
@@ -92,18 +126,95 @@ const TransactionAccountSelector = ({
   const totalCount = apiResponse?.totalCount || 0;
   const hasMore = apiResponse?.hasMore || false;
 
+  // Extract price levels from API response and filter by branch
+  const allPriceLevels = priceLevelsResponse?.data || [];
+  const priceLevels = allPriceLevels.filter(
+    (level) =>
+      level.status === "active" &&
+      (level.branches?.includes(branch) || level.branches?.length === 0)
+  );
+
   // ============================================================================
   // EFFECTS
   // ============================================================================
+
+  /**
+   * Set initial price level when price levels are fetched
+   */
+  useEffect(() => {
+    if (priceLevels.length > 0 && !priceLevel) {
+      const firstLevel = priceLevels[0];
+      updateTransactionData({
+        priceLevel: firstLevel._id,
+        priceLevelName: firstLevel.priceLevelName,
+      });
+    }
+  }, [priceLevels, priceLevel, updateTransactionData]);
+
+  /**
+   * Show error toast and provide retry option for price level fetch errors
+   */
+  useEffect(() => {
+    if (isPriceLevelLoading) {
+      dispatch(showLoader());
+    } else {
+      dispatch(hideLoader());
+      if (isPriceLevelError) {
+        toast.error("Failed to load price levels", {
+          description: "Unable to fetch price levels. Please try again.",
+          action: {
+            label: "Retry",
+            onClick: () => refetchPriceLevels(),
+          },
+          duration: 5000,
+        });
+      }
+    }
+  }, [isPriceLevelLoading, isPriceLevelError, refetchPriceLevels, dispatch]);
+
+  /**
+   * Auto-populate Cash account when "cash" is selected
+   */
+  useEffect(() => {
+    if (
+      accountType === "cash" &&
+      cashAccountResponse &&
+      !accountId &&
+      company
+    ) {
+      const truncatedName = truncate(
+        cashAccountResponse.accountName,
+        TRUNCATE_LENGTH
+      );
+      setSearchTerm(truncatedName);
+
+      updateTransactionData({
+        accountName: cashAccountResponse.accountName,
+        accountId: cashAccountResponse._id,
+        openingBalance: cashAccountResponse.openingBalance || 0,
+        netAmount: 0,
+        email: cashAccountResponse.email || "",
+        phone: cashAccountResponse.phoneNo || "",
+      });
+    }
+  }, [
+    accountType,
+    cashAccountResponse,
+    accountId,
+    company,
+    updateTransactionData,
+  ]);
 
   /**
    * Handle clicks outside dropdown to close it
    */
   useEffect(() => {
     const handleClickOutside = (e) => {
-      const isOutsideDropdown = dropdownRef.current && !dropdownRef.current.contains(e.target);
-      const isOutsideInput = inputRef.current && !inputRef.current.contains(e.target);
-      
+      const isOutsideDropdown =
+        dropdownRef.current && !dropdownRef.current.contains(e.target);
+      const isOutsideInput =
+        inputRef.current && !inputRef.current.contains(e.target);
+
       if (isOutsideDropdown && isOutsideInput) {
         setShowDropdown(false);
       }
@@ -121,33 +232,60 @@ const TransactionAccountSelector = ({
    * Handle search input changes
    * Clears selected account when user types
    */
-  const handleInputChange = useCallback((e) => {
+  // const handleInputChange = useCallback(
+  //   (e) => {
+  //     const value = e.target.value;
+  //     setSearchTerm(value);
+  //     setShowDropdown(true);
+  //   },
+  //   [updateTransactionData]
+  // );
+
+  const handleInputChange = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
     setShowDropdown(true);
-  }, [updateTransactionData]);
+  };
 
   /**
    * Handle account selection from dropdown
    * Updates transaction with selected account details
    */
-  const handleSelectAccount = useCallback((account) => {
-    const truncatedName = truncate(account.accountName, TRUNCATE_LENGTH);
-    setSearchTerm(truncatedName);
-    
-    updateTransactionData({
-      accountName: account.accountName,
-      accountId: account._id,
-      openingBalance: account.openingBalance || 0,
-      netAmount: 0,
-      email: account.email,
-      phone: account.phoneNo,
-    });
+  const handleSelectAccount = useCallback(
+    (account) => {
+      const truncatedName = truncate(account.accountName, TRUNCATE_LENGTH);
+      setSearchTerm(truncatedName);
 
+      // Find matching price level from customer's priceLevel field
+      let selectedPriceLevel = priceLevel;
+      let selectedPriceLevelName = priceLevelName;
 
-    
-    setShowDropdown(false);
-  }, [updateTransactionData]);
+      if (account.priceLevel) {
+        const matchingLevel = priceLevels.find(
+          (level) => level._id === account.priceLevel._id
+        );
+
+        if (matchingLevel) {
+          selectedPriceLevel = matchingLevel._id;
+          selectedPriceLevelName = matchingLevel.priceLevelName;
+        }
+      }
+
+      updateTransactionData({
+        accountName: account.accountName,
+        accountId: account._id,
+        openingBalance: account.openingBalance || 0,
+        netAmount: 0,
+        email: account.email,
+        phone: account.phoneNo,
+        priceLevel: selectedPriceLevel,
+        priceLevelName: selectedPriceLevelName,
+      });
+
+      setShowDropdown(false);
+    },
+    [updateTransactionData, priceLevels, priceLevel, priceLevelName]
+  );
 
   /**
    * Show dropdown when input is focused (if search term is valid)
@@ -159,20 +297,23 @@ const TransactionAccountSelector = ({
   }, [searchTerm]);
 
   /**
-   * Handle account type change (customer/others)
+   * Handle account type change (customer/cash)
    */
-  const handleAccountTypeChange = useCallback((newType) => {
-    updateTransactionData({
-      accountType: newType,
-      accountName: "",
-      accountId: "",
-      openingBalance: 0,
-      netAmount: 0,
-      email: "",
-      phone: "",
-    });
-    setSearchTerm("");
-  }, [updateTransactionData]);
+  const handleAccountTypeChange = useCallback(
+    (newType) => {
+      updateTransactionData({
+        accountType: newType,
+        accountName: "",
+        accountId: "",
+        openingBalance: 0,
+        netAmount: 0,
+        email: "",
+        phone: "",
+      });
+      setSearchTerm("");
+    },
+    [updateTransactionData]
+  );
 
   /**
    * Clear selected account
@@ -190,6 +331,24 @@ const TransactionAccountSelector = ({
     setSearchTerm("");
   }, [updateTransactionData]);
 
+  /**
+   * Handle price level change
+   */
+  const handlePriceLevelChange = useCallback(
+    (e) => {
+      const selectedId = e.target.value;
+      const selectedLevel = priceLevels.find(
+        (level) => level._id === selectedId
+      );
+
+      updateTransactionData({
+        priceLevel: selectedId,
+        priceLevelName: selectedLevel?.priceLevelName || "",
+      });
+    },
+    [updateTransactionData, priceLevels]
+  );
+
   // ============================================================================
   // RENDER HELPERS
   // ============================================================================
@@ -203,22 +362,22 @@ const TransactionAccountSelector = ({
         <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 animate-spin text-blue-500" />
       );
     }
-    
+
     if (accountId) {
       return (
         <X
-          className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+          className="absolute mt-[1px] right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 hover:text-slate-600 cursor-pointer"
           onClick={handleClearAccount}
         />
       );
     }
-    
+
     if (searchTerm.length >= MIN_SEARCH_LENGTH) {
       return (
         <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
       );
     }
-    
+
     return null;
   };
 
@@ -284,11 +443,8 @@ const TransactionAccountSelector = ({
   // ============================================================================
   // MAIN RENDER
   // ============================================================================
-  const isDisabled = accountType === "others";
-  const disabledClasses = isDisabled ? "opacity-50 pointer-events-none" : "";
-
   return (
-    <div className="grid grid-cols-3 gap-x-1 gap-y-2 bg-white px-3">
+    <div className="grid grid-cols-5 gap-x-1 gap-y-2 bg-white px-3">
       {/* ====================================================================== */}
       {/* ACCOUNT TYPE SELECTOR */}
       {/* ====================================================================== */}
@@ -313,24 +469,24 @@ const TransactionAccountSelector = ({
             <input
               type="radio"
               name="accountType"
-              value="others"
-              checked={accountType === "others"}
+              value="cash"
+              checked={accountType === "cash"}
               onChange={(e) => handleAccountTypeChange(e.target.value)}
               className="mr-1 text-blue-600 scale-75 cursor-pointer"
             />
-            Others
+            Other
           </label>
         </div>
       </div>
 
       {/* ====================================================================== */}
-      {/* ACCOUNT NAME WITH AUTOCOMPLETE */}
+      {/* ACCOUNT SEARCH (Only for Customer) */}
       {/* ====================================================================== */}
-      <div className={`relative ${disabledClasses}`}>
+      <div className="relative">
         <label className="block text-[9px] font-medium text-slate-700 mb-1">
-          {partyLabel} Name
+          Search {partyLabel}
         </label>
-        
+
         <div className="relative">
           <input
             ref={inputRef}
@@ -338,8 +494,11 @@ const TransactionAccountSelector = ({
             value={searchTerm}
             onChange={handleInputChange}
             onFocus={handleInputFocus}
+            disabled={accountType === "cash"}
             placeholder={`Search ${partyLabel.toLowerCase()} name`}
-            className="w-full px-2 py-1 pr-7 border border-slate-300 rounded text-[9px] focus:ring-1 focus:ring-blue-500"
+            className={`  ${
+              accountType === "cash" ? "bg-slate-200" : ""
+            }   w-full px-2 py-1 pr-7 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500`}
             autoComplete="off"
           />
           {renderInputIcon()}
@@ -349,7 +508,7 @@ const TransactionAccountSelector = ({
         {showDropdown && searchTerm.length >= MIN_SEARCH_LENGTH && (
           <div
             ref={dropdownRef}
-            className="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded shadow-lg max-h-48 overflow-y-auto"
+            className="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-xs shadow-lg max-h-48 overflow-y-auto"
           >
             {renderDropdownContent()}
           </div>
@@ -364,24 +523,65 @@ const TransactionAccountSelector = ({
       </div>
 
       {/* ====================================================================== */}
+      {/* CUSTOMER/PARTY NAME (Display or Editable) */}
+      {/* ====================================================================== */}
+      <div>
+        <label className="block text-[9px] font-medium text-slate-700 mb-1">
+          {partyLabel} Name
+        </label>
+        <input
+          type="text"
+          value={accountName}
+          onChange={(e) =>
+            updateTransactionData({ accountName: e.target.value })
+          }
+          placeholder={`Enter ${partyLabel.toLowerCase()} name`}
+          disabled={accountType === "customer"}
+          className={`w-full px-2 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500 ${
+            accountType === "customer" ? "bg-slate-200 " : ""
+          }`}
+        />
+      </div>
+
+      {/* ====================================================================== */}
       {/* OPENING BALANCE */}
       {/* ====================================================================== */}
-      <div className={disabledClasses}>
+      <div>
         <label className="block text-[9px] font-medium text-slate-700 mb-1">
           Opening Balance
         </label>
-        <input
-          type="number"
+        <NumericFormat
+          prefix="₹"
+          thousandsGroupStyle="lakh"
+          thousandSeparator=","
           value={openingBalance}
           disabled
-          // onChange={(e) =>
-          //   updateTransactionField(
-          //     "openingBalance",
-          //     parseFloat(e.target.value) || 0
-          //   )
-          // }
-          className="w-full px-2 py-1 border border-slate-300 rounded text-[9px] focus:ring-1 focus:ring-blue-500"
+          className={`w-full px-2 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500 bg-slate-200 
+          `}
         />
+      </div>
+
+      {/* ====================================================================== */}
+      {/* PRICE LEVEL */}
+      {/* ====================================================================== */}
+      <div>
+        <label className="block text-[9px] font-medium text-slate-700 mb-1">
+          Price Level
+        </label>
+        <select
+          value={priceLevel || ""}
+          onChange={handlePriceLevelChange}
+          className={`w-full px-2 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500
+          
+          `}
+        >
+          <option value="">Select price level</option>
+          {priceLevels.map((level) => (
+            <option key={level._id} value={level._id}>
+              {level.priceLevelName}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   );

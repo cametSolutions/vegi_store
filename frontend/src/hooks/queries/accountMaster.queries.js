@@ -1,6 +1,6 @@
 // hooks/queries/accountMasterQueries.js
 import { queryOptions } from '@tanstack/react-query';
-import { accountMasterService } from '../../api/accountMasterApi';
+import { accountMasterService } from '../../api/services/accountMaster.service';
 
 export const accountMasterQueries = {
   all: () => ['accountMaster'],
@@ -24,4 +24,6 @@ export const accountMasterQueries = {
     queryFn: () => accountMasterService.getById(id),
     enabled: !!id,
   }),
+
+
 };

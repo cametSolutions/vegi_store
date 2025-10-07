@@ -22,22 +22,14 @@ export const transactionTypes = [
 ];
 
 export const products = [
-  { code: "V001", name: "Tomato", rate: 40 },
-  { code: "V002", name: "Onion", rate: 30 },
-  { code: "V003", name: "Potato", rate: 25 },
-  { code: "V004", name: "Carrot", rate: 45 },
-  { code: "V005", name: "Cabbage", rate: 20 },
-  { code: "V006", name: "Cauliflower", rate: 35 },
-  { code: "V007", name: "Brinjal", rate: 30 },
-  { code: "V008", name: "Okra", rate: 50 },
-];
-
-export const unitOptions = [
-  { value: "kg", label: "kg" },
-  { value: "piece", label: "piece" },
-  { value: "dozen", label: "dozen" },
-  { value: "liter", label: "liter" },
-  { value: "box", label: "box" },
+  { itemCode: "V001", itemName: "Tomato", rate: 40 },
+  { itemCode: "V002", itemName: "Onion", rate: 30 },
+  { itemCode: "V003", itemName: "Potato", rate: 25 },
+  { itemCode: "V004", itemName: "Carrot", rate: 45 },
+  { itemCode: "V005", itemName: "Cabbage", rate: 20 },
+  { itemCode: "V006", itemName: "Cauliflower", rate: 35 },
+  { itemCode: "V007", itemName: "Brinjal", rate: 30 },
+  { itemCode: "V008", itemName: "Okra", rate: 50 },
 ];
 
 // ==================== LABEL HELPERS ====================
@@ -76,17 +68,18 @@ export const createEmptyTransaction = () => ({
   transactionNumber: "",
   accountType: "customer",
   accountName: "",
+  priceLevel: "",
+  priceLevelName: "",
   items: [],
 
-  // Amount breakdown
-  subtotal: 0, // sum of product amounts (price * qty)
-  taxableAmount: 0, // subtotal of taxable products
-  taxAmount: 0, // total tax on taxableAmount
-  amountAfterTax: 0, // subtotal + taxAmount
+  // Amount breakdown totals (numeric)
+  subtotal: 0, // sum of product base amounts (price * qty)
+  totalTaxAmount: 0, // total tax amount summed from items
+  totalAmountAfterTax: 0, // total of amounts after tax from all items
   discount: 0, // discount % or fixed amount
-  discountAmount: 0, // discount value
-  openingBalance: 0, // previous dues of customer
-  netAmount: 0, // amountAfterTax - discountAmount + openingBalance
+  discountAmount: 0, // discount value in currency
+  openingBalance: 0, // previous customer dues
+  netAmount: 0, // totalAmountAfterTax - discountAmount + openingBalance
   paidAmount: 0, // amount paid by customer
   closingBalanceAmount: 0, // netAmount - paidAmount
 
@@ -100,33 +93,28 @@ export const calculateTransactionTotals = (transaction) => {
 
   // 1️⃣ Subtotal
   const subtotal = transaction.items.reduce(
-    (sum, item) => sum + item.amount,
+    (sum, item) => sum + parseFloat(item?.baseAmount),
     0
   );
 
-  // 2️⃣ Taxable Amount (default taxable = true)
-  const taxableAmount = transaction.items
-    .filter((item) => item.taxable !== false)
-    .reduce((sum, item) => sum + item.amount, 0);
-
-  // 3️⃣ Tax Amount
-  const taxRate = transaction.taxRate || 0;
-  const taxAmount = (taxableAmount * taxRate) / 100;
-
+  const totalTaxAmount = transaction.items.reduce(
+    (sum, item) => sum + parseFloat(item?.taxAmount),
+    0
+  );
   // 4️⃣ Amount after tax
-  const amountAfterTax = subtotal + taxAmount;
+  const totalAmountAfterTax = subtotal + totalTaxAmount;
 
   // 5️⃣ Discount
   let discountAmount = 0;
   if (transaction.discountType === "percent") {
-    discountAmount = (amountAfterTax * transaction.discount) / 100;
+    discountAmount = (totalAmountAfterTax * transaction.discount) / 100;
   } else {
     discountAmount = transaction.discount; // fixed discount
   }
 
   // 6️⃣ Net Amount
   const netAmount =
-    amountAfterTax - discountAmount + transaction.openingBalance;
+    totalAmountAfterTax - discountAmount + transaction.openingBalance;
 
   // 7️⃣ Closing Balance
   const closingBalanceAmount = netAmount - transaction.paidAmount;
@@ -134,9 +122,8 @@ export const calculateTransactionTotals = (transaction) => {
   return {
     ...transaction,
     subtotal,
-    taxableAmount,
-    taxAmount,
-    amountAfterTax,
+    totalTaxAmount,
+    totalAmountAfterTax,
     discountAmount,
     netAmount,
     closingBalanceAmount,
@@ -155,13 +142,52 @@ export const calculateClosingBalance = (
   return openingBalance + netAmount * multiplier - paidAmount;
 };
 
-// ==================== REACT-HOOK FRIENDLY MEMOIZED CALC ====================
-import { useMemo } from "react";
+// ==================== RECALCULATE PRICE LEVEL  ====================
+export const recalculateTransactionOnPriceLevelChange = (transaction) => {
+  // // update the priceLevel fields
+  // transaction.priceLevel = selectedPriceLevelId;
+  // transaction.priceLevelName = selectedPriceLevelName || "";
 
+  const selectedPriceLevelId = transaction.priceLevel;
 
-export const useTransactionTotals = (transaction) => {
-  return useMemo(() => {
-    console.log("heavy calculations2"); // runs only when transaction changes
-    return calculateTransactionTotals(transaction);
-  }, [transaction.openingBalance]);
+  // update each item rate and recalc baseAmount and tax amounts
+  const updatedItems = transaction.items.map((item) => {
+    const priceLevelObj = item.priceLevels.find(
+      (pl) => pl.priceLevel._id === selectedPriceLevelId
+    );
+    const newRate = priceLevelObj
+      ? parseFloat(priceLevelObj.rate)
+      : parseFloat(item.rate);
+
+    const qty = parseFloat(item.quantity);
+    const baseAmount = newRate * qty;
+
+    const taxable = item.taxable;
+    const taxRate = parseFloat(item.taxRate || 0);
+    const taxAmount = taxable ? (baseAmount * taxRate) / 100 : 0;
+
+    const amountAfterTax = baseAmount + taxAmount;
+
+    return {
+      ...item,
+      rate: newRate,
+      baseAmount,
+      taxAmount,
+      amountAfterTax,
+    };
+  });
+
+  // update items in transaction
+  const updatedTransaction = {
+    ...transaction,
+    items: updatedItems,
+  };
+
+  // recalc transaction totals using existing calculateTransactionTotals function
+  const recalculatedTransaction =
+    calculateTransactionTotals(updatedTransaction);
+
+  console.log("recalculatedTransaction", recalculatedTransaction);
+
+  return recalculatedTransaction;
 };

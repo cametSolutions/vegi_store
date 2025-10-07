@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useCallback } from "react";
+import React, { useEffect, useMemo } from "react";
 import TransactionAccountSelectorComponent from "./components/TransactionAccountSelector";
 import AddItemFormComponent from "./components/AddItemForm";
 import ItemsTableComponent from "./components/ItemsTable";
@@ -28,17 +28,18 @@ const CreateTransaction = () => {
 
   const {
     transactionData,
-    newItem,
     updateTransactionData,
     updateTransactionField,
+    updateItemQuantity,
+    removeItem,
+    handleDiscountChange,
+    handlePaidAmountChange,
+    newItem,
+
     updateNewItem,
     selectProduct,
     addItem,
-    updateItemQuantity,
-    removeItem,
     setTransactionData,
-    handleDiscountChange,
-    handlePaidAmountChange,
   } = useTransaction();
 
   const currentTransactionType = useMemo(
@@ -56,19 +57,6 @@ const CreateTransaction = () => {
   const selectedBranchFromStore = useSelector(
     (state) => state.companyBranch?.selectedBranch
   );
-
-  // Recalculate totals automatically
-  // useEffect(() => {
-  //   setTransactionData((prev) => calculateTransactionTotals(prev));
-  // }, [
-  //   transactionData.openingBalance,
-  //   // transactionData.items,
-  //   // transactionData.discount,
-  //   // transactionData.discountType,
-  //   // transactionData.paidAmount,
-  //   // transactionData.taxRate,
-  //   setTransactionData,
-  // ]);
 
   console.log("transactionData", transactionData);
 
@@ -92,6 +80,9 @@ const CreateTransaction = () => {
               accountName={transactionData?.accountName}
               openingBalance={transactionData?.openingBalance}
               accountId={transactionData?.accountId}
+              transactionType={transactionData?.transactionType}
+              priceLevel={transactionData?.priceLevel}
+              priceLevelName={transactionData?.priceLevelName}
               // transactionData={transactionData}
               updateTransactionField={updateTransactionField}
               updateTransactionData={updateTransactionData}
@@ -100,23 +91,24 @@ const CreateTransaction = () => {
             />
 
             <AddItemForm
-              newItem={newItem}
-              onNewItemChange={updateNewItem}
-              products={products}
-              onProductSelect={selectProduct}
-              onAddItem={addItem}
+              items={transactionData?.items}
+              branch={selectedBranchFromStore?._id}
+              company={selectedCompanyFromStore?._id}
+              priceLevel={transactionData?.priceLevel}
+              updateTransactionField={updateTransactionField}
+              addItem={addItem}
             />
           </div>
 
           <div className="flex-1">
             <ItemsTable
-              items={transactionData.items}
+              items={transactionData?.items}
               onUpdateQuantity={updateItemQuantity}
               onRemoveItem={removeItem}
             />
 
             <TransactionSummary
-              total={transactionData.total}
+              total={transactionData.subtotal}
               netAmount={transactionData.netAmount}
               discount={transactionData.discount}
               paidAmount={transactionData.paidAmount}

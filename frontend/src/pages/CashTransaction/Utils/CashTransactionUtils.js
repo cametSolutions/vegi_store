@@ -23,3 +23,19 @@ export const getTransactionType = (location) => {
   const pathName = location?.pathname || "";
   return pathName?.split("/")[2];
 };
+export const createEmptyTransaction = () => ({
+    accountName: '',
+     transactionNumber: "",
+  accountType: "customer",
+    amount: '',
+    previousBalanceAmount: '',
+    narration: '',
+    closingBalanceAmount: '',
+
+     chequeNumber: '',
+    bank: '',
+    description: '',
+    paymentMode: 'cheque',
+    transactionDate: new Date().toISOString().split("T")[0],
+    transactionType: "reciept",
+});

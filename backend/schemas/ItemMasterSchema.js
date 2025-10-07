@@ -1,32 +1,3 @@
-// import mongoose from "mongoose";
-// const ItemMasterSchema = new mongoose.Schema(
-//   {
-//     companyId: {
-//       type: mongoose.Schema.Types.ObjectId,
-//       ref: "Company",
-//       required: [true, "Company id is required"],
-//     },
-//     branchIds: [
-//       {
-//         type: mongoose.Schema.Types.ObjectId,
-//         ref: "Branch",
-//         required: [true, "Branch id is required"],
-//       },
-//     ],
-//     itemName: { type: String, required: true },
-//     itemCode: { type: String, required: true },
-//     unit: { type: String },
-//     // dynamic price levels
-//     priceLevels: {
-//       type: Map,
-//       of: Number,
-//       default: {},
-//     },
-//   },
-//   { timestamps: true }
-// );
-// export default ItemMasterSchema;
-
 import mongoose from "mongoose";
 
 const ItemMasterSchema = new mongoose.Schema(
@@ -223,6 +194,64 @@ ItemMasterSchema.statics.getOutOfStockItems = function (branchId) {
     "stock.branch": branchId,
     "stock.currentStock": { $lte: 0 },
   });
+};
+
+//// search by item Code or itemName
+ItemMasterSchema.statics.searchItems = async function (
+  searchTerm,
+  companyId,
+  branchId,
+  limit = 25,
+  exactMatch = false
+) {
+  let searchCondition;
+
+  if (exactMatch) {
+  const searchRegex = new RegExp(`^${searchTerm}$`, "i"); // exact match, ignore case
+  searchCondition = {
+    $or: [{ itemCode: searchRegex }, { itemName: searchRegex }],
+  };
+}else {
+    const searchRegex = new RegExp(searchTerm, "i");
+    searchCondition = {
+      $or: [{ itemCode: searchRegex }, { itemName: searchRegex }],
+    };
+  }
+
+  const items = await this.find({
+    ...searchCondition,
+    company: companyId,
+    "stock.branch": branchId,
+  })
+    .sort({
+      itemCode: 1,
+      itemName: 1,
+    })
+    .limit(parseInt(limit))
+    .populate({
+      path:"priceLevels.priceLevel",
+      model:"PriceLevel",
+      select:"priceLevelName "
+    })
+    .populate({
+      path: "stock.branch",
+      model: "Branch",
+      select: "branchName ", // adjust fields to populate as needed
+    })
+    .lean();
+
+    // console.log("items", items);
+    
+
+  // Filter stock by branchId for each item
+  const filteredItems = items.map(item => ({
+    ...item,
+    stock: item.stock?.filter(stockEntry => 
+      String(stockEntry.branch._id) === String(branchId)
+    ) || []
+  }));
+
+  return filteredItems;
 };
 
 // Get branch-wise summary for all items

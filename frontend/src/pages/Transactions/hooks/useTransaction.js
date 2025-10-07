@@ -3,6 +3,7 @@ import {
   calculateItemAmount,
   createEmptyTransaction,
   calculateTransactionTotals,
+  recalculateTransactionOnPriceLevelChange,
 } from "../utils/transactionUtils";
 
 export const useTransaction = (initialData = null) => {
@@ -52,18 +53,37 @@ export const useTransaction = (initialData = null) => {
     }));
   }, []);
 
-  const addItem = useCallback(() => {
-    if (newItem.code && newItem.qty > 0) {
-      const amount = calculateItemAmount(newItem.qty, newItem.rate);
-      setTransactionData((prev) => ({
-        ...prev,
-        items: [...prev.items, { ...newItem, amount }],
-      }));
-      setNewItem({ code: "", name: "", unit: "kg", qty: 0, rate: 0 });
-      return true;
+  // Utility function to handle adding/updating items
+  const addItem = (items, newItem) => {
+    // Convert quantity and rate to numbers
+    const quantity = parseFloat(newItem.quantity) || 0;
+    const rate = parseFloat(newItem.rate) || 0;
+    const baseAmount = quantity * rate;
+    const amountAfterTax = baseAmount; //// currently assuming no tax
+
+    const normalizedItem = {
+      ...newItem,
+      quantity: quantity.toString(), // for consistent input field use
+      rate: rate.toString(),
+      baseAmount: baseAmount.toString(),
+      amountAfterTax: amountAfterTax.toString(),
+    };
+
+    // Check for item existence
+    const existingItemIndex = items.findIndex(
+      (item) => item?.item === normalizedItem?.item
+    );
+
+    if (existingItemIndex !== -1) {
+      // Update and move to top
+      const updatedItems = [...items];
+      updatedItems.splice(existingItemIndex, 1);
+      return [normalizedItem, ...updatedItems];
+    } else {
+      // Add new item to top
+      return [normalizedItem, ...items];
     }
-    return false;
-  }, [newItem]);
+  };
 
   const updateItemQuantity = useCallback((index, qty) => {
     setTransactionData((prev) => ({
@@ -97,6 +117,26 @@ export const useTransaction = (initialData = null) => {
     (paidAmount) => updateTransactionField("paidAmount", paidAmount),
     [updateTransactionField]
   );
+
+  const modifyOnPriceLevelChange = useCallback(
+    (transaction, selectedPriceLevelId, selectedPriceLevelName) => {
+      setTransactionData((prev) =>
+        recalculateTransactionOnPriceLevelChange(
+          prev,
+          selectedPriceLevelId,
+          selectedPriceLevelName
+        )
+      );
+    },
+    []
+  );
+
+  /// ===================== UPDATE TOTALS AUTOMATICALLY =====================
+  useEffect(() => {
+    setTransactionData((prev) => recalculateTransactionOnPriceLevelChange(prev));
+  }, [
+    transactionData.priceLevel
+  ]);
 
   return {
     transactionData, // ⚡ always contains updated totals

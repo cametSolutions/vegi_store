@@ -1,4 +1,4 @@
-import { createResourceApi } from "./apiClient";
+import { createResourceApi } from "./client/apiClient";
 export const branchApi=createResourceApi("branch",{
 create:"createbranches",//POST route
 getAll:"getallbranches",//GET route

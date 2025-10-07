@@ -5,7 +5,7 @@ export default function TransactionList() {
   const [searchTerm, setSearchTerm] = useState('');
   
   const transactions = [
-    { billNo: 'PUR-280596', PayPaydate: '27/09/2025', AccountName: 'BABU SAS', PreviousBlanceAmount: '₹3716.40', amount: '₹0.00', paid: '₹3716.40', closingBalnceAmount: '₹2000.00', status: 'unpaid' },
+    { billNo: 'PUR-280596', Paydate: '27/09/2025', AccountName: 'BABU SAS', PreviousBlanceAmount: '₹3716.40', amount: '₹0.00', paid: '₹3716.40', closingBalnceAmount: '₹2000.00', status: 'unpaid' },
     { billNo: 'CN-280595', Paydate: '27/09/2025', AccountName: 'SULYMAN', PreviousBlanceAmount: '₹1051.30', amount: '₹130.00', paid: '₹961.30', closingBalnceAmount: '₹0.00', status: 'paid' },
     { billNo: 'INV-280594', Paydate: '27/09/2025', AccountName: 'BAVU P', PreviousBlanceAmount: '₹6273.60', amount: '₹500.00', paid: '₹5773.60', closingBalnceAmount: '₹0.00', status: 'paid' },
     { billNo: 'PUR-280593', Paydate: '27/09/2025', AccountName: 'ANTHU A.', PreviousBlanceAmount: '₹2144.80', amount: '₹0.00', paid: '₹2144.80', closingBalnceAmount: '₹0.00', status: 'paid' },
