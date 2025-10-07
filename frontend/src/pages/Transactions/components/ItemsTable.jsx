@@ -10,7 +10,7 @@ const ItemsTable = ({ items, onUpdateQuantity, onRemoveItem }) => {
         <table className="w-full text-[9px]">
           <thead>
             <tr>
-              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-left z-10">
+              <th className="sticky top-0 bg-slate-600 text-white px-4 py-1.5 text-left z-10">
                 Code
               </th>
               <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center z-10">
@@ -36,35 +36,21 @@ const ItemsTable = ({ items, onUpdateQuantity, onRemoveItem }) => {
           <tbody className="divide-y divide-slate-200 text-center">
             {items.map((item, index) => (
               <tr key={index} className="hover:bg-slate-50">
-                <td className="px-2 py-1.5 font-medium text-slate-900 text-left">
+                <td className="px-5 py-1.5 font-medium text-slate-900 text-left">
                   {item.itemCode}
                 </td>
                 <td className="px-2 py-1.5 text-slate-700">{item.itemName}</td>
                 <td className="px-2 py-1.5 text-slate-700">{item.unit}</td>
                 <td className="px-2 py-1.5">
-                  <div className="flex items-center gap-1 justify-center">
-                    <button
-                      onClick={() =>
-                        onUpdateQuantity(index, Math.max(0, item.quantity - 1))
-                      }
-                      className="w-5 h-5 bg-slate-200 hover:bg-slate-300 rounded flex items-center justify-center transition-colors cursor-pointer"
-                    >
-                      <Minus className="w-2.5 h-2.5" />
-                    </button>
+                  <div className="">
                     <span className="w-6 text-center font-medium">
                       {item.quantity}
                     </span>
-                    <button
-                      onClick={() => onUpdateQuantity(index, item.quantity + 1)}
-                      className="w-5 h-5 bg-slate-200 hover:bg-slate-300 rounded flex items-center justify-center transition-colors cursor-pointer"
-                    >
-                      <Plus className="w-2.5 h-2.5" />
-                    </button>
                   </div>
                 </td>
                 <td className="px-2 py-1.5 text-slate-700">₹{item.rate}</td>
                 <td className="px-2 py-1.5 font-semibold text-slate-900">
-                  ₹{item.amount}
+                  ₹{item.amountAfterTax}
                 </td>
                 <td className="px-2 py-1.5">
                   <button

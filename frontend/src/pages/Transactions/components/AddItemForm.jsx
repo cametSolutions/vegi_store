@@ -96,6 +96,7 @@ const AddItemForm = ({
           item: foundProduct?._id,
           itemCode: foundProduct.itemCode || debouncedSearchTerm,
           itemName: foundProduct.itemName || "",
+          priceLevels: foundProduct.priceLevels || [],
           unit: foundProduct.unit || "",
           rate: rate.toString() || "",
           taxable:false,
@@ -118,6 +119,8 @@ const AddItemForm = ({
     // Include priceLevel as a dependency
     // eslint-disable-next-line
   }, [searchResponse, isFetching, shouldSearch]);
+
+  
 
   useEffect(() => {
     if (!localItem.item) return; // No item loaded, no update needed
@@ -199,6 +202,7 @@ const AddItemForm = ({
       itemCode: "",
       itemName: "",
       unit: units[0]?.value || "",
+      priceLevels: [],
       quantity: "0",
       rate: "0",
       baseAmount: "0",

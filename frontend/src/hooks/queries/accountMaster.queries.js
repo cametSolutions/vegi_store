@@ -24,4 +24,6 @@ export const accountMasterQueries = {
     queryFn: () => accountMasterService.getById(id),
     enabled: !!id,
   }),
+
+
 };

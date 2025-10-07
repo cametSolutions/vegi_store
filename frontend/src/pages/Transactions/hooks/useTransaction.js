@@ -3,6 +3,7 @@ import {
   calculateItemAmount,
   createEmptyTransaction,
   calculateTransactionTotals,
+  recalculateTransactionOnPriceLevelChange,
 } from "../utils/transactionUtils";
 
 export const useTransaction = (initialData = null) => {
@@ -19,16 +20,16 @@ export const useTransaction = (initialData = null) => {
   });
 
   // ===================== UPDATE TOTALS AUTOMATICALLY =====================
-    useEffect(() => {
-      setTransactionData((prev) => calculateTransactionTotals(prev));
-    }, [
-      transactionData.items,
-      transactionData.discount,
-      transactionData.discountType,
-      transactionData.openingBalance,
-      transactionData.paidAmount,
-      transactionData.taxRate,
-    ]);
+  useEffect(() => {
+    setTransactionData((prev) => calculateTransactionTotals(prev));
+  }, [
+    transactionData.items,
+    transactionData.discount,
+    transactionData.discountType,
+    transactionData.openingBalance,
+    transactionData.paidAmount,
+    transactionData.taxRate,
+  ]);
 
   // ===================== TRANSACTION HANDLERS =====================
   const updateTransactionData = useCallback((updates) => {
@@ -54,8 +55,6 @@ export const useTransaction = (initialData = null) => {
 
   // Utility function to handle adding/updating items
   const addItem = (items, newItem) => {
-    console.log("newItem", newItem);
-
     // Convert quantity and rate to numbers
     const quantity = parseFloat(newItem.quantity) || 0;
     const rate = parseFloat(newItem.rate) || 0;
@@ -66,8 +65,8 @@ export const useTransaction = (initialData = null) => {
       ...newItem,
       quantity: quantity.toString(), // for consistent input field use
       rate: rate.toString(),
-      baseAmount:baseAmount.toString(),
-      amountAfterTax:amountAfterTax.toString(),
+      baseAmount: baseAmount.toString(),
+      amountAfterTax: amountAfterTax.toString(),
     };
 
     // Check for item existence
@@ -85,7 +84,6 @@ export const useTransaction = (initialData = null) => {
       return [normalizedItem, ...items];
     }
   };
-
 
   const updateItemQuantity = useCallback((index, qty) => {
     setTransactionData((prev) => ({
@@ -119,6 +117,26 @@ export const useTransaction = (initialData = null) => {
     (paidAmount) => updateTransactionField("paidAmount", paidAmount),
     [updateTransactionField]
   );
+
+  const modifyOnPriceLevelChange = useCallback(
+    (transaction, selectedPriceLevelId, selectedPriceLevelName) => {
+      setTransactionData((prev) =>
+        recalculateTransactionOnPriceLevelChange(
+          prev,
+          selectedPriceLevelId,
+          selectedPriceLevelName
+        )
+      );
+    },
+    []
+  );
+
+  /// ===================== UPDATE TOTALS AUTOMATICALLY =====================
+  useEffect(() => {
+    setTransactionData((prev) => recalculateTransactionOnPriceLevelChange(prev));
+  }, [
+    transactionData.priceLevel
+  ]);
 
   return {
     transactionData, // ⚡ always contains updated totals

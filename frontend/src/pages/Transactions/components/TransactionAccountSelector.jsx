@@ -41,6 +41,7 @@ const TransactionAccountSelector = ({
   updateTransactionData,
   branch,
   company,
+  modifyOnPriceLevelChange,
 }) => {
   // ============================================================================
   // CONSTANTS
@@ -92,7 +93,7 @@ const TransactionAccountSelector = ({
       "customer",
       RESULT_LIMIT
     ),
-    enabled: isSearchEnabled,
+    enabled: isSearchEnabled ,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     placeholderData: { success: false, count: 0, data: [] },

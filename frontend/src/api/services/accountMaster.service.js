@@ -31,4 +31,19 @@ export const accountMasterService = {
       throw new Error("An unexpected error occurred");
     }
   },
+
+    list: async ( companyId, branchId, accountType) => {
+    try {
+      const response = await api.get("/accountmaster/list", {
+        params: { searchTerm, companyId, branchId, accountType, limit },
+      });
+
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
 };
