@@ -151,42 +151,47 @@ export const searchAccounts = async (req, res) => {
       companyId,
       branchId,
       accountType,
-      limit = 25, // Default to 25 results
-      offset = 0, // For potential future pagination
+      limit = 25,
+      offset = 0,
+      withOutstanding, // boolean: true/false
+      outstandingType, // "dr", "cr", "both"
     } = req.query;
 
-    // Validate required query parameters
     if (!searchTerm || !companyId || !branchId || !accountType) {
       return res.status(400).json({
         success: false,
-        message: "searchTerm, companyId, branchId and accountType are required",
+        message:
+          "searchTerm, companyId, branchId, and accountType are required",
       });
     }
 
-    // Parse limit to integer and cap it
-    const parsedLimit = Math.min(parseInt(limit) || 25, 50); // Max 50
+    const parsedLimit = Math.min(parseInt(limit) || 25, 50);
     const parsedOffset = parseInt(offset) || 0;
 
-    // Call the model method with pagination
+    // Build filters object
+    const filters = {};
+    if (withOutstanding !== undefined) {
+      filters.withOutstanding = withOutstanding === "true";
+    }
+
     const result = await AccountMasterModel.searchAccounts(
       companyId,
       searchTerm,
       branchId,
       accountType,
-      {}, // Optional filters
+      filters,
       parsedLimit,
       parsedOffset
     );
 
-    // Get total count for informational purposes
-    const totalCount = result?.totalCount || result?.accounts?.length;
-    const accounts = result?.accounts || result;
+    const totalCount = result?.totalCount || 0;
+    const accounts = result?.accounts || [];
 
     res.status(200).json({
       success: true,
-      count: accounts?.length || 0,
-      totalCount: totalCount, // Total matching records
-      hasMore: totalCount > parsedOffset + accounts?.length, // Are there more results?
+      count: accounts.length,
+      totalCount,
+      hasMore: totalCount > parsedOffset + accounts.length,
       data: accounts,
     });
   } catch (error) {

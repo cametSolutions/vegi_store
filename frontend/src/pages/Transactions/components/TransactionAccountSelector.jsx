@@ -92,8 +92,11 @@ const TransactionAccountSelector = ({
       branch,
       "customer",
       RESULT_LIMIT,
+      {
+        withOutstanding: true, // or false, or omit
+      }
     ),
-    enabled: isSearchEnabled ,
+    enabled: isSearchEnabled,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     placeholderData: { success: false, count: 0, data: [] },
@@ -183,18 +186,18 @@ const TransactionAccountSelector = ({
       company
     ) {
       const truncatedName = truncate(
-        cashAccountResponse.accountName,
+        cashAccountResponse?.accountName,
         TRUNCATE_LENGTH
       );
       setSearchTerm(truncatedName);
 
       updateTransactionData({
-        accountName: cashAccountResponse.accountName,
-        accountId: cashAccountResponse._id,
-        openingBalance: cashAccountResponse.openingBalance || 0,
+        accountName: cashAccountResponse?.accountName,
+        accountId: cashAccountResponse?._id,
+        openingBalance: cashAccountResponse?.outstandingNet || 0,
         netAmount: 0,
-        email: cashAccountResponse.email || "",
-        phone: cashAccountResponse.phoneNo || "",
+        email: cashAccountResponse?.email || "",
+        phone: cashAccountResponse?.phoneNo || "",
       });
     }
   }, [
@@ -211,7 +214,7 @@ const TransactionAccountSelector = ({
   useEffect(() => {
     const handleClickOutside = (e) => {
       const isOutsideDropdown =
-        dropdownRef.current && !dropdownRef.current.contains(e.target);
+        dropdownRef.current && !dropdownRef?.current?.contains(e.target);
       const isOutsideInput =
         inputRef.current && !inputRef.current.contains(e.target);
 
@@ -272,12 +275,12 @@ const TransactionAccountSelector = ({
       }
 
       updateTransactionData({
-        accountName: account.accountName,
-        accountId: account._id,
-        openingBalance: account.openingBalance || 0,
+        accountName: account?.accountName,
+        accountId: account?._id,
+        openingBalance: account?.outstandingNet || 0,
         netAmount: 0,
-        email: account.email,
-        phone: account.phoneNo,
+        email: account?.email,
+        phone: account?.phoneNo,
         priceLevel: selectedPriceLevel,
         priceLevelName: selectedPriceLevelName,
       });
