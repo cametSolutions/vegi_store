@@ -38,6 +38,7 @@ export const useAuth = () => {
 
       // Axios puts server errors inside error.response
       if (error.response) {
+        console.error("Login failed:", error.response.data);
         throw new Error(error.response.data?.message || "Invalid credentials");
       }
       throw error;

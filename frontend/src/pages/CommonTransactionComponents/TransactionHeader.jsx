@@ -1,8 +1,7 @@
 import React from "react";
 import { Calendar } from "lucide-react";
-import { getDocumentLabel } from "../utils/transactionUtils";
 import { useLocation } from "react-router-dom";
-import { capitalizeFirstLetter } from "../../../../../shared/utils/string";
+import { capitalizeFirstLetter } from "../../../../shared/utils/string";
 
 const TransactionHeader = ({
   currentTransactionType,
@@ -52,3 +51,4 @@ const TransactionHeader = ({
 };
 
 export default TransactionHeader;
+

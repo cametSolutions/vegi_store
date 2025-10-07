@@ -3,8 +3,8 @@ import TransactionAccountSelectorComponent from "./components/TransactionAccount
 import AddItemFormComponent from "./components/AddItemForm";
 import ItemsTableComponent from "./components/ItemsTable";
 import TransactionSummaryComponent from "./components/TransactionSummary";
-import TransactionActionsComponent from "./components/TransactionActions";
-import TransactionHeaderComponent from "./components/TransactionHeader";
+import TransactionActionsComponent from "../CommonTransactionComponents/TransactionActions";
+import TransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
 import { products, getTransactionType } from "./utils/transactionUtils";
 import { useTransaction } from "./hooks/useTransaction";
 import { useTransactionActions } from "./hooks/useTransactionActions";
@@ -16,6 +16,8 @@ const TransactionHeader = React.memo(TransactionHeaderComponent);
 const TransactionAccountSelector = React.memo(
   TransactionAccountSelectorComponent
 );
+
+///
 const AddItemForm = React.memo(AddItemFormComponent);
 const ItemsTable = React.memo(ItemsTableComponent);
 const TransactionSummary = React.memo(TransactionSummaryComponent);
