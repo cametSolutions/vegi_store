@@ -91,7 +91,7 @@ const TransactionAccountSelector = ({
       company,
       branch,
       "customer",
-      RESULT_LIMIT
+      RESULT_LIMIT,
     ),
     enabled: isSearchEnabled ,
     refetchOnWindowFocus: false,

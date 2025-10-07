@@ -40,6 +40,8 @@ const CreateTransaction = () => {
     selectProduct,
     addItem,
     setTransactionData,
+    clickedItemInTable,
+    handleItemClickInItemsTable,
   } = useTransaction();
 
   const currentTransactionType = useMemo(
@@ -57,6 +59,10 @@ const CreateTransaction = () => {
   const selectedBranchFromStore = useSelector(
     (state) => state.companyBranch?.selectedBranch
   );
+
+  ///handle itemClick from the items table and pass it to item adding form for edit////
+
+
 
   console.log("transactionData", transactionData);
 
@@ -97,6 +103,7 @@ const CreateTransaction = () => {
               priceLevel={transactionData?.priceLevel}
               updateTransactionField={updateTransactionField}
               addItem={addItem}
+              clickedItemInTable={clickedItemInTable}
             />
           </div>
 
@@ -105,6 +112,7 @@ const CreateTransaction = () => {
               items={transactionData?.items}
               onUpdateQuantity={updateItemQuantity}
               onRemoveItem={removeItem}
+              handleItemClickInItemsTable={handleItemClickInItemsTable}
             />
 
             <TransactionSummary

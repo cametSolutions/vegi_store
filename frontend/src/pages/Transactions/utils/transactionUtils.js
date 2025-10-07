@@ -144,10 +144,6 @@ export const calculateClosingBalance = (
 
 // ==================== RECALCULATE PRICE LEVEL  ====================
 export const recalculateTransactionOnPriceLevelChange = (transaction) => {
-  // // update the priceLevel fields
-  // transaction.priceLevel = selectedPriceLevelId;
-  // transaction.priceLevelName = selectedPriceLevelName || "";
-
   const selectedPriceLevelId = transaction.priceLevel;
 
   // update each item rate and recalc baseAmount and tax amounts
@@ -186,8 +182,6 @@ export const recalculateTransactionOnPriceLevelChange = (transaction) => {
   // recalc transaction totals using existing calculateTransactionTotals function
   const recalculatedTransaction =
     calculateTransactionTotals(updatedTransaction);
-
-  console.log("recalculatedTransaction", recalculatedTransaction);
 
   return recalculatedTransaction;
 };
