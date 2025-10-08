@@ -154,7 +154,6 @@ export const searchAccounts = async (req, res) => {
       limit = 25,
       offset = 0,
       withOutstanding, // boolean: true/false
-      outstandingType, // "dr", "cr", "both"
     } = req.query;
 
     if (!searchTerm || !companyId || !branchId || !accountType) {
