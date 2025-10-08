@@ -15,6 +15,7 @@ const AddItemForm = ({
   priceLevel,
   updateTransactionField,
   addItem,
+  clickedItemInTable,
 }) => {
   // Local state for form fields
   const [localItem, setLocalItem] = useState({
@@ -99,7 +100,7 @@ const AddItemForm = ({
           priceLevels: foundProduct.priceLevels || [],
           unit: foundProduct.unit || "",
           rate: rate.toString() || "",
-          taxable:false,
+          taxable: false,
           taxRate: "0",
           taxAmount: "0",
           // availableStock: currentStock,
@@ -119,8 +120,6 @@ const AddItemForm = ({
     // Include priceLevel as a dependency
     // eslint-disable-next-line
   }, [searchResponse, isFetching, shouldSearch]);
-
-  
 
   useEffect(() => {
     if (!localItem.item) return; // No item loaded, no update needed
@@ -151,6 +150,37 @@ const AddItemForm = ({
       }));
     }
   }, [priceLevel, localItem.item, searchResponse]);
+
+  /// if an item form table is clicked on, set the localItem to the clicked item
+  useEffect(() => {
+    if (clickedItemInTable) {
+      const {
+        item,
+        itemCode,
+        itemName,
+        unit,
+        quantity,
+        rate,
+        taxable,
+        taxRate,
+        taxAmount,
+      } = clickedItemInTable;
+
+      setLocalItem((prev) => ({
+        ...prev,
+        item,
+        itemCode,
+        itemName,
+        unit,
+        quantity,
+        rate,
+        taxable,
+        taxRate,
+        taxAmount,
+      }));
+      codeInputRef.current.focus();
+    }
+  }, [clickedItemInTable]);
 
   // Handle Tab on itemCode field
   const handleCodeKeyDown = (e) => {

@@ -17,10 +17,10 @@ export const accountMasterService = {
   ...accountMasterApi,
 
   // Custom search method specific to account master
-  search: async (searchTerm, companyId, branchId, accountType, limit) => {
+  search: async (searchTerm, companyId, branchId, accountType, limit, filters = {}) => {
     try {
       const response = await api.get("/accountmaster/searchAccounts", {
-        params: { searchTerm, companyId, branchId, accountType, limit },
+        params: { searchTerm, companyId, branchId, accountType, limit,...filters },
       });
 
       return response.data;

@@ -19,6 +19,14 @@ export const useTransaction = (initialData = null) => {
     rate: 0,
   });
 
+  const [clickedItemInTable, setClickedItemInTable] = useState(null);
+
+  ///handle itemClick from the items table and pass it to item adding form for edit////
+
+  const handleItemClickInItemsTable = useCallback((item) => {
+    setClickedItemInTable(item);
+  }, []);
+
   // ===================== UPDATE TOTALS AUTOMATICALLY =====================
   useEffect(() => {
     setTransactionData((prev) => calculateTransactionTotals(prev));
@@ -118,25 +126,14 @@ export const useTransaction = (initialData = null) => {
     [updateTransactionField]
   );
 
-  const modifyOnPriceLevelChange = useCallback(
-    (transaction, selectedPriceLevelId, selectedPriceLevelName) => {
-      setTransactionData((prev) =>
-        recalculateTransactionOnPriceLevelChange(
-          prev,
-          selectedPriceLevelId,
-          selectedPriceLevelName
-        )
-      );
-    },
-    []
-  );
+
 
   /// ===================== UPDATE TOTALS AUTOMATICALLY =====================
   useEffect(() => {
-    setTransactionData((prev) => recalculateTransactionOnPriceLevelChange(prev));
-  }, [
-    transactionData.priceLevel
-  ]);
+    setTransactionData((prev) =>
+      recalculateTransactionOnPriceLevelChange(prev)
+    );
+  }, [transactionData.priceLevel]);
 
   return {
     transactionData, // ⚡ always contains updated totals
@@ -153,5 +150,7 @@ export const useTransaction = (initialData = null) => {
     handlePaidAmountChange,
     clearForm,
     setTransactionData,
+    clickedItemInTable,
+    handleItemClickInItemsTable,
   };
 };

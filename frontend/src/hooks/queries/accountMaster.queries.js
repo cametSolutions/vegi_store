@@ -12,9 +12,9 @@ export const accountMasterQueries = {
     staleTime: 5 * 60 * 1000,
   }),
 
-  search: (searchTerm, companyId,branchId,accountType,limit=25, options = {}) => queryOptions({
-    queryKey: [...accountMasterQueries.all(), 'search', searchTerm, companyId,branchId,accountType, limit],
-    queryFn: () => accountMasterService.search(searchTerm, companyId,branchId,accountType, limit),
+  search: (searchTerm, companyId,branchId,accountType,limit=25,filters={}, options = {},) => queryOptions({
+    queryKey: [...accountMasterQueries.all(), 'search', searchTerm, companyId,branchId,accountType, limit,filters],
+    queryFn: () => accountMasterService.search(searchTerm, companyId,branchId,accountType, limit,filters  ),
     staleTime: 2 * 60 * 1000,
     ...options
   }),

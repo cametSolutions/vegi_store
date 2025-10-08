@@ -1,47 +1,3 @@
-// import mongoose from "mongoose";
-
-// const AccountMasterSchema = new mongoose.Schema(
-//     {
-//         companyId: {
-//             type: mongoose.Schema.Types.ObjectId,
-//             ref: "Company",
-//             required: [true, "Company id is required"]
-//         },
-//         branchId: {
-//             type: mongoose.Schema.Types.ObjectId,
-//             ref: "Branch",
-//             required: [true, "Branch id is required"]
-//         },
-//         accountName: {
-//             type: String,
-//             required: [true, "Account name is required"]
-//         },
-//         accountType: {
-//             type: String,
-//             required: [true, "AccountType is required"]
-//         },
-
-//         address: {
-//             type: String,
-//             required: [true, "Address is required"]
-//         },
-//         openingBalance: {
-//             type: Number,
-//         },
-//         openingBalanceType: {
-//             type: String,
-//         },
-//         phoneNo: {
-//             type: String,
-//         },
-//         pricelevel: {
-//             type: mongoose.Schema.Types.ObjectId,
-//             ref: "Pricelevel", // should match your Pricelevel model name
-//             required: [true, "Price level is required"],
-//         }
-
-//     }, { timestamps: true })
-// export default AccountMasterSchema
 
 import mongoose from "mongoose";
 
@@ -177,26 +133,6 @@ AccountMasterSchema.methods.canMakePurchase = function (amount = 0) {
   return { allowed: true };
 };
 
-// Get formatted address for printing
-AccountMasterSchema.methods.getFormattedAddress = function () {
-  let formatted = this.accountName + "\n";
-  if (this.contactPerson) {
-    formatted += `Contact: ${this.contactPerson}\n`;
-  }
-  formatted += this.address + "\n";
-  if (this.phoneNo) {
-    formatted += `Phone: ${this.phoneNo}\n`;
-  }
-  if (this.email) {
-    formatted += `Email: ${this.email}\n`;
-  }
-  if (this.gstNumber) {
-    formatted += `GST: ${this.gstNumber}`;
-  }
-
-  return formatted;
-};
-
 // ==================== STATIC METHODS ====================
 // Get accounts by type with pagination
 AccountMasterSchema.statics.getAccountsByType = function (
@@ -229,88 +165,135 @@ AccountMasterSchema.statics.searchAccounts = async function (
   limit = 25,
   offset = 0
 ) {
-  // Parsing filters for outstanding presence and type
-  const withOutstanding = filters.withOutstanding; // true, false, or undefined (all)
-  const outstandingType = filters.outstandingType || "both"; // "dr", "cr", or "both"
+  const withOutstanding = filters.withOutstanding; // true, false, or undefined
 
   const searchRegex = new RegExp(searchTerm, "i");
 
-  // Base match conditions for accounts
+  const companyObjId =
+    typeof companyId === "string"
+      ? new mongoose.Types.ObjectId(companyId)
+      : companyId;
+  const branchObjId =
+    typeof branchId === "string"
+      ? new mongoose.Types.ObjectId(branchId)
+      : branchId;
+
   const matchConditions = {
-    company: companyId,
+    company: companyObjId,
     accountType,
-    branch: branchId,
+    branch: branchObjId,
     $or: [{ accountName: searchRegex }, { accountCode: searchRegex }],
   };
 
-  // Convert to ObjectId if needed
-  const companyObjId = typeof companyId === "string" ? new mongoose.Types.ObjectId(companyId) : companyId;
-  const branchObjId = typeof branchId === "string" ? new mongoose.Types.ObjectId(branchId) : branchId;
+  //// here we are going to find the outstanding details of party also
+  const pipeline = [{ $match: matchConditions }];
 
-  // Build aggregation pipeline
-  const pipeline = [
-    { $match: matchConditions },
-
-    // Lookup Outstanding amounts filtered by account, company, branch, and outstandingType
-    {
-      $lookup: {
-        from: "outstandings", // collection name
-        let: { account: "$_id" },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [
-                  { $eq: ["$account", "$$account"] },
-                  { $eq: ["$company", companyObjId] },
-                  { $eq: ["$branch", branchObjId] },
-                  ...(outstandingType !== "both"
-                    ? [{ $eq: ["$outstandingType", outstandingType] }]
-                    : []),
-                ],
+  // Only add outstanding lookup if withOutstanding is true
+  if (withOutstanding === true) {
+    pipeline.push(
+      {
+        $lookup: {
+          from: "outstandings",
+          let: { accountId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$account", "$$accountId"] },
+                    { $eq: ["$company", companyObjId] },
+                    { $eq: ["$branch", branchObjId] },
+                  ],
+                },
               },
             },
-          },
-          {
-            $group: {
-              _id: "$account",
-              totalOutstanding: { $sum: "$closingBalanceAmount" },
+            {
+              $group: {
+                _id: "$outstandingType",
+                total: { $sum: "$closingBalanceAmount" },
+              },
             },
-          },
-        ],
-        as: "outstandings",
-      },
-    },
-
-    // Add totalOutstanding field or default to 0 if no outstanding found
-    {
-      $addFields: {
-        totalOutstanding: {
-          $ifNull: [{ $arrayElemAt: ["$outstandings.totalOutstanding", 0] }, 0],
+          ],
+          as: "outstandingDetails",
         },
       },
-    },
-  ];
-
-  // Apply filter for outstanding presence if specified
-  if (withOutstanding === true) {
-    pipeline.push({ $match: { totalOutstanding: { $gt: 0 } } });
-  } else if (withOutstanding === false) {
-    pipeline.push({ $match: { totalOutstanding: { $eq: 0 } } });
+      {
+        $addFields: {
+          // Extract DR total
+          outstandingDr: {
+            $let: {
+              vars: {
+                drDoc: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: "$outstandingDetails",
+                        as: "item",
+                        cond: { $eq: ["$$item._id", "dr"] },
+                      },
+                    },
+                    0,
+                  ],
+                },
+              },
+              in: { $ifNull: ["$$drDoc.total", 0] },
+            },
+          },
+          // Extract CR total
+          outstandingCr: {
+            $let: {
+              vars: {
+                crDoc: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: "$outstandingDetails",
+                        as: "item",
+                        cond: { $eq: ["$$item._id", "cr"] },
+                      },
+                    },
+                    0,
+                  ],
+                },
+              },
+              in: { $ifNull: ["$$crDoc.total", 0] },
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          // Calculate net outstanding (DR - CR)
+          outstandingNet: {
+            $add: ["$outstandingDr", "$outstandingCr"],
+          },
+          // // Calculate absolute total (|DR| + |CR|)
+          // outstandingTotal: {
+          //   $add: ["$outstandingDr", "$outstandingCr"],
+          // },
+        },
+      },
+      // Remove the temporary outstandingDetails array
+      {
+        $project: {
+          outstandingDetails: 0,
+        },
+      }
+    );
   }
 
-  // Add sorting by accountName
+  // Sort and paginate
   pipeline.push({ $sort: { accountName: 1 } });
-
-  // Pagination: skip and limit
   pipeline.push({ $skip: offset });
   pipeline.push({ $limit: limit });
 
-  // For totalCount, need a separate pipeline without skip and limit but with same filters
-  const countPipeline = pipeline.filter(stage => !("$skip" in stage || "$limit" in stage));
+  // Create count pipeline (exclude skip/limit)
+  const countPipeline = pipeline.filter(
+    (stage) => !("$skip" in stage || "$limit" in stage)
+  );
   countPipeline.push({ $count: "totalCount" });
 
-  // Run both aggregation queries in parallel
+  // Execute both pipelines
   const [accounts, countResult] = await Promise.all([
     this.aggregate(pipeline).exec(),
     this.aggregate(countPipeline).exec(),
