@@ -229,29 +229,94 @@ AccountMasterSchema.statics.searchAccounts = async function (
   limit = 25,
   offset = 0
 ) {
+  // Parsing filters for outstanding presence and type
+  const withOutstanding = filters.withOutstanding; // true, false, or undefined (all)
+  const outstandingType = filters.outstandingType || "both"; // "dr", "cr", or "both"
+
   const searchRegex = new RegExp(searchTerm, "i");
+
+  // Base match conditions for accounts
   const matchConditions = {
     company: companyId,
     accountType,
     branch: branchId,
     $or: [{ accountName: searchRegex }, { accountCode: searchRegex }],
-    ...filters,
   };
 
-  // Execute both queries in parallel for better performance
-  const [accounts, totalCount] = await Promise.all([
-    // Get paginated accounts
-    this.find(matchConditions)
-      .populate("branch", "branchName")
-      .populate("priceLevel", "priceLevelName")
-      .sort({ accountName: 1 })
-      .skip(offset)
-      .limit(limit)
-      .lean(), // Use lean() for better performance if you don't need mongoose document methods
+  // Convert to ObjectId if needed
+  const companyObjId = typeof companyId === "string" ? new mongoose.Types.ObjectId(companyId) : companyId;
+  const branchObjId = typeof branchId === "string" ? new mongoose.Types.ObjectId(branchId) : branchId;
 
-    // Get total count
-    this.countDocuments(matchConditions),
+  // Build aggregation pipeline
+  const pipeline = [
+    { $match: matchConditions },
+
+    // Lookup Outstanding amounts filtered by account, company, branch, and outstandingType
+    {
+      $lookup: {
+        from: "outstandings", // collection name
+        let: { account: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$account", "$$account"] },
+                  { $eq: ["$company", companyObjId] },
+                  { $eq: ["$branch", branchObjId] },
+                  ...(outstandingType !== "both"
+                    ? [{ $eq: ["$outstandingType", outstandingType] }]
+                    : []),
+                ],
+              },
+            },
+          },
+          {
+            $group: {
+              _id: "$account",
+              totalOutstanding: { $sum: "$closingBalanceAmount" },
+            },
+          },
+        ],
+        as: "outstandings",
+      },
+    },
+
+    // Add totalOutstanding field or default to 0 if no outstanding found
+    {
+      $addFields: {
+        totalOutstanding: {
+          $ifNull: [{ $arrayElemAt: ["$outstandings.totalOutstanding", 0] }, 0],
+        },
+      },
+    },
+  ];
+
+  // Apply filter for outstanding presence if specified
+  if (withOutstanding === true) {
+    pipeline.push({ $match: { totalOutstanding: { $gt: 0 } } });
+  } else if (withOutstanding === false) {
+    pipeline.push({ $match: { totalOutstanding: { $eq: 0 } } });
+  }
+
+  // Add sorting by accountName
+  pipeline.push({ $sort: { accountName: 1 } });
+
+  // Pagination: skip and limit
+  pipeline.push({ $skip: offset });
+  pipeline.push({ $limit: limit });
+
+  // For totalCount, need a separate pipeline without skip and limit but with same filters
+  const countPipeline = pipeline.filter(stage => !("$skip" in stage || "$limit" in stage));
+  countPipeline.push({ $count: "totalCount" });
+
+  // Run both aggregation queries in parallel
+  const [accounts, countResult] = await Promise.all([
+    this.aggregate(pipeline).exec(),
+    this.aggregate(countPipeline).exec(),
   ]);
+
+  const totalCount = countResult.length > 0 ? countResult[0].totalCount : 0;
 
   return {
     accounts,
