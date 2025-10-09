@@ -34,12 +34,7 @@ const CreateTransaction = () => {
     removeItem,
     handleDiscountChange,
     handlePaidAmountChange,
-    newItem,
-
-    updateNewItem,
-    selectProduct,
     addItem,
-    setTransactionData,
     clickedItemInTable,
     handleItemClickInItemsTable,
   } = useTransaction();
@@ -61,8 +56,6 @@ const CreateTransaction = () => {
   );
 
   ///handle itemClick from the items table and pass it to item adding form for edit////
-
-
 
   console.log("transactionData", transactionData);
 
@@ -120,16 +113,19 @@ const CreateTransaction = () => {
               netAmount={transactionData.netAmount}
               discount={transactionData.discount}
               paidAmount={transactionData.paidAmount}
+              balanceAmount={transactionData.balanceAmount}
+              totalDue={transactionData.totalDue}
               onDiscountChange={handleDiscountChange}
               onPaidAmountChange={handlePaidAmountChange}
             />
 
             <TransactionActions
               onSave={useTransactionActions?.handleSave}
-              onView={useTransactionActions?.handleView}
-              onDelete={useTransactionActions?.handleDelete}
-              onCancel={useTransactionActions?.handleCancel}
-              onPrint={useTransactionActions?.handlePrint}
+              transactionData={transactionData}
+              // onView={useTransactionActions?.handleView}
+              // onDelete={useTransactionActions?.handleDelete}
+              // onCancel={useTransactionActions?.handleCancel}
+              // onPrint={useTransactionActions?.handlePrint}
               isEditMode={false}
             />
           </div>

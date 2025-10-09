@@ -46,6 +46,8 @@ const CreateCashTransaction = () => {
    useEffect(() => {
       updateTransactionField("currentTransactionType", currentTransactionType);
     }, [currentTransactionType, updateTransactionField]);
+
+    
   console.log("cashCashtransactionData", CashtransactionData);
   return (
     <div>

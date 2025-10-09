@@ -75,13 +75,14 @@ export const createEmptyTransaction = () => ({
   // Amount breakdown totals (numeric)
   subtotal: 0, // sum of product base amounts (price * qty)
   totalTaxAmount: 0, // total tax amount summed from items
-  totalAmountAfterTax: 0, // total of amounts after tax from all items
+  totalAmountAfterTax: 0, // total of amounts after tax from all items(subtotal + totalTaxAmount-discountAmount)
   discount: 0, // discount % or fixed amount
   discountAmount: 0, // discount value in currency
   openingBalance: 0, // previous customer dues
-  netAmount: 0, // totalAmountAfterTax - discountAmount + openingBalance
+  netAmount: 0, // totalAmountAfterTax - discountAmount
+  totalDue: 0, // netAmount + openingBalance
   paidAmount: 0, // amount paid by customer
-  closingBalanceAmount: 0, // netAmount - paidAmount
+  balanceAmount: 0, // totalDue - paidAmount
 
   reference: "",
   notes: "",
@@ -91,42 +92,53 @@ export const createEmptyTransaction = () => ({
 export const calculateTransactionTotals = (transaction) => {
   console.log("heavy calculations1");
 
-  // 1️⃣ Subtotal
+  // 1️⃣ Subtotal - Parse each item's baseAmount
   const subtotal = transaction.items.reduce(
-    (sum, item) => sum + parseFloat(item?.baseAmount),
+    (sum, item) => sum + parseFloat(item?.baseAmount || 0),
     0
   );
 
+  // 2️⃣ Total Tax Amount - Parse each item's taxAmount
   const totalTaxAmount = transaction.items.reduce(
-    (sum, item) => sum + parseFloat(item?.taxAmount),
+    (sum, item) => sum + parseFloat(item?.taxAmount || 0),
     0
   );
-  // 4️⃣ Amount after tax
-  const totalAmountAfterTax = subtotal + totalTaxAmount;
 
-  // 5️⃣ Discount
+  // 3️⃣ Amount after tax
+  const totalAmountAfterTax = parseFloat(subtotal) + parseFloat(totalTaxAmount);
+
+  // 4️⃣ Discount calculation
   let discountAmount = 0;
+  const discountValue = parseFloat(transaction.discount || 0);
+
   if (transaction.discountType === "percent") {
-    discountAmount = (totalAmountAfterTax * transaction.discount) / 100;
+    discountAmount = (parseFloat(totalAmountAfterTax) * discountValue) / 100;
   } else {
-    discountAmount = transaction.discount; // fixed discount
+    discountAmount = discountValue; // fixed discount
   }
 
-  // 6️⃣ Net Amount
+  // 5️⃣ Net Amount
   const netAmount =
-    totalAmountAfterTax - discountAmount + transaction.openingBalance;
+    parseFloat(totalAmountAfterTax) - parseFloat(discountAmount);
 
-  // 7️⃣ Closing Balance
-  const closingBalanceAmount = netAmount - transaction.paidAmount;
+  /// total due
+
+  const totalDue =
+    parseFloat(netAmount) + parseFloat(transaction?.openingBalance || 0);
+
+  // 6️⃣ Balance Amount (NOT closing balance - just balance)
+  const balanceAmount =
+    parseFloat(totalDue) - parseFloat(transaction?.paidAmount || 0);
 
   return {
     ...transaction,
-    subtotal,
-    totalTaxAmount,
-    totalAmountAfterTax,
-    discountAmount,
-    netAmount,
-    closingBalanceAmount,
+    subtotal: parseFloat(subtotal.toFixed(2)),
+    totalTaxAmount: parseFloat(totalTaxAmount.toFixed(2)),
+    totalDue: parseFloat(totalDue.toFixed(2)),
+    totalAmountAfterTax: parseFloat(totalAmountAfterTax.toFixed(2)),
+    discountAmount: parseFloat(discountAmount.toFixed(2)),
+    netAmount: parseFloat(netAmount.toFixed(2)),
+    balanceAmount: parseFloat(balanceAmount.toFixed(2)),
   };
 };
 

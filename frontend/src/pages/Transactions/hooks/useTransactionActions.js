@@ -1,84 +1,57 @@
-import { useCallback } from 'react';
+import { useCallback } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { transactionMutations } from "../../../hooks/mutations/transaction.mutations";
 
 export const useTransactionActions = (transactionData, isEditMode = false) => {
+  const queryClient = useQueryClient();
+  
+  // Initialize both mutations
+  const createMutation = useMutation(transactionMutations.create(queryClient));
+  const updateMutation = useMutation(transactionMutations.update(queryClient));
+
   const handleSave = useCallback(async () => {
     try {
-      console.log('Saving transaction:', transactionData);
+      console.log("Saving transaction:", transactionData);
       
       // Validation
-      if (!transactionData.partyName.trim()) {
-        alert('Please enter party name');
-        return false;
-      }
-      
-      if (transactionData.items.length === 0) {
-        alert('Please add at least one item');
-        return false;
+      // if (!transactionData.partyName.trim()) {
+      //   alert("Please enter party name");
+      //   return false;
+      // }
+
+      // if (transactionData.items.length === 0) {
+      //   alert("Please add at least one item");
+      //   return false;
+      // }
+
+      // Choose mutation based on mode
+      if (isEditMode) {
+        // Update existing transaction
+        await updateMutation.mutateAsync({
+          id: transactionData.id,
+          formData: transactionData,
+          transactionType: transactionData.transactionType
+        });
+      } else {
+        // Create new transaction
+        await createMutation.mutateAsync({
+          formData: transactionData,
+          transactionType: transactionData.transactionType
+        });
       }
 
-      // API call would go here
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      alert(`Transaction ${isEditMode ? 'updated' : 'saved'} successfully!`);
       return true;
     } catch (error) {
-      console.error('Error saving transaction:', error);
-      alert('Error saving transaction. Please try again.');
+      console.error("Error saving transaction:", error);
       return false;
     }
-  }, [transactionData, isEditMode]);
-
-  const handleView = useCallback(() => {
-    console.log('Viewing transaction:', transactionData);
-    // Open view modal or navigate to view page
-    // You can implement this based on your routing setup
-  }, [transactionData]);
-
-  const handleDelete = useCallback(async () => {
-    if (!window.confirm('Are you sure you want to delete this transaction?')) {
-      return false;
-    }
-
-    try {
-      console.log('Deleting transaction:', transactionData);
-      
-      // API call would go here
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      alert('Transaction deleted successfully!');
-      return true;
-    } catch (error) {
-      console.error('Error deleting transaction:', error);
-      alert('Error deleting transaction. Please try again.');
-      return false;
-    }
-  }, [transactionData]);
-
-  const handleCancel = useCallback(() => {
-    const hasUnsavedChanges = true; // You can implement change detection logic
-    
-    if (hasUnsavedChanges && !window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
-      return false;
-    }
-
-    console.log('Cancelling transaction');
-    // Navigate back or reset form
-    return true;
-  }, []);
-
-  const handlePrint = useCallback(() => {
-    console.log('Printing transaction:', transactionData);
-    
-    // You can implement custom print logic here
-    // For now, using browser's print function
-    window.print();
-  }, [transactionData]);
+  }, [transactionData, isEditMode, createMutation, updateMutation]);
 
   return {
     handleSave,
-    handleView,
-    handleDelete,
-    handleCancel,
-    handlePrint
+    isLoading: createMutation.isPending || updateMutation.isPending,
+    isSuccess: createMutation.isSuccess || updateMutation.isSuccess,
+    isError: createMutation.isError || updateMutation.isError,
+    error: createMutation.error || updateMutation.error
   };
 };
