@@ -37,6 +37,7 @@ const CreateTransaction = () => {
     addItem,
     clickedItemInTable,
     handleItemClickInItemsTable,
+    resetTransactionData,
   } = useTransaction();
 
   const currentTransactionType = useMemo(
@@ -45,8 +46,18 @@ const CreateTransaction = () => {
   );
 
   useEffect(() => {
+    console.log("Transaction type changed, resetting data");
+    resetTransactionData();
     updateTransactionField("currentTransactionType", currentTransactionType);
   }, [currentTransactionType, updateTransactionField]);
+
+  // Reset transaction data when navigating away from this page
+  useEffect(() => {
+    return () => {
+      console.log("Cleaning up - resetting transaction data");
+      resetTransactionData();
+    };
+  }, [resetTransactionData]);
 
   const selectedCompanyFromStore = useSelector(
     (state) => state.companyBranch?.selectedCompany

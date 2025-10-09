@@ -126,7 +126,10 @@ export const useTransaction = (initialData = null) => {
     [updateTransactionField]
   );
 
-
+const resetTransactionData = useCallback(() => {
+  console.log("resetting transaction data");
+  setTransactionData(createEmptyTransaction());
+}, []);
 
   /// ===================== UPDATE TOTALS AUTOMATICALLY =====================
   useEffect(() => {
@@ -138,7 +141,6 @@ export const useTransaction = (initialData = null) => {
   return {
     transactionData, // ⚡ always contains updated totals
     newItem,
-
     updateTransactionData,
     updateTransactionField,
     updateNewItem,
@@ -152,5 +154,6 @@ export const useTransaction = (initialData = null) => {
     setTransactionData,
     clickedItemInTable,
     handleItemClickInItemsTable,
+    resetTransactionData
   };
 };
