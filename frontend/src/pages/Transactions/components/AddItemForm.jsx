@@ -17,7 +17,6 @@ const AddItemForm = ({
   addItem,
   clickedItemInTable,
 }) => {
-  // Local state for form fields
   const [localItem, setLocalItem] = useState({
     item: null,
     itemCode: "",
@@ -25,9 +24,9 @@ const AddItemForm = ({
     unit: units[0]?.value || "",
     quantity: "0",
     rate: "0",
-    taxable: false, // boolean to indicate if item is taxable (default false)
-    taxRate: "0", // string, tax rate percent (e.g., "5" for 5%)
-    taxAmount: "0", // string, calculated tax baseAmount for the item
+    taxable: false,
+    taxRate: "0",
+    taxAmount: "0",
   });
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -35,7 +34,14 @@ const AddItemForm = ({
   const [showDropdown, setShowDropdown] = useState(false);
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Refs for all inputs
   const codeInputRef = useRef(null);
+  const nameInputRef = useRef(null);
+  const unitInputRef = useRef(null);
+  const quantityInputRef = useRef(null);
+  const rateInputRef = useRef(null);
+  const addButtonRef = useRef(null);
 
   // TanStack Query - enabled based on shouldSearch flag
   const {
@@ -61,7 +67,7 @@ const AddItemForm = ({
     }
   }, [isError, error]);
 
-  // Update form fields if found
+  // Update form fields when search results are received
   useEffect(() => {
     if (shouldSearch && !isFetching) {
       if (searchResponse?.data && searchResponse.data.length > 0) {
@@ -91,7 +97,7 @@ const AddItemForm = ({
           currentStock = branchStock?.currentStock || "";
         }
 
-        // Update localItem, including rate
+        // Update localItem with found product details
         setLocalItem((prev) => ({
           ...prev,
           item: foundProduct?._id,
@@ -103,12 +109,13 @@ const AddItemForm = ({
           taxable: false,
           taxRate: "0",
           taxAmount: "0",
-          // availableStock: currentStock,
         }));
         setShowDropdown(false);
         setShouldSearch(false);
+        // Auto-focus to unit field after successful search
+        setTimeout(() => unitInputRef.current?.focus(), 100);
       } else {
-        // No items found - show dropdown
+        // No items found - show dropdown with "not found" message
         setLocalItem((prev) => ({
           ...prev,
           itemCode: debouncedSearchTerm,
@@ -117,14 +124,11 @@ const AddItemForm = ({
         setShouldSearch(false);
       }
     }
-    // Include priceLevel as a dependency
-    // eslint-disable-next-line
-  }, [searchResponse, isFetching, shouldSearch]);
+  }, [searchResponse, isFetching, shouldSearch, debouncedSearchTerm, priceLevel, branch]);
 
+  // Update rate when priceLevel changes for an existing item
   useEffect(() => {
-    if (!localItem.item) return; // No item loaded, no update needed
-
-    // Find the loaded product from the last searchResponse (or maintain it separately)
+    if (!localItem.item) return;
 
     const foundProduct = searchResponse?.data[0];
 
@@ -142,7 +146,7 @@ const AddItemForm = ({
       newRate = "0";
     }
 
-    // Update the localItem rate if it differs from current
+    // Only update if rate has changed
     if (localItem.rate !== newRate.toString()) {
       setLocalItem((prev) => ({
         ...prev,
@@ -151,7 +155,7 @@ const AddItemForm = ({
     }
   }, [priceLevel, localItem.item, searchResponse]);
 
-  /// if an item form table is clicked on, set the localItem to the clicked item
+  // Handle clicked item from table
   useEffect(() => {
     if (clickedItemInTable) {
       const {
@@ -178,11 +182,13 @@ const AddItemForm = ({
         taxRate,
         taxAmount,
       }));
-      codeInputRef.current.focus();
+      // setSearchTerm(itemCode);
+      unitInputRef.current?.focus();
+      // codeInputRef.current?.focus();
     }
   }, [clickedItemInTable]);
 
-  // Handle Tab on itemCode field
+  // Handle itemCode Enter - trigger search
   const handleCodeKeyDown = (e) => {
     if (e.key === "Enter" && searchTerm.trim() !== "") {
       e.preventDefault();
@@ -199,24 +205,33 @@ const AddItemForm = ({
     setLocalItem({ ...localItem, itemCode: value });
   };
 
-  // Handle Enter key on quantity field
+  // Handle Unit Enter - move to quantity
+  const handleUnitKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      quantityInputRef.current?.focus();
+    }
+  };
+
+  // Handle Quantity Enter - move to rate
   const handleQuantityKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      handleAddClick();
+      rateInputRef.current?.focus();
     }
   };
 
-  // Handle Enter key on rate field
+  // Handle Rate Enter - move to add button
   const handleRateKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      handleAddClick();
+      addButtonRef.current?.focus();
     }
   };
 
-  // Handle add button click
+  // Add item to the transaction and reset form
   const handleAddClick = () => {
+    // Validate required fields
     if (!localItem.itemCode || !localItem.itemName || !localItem.item) {
       toast.error("Validation Error", {
         description: "Please fill in itemCode and itemName fields",
@@ -224,25 +239,37 @@ const AddItemForm = ({
       return;
     }
 
+    // Add item to transaction
     const newItems = addItem(items, localItem);
     updateTransactionField("items", newItems);
 
+    // Reset form to initial state
     setLocalItem({
       item: null,
       itemCode: "",
       itemName: "",
       unit: units[0]?.value || "",
       priceLevels: [],
-      quantity: "0",
-      rate: "0",
+      quantity: "",
+      rate: "",
       baseAmount: "0",
       amountAfterTax: "0",
-      taxable: false, // boolean to indicate if item is taxable (default false)
-      taxRate: "0", // string, tax rate percent (e.g., "5" for 5%)
-      taxAmount: "0", // string, calculated tax baseAmount for the item
+      taxable: false,
+      taxRate: "0",
+      taxAmount: "0",
     });
     setSearchTerm("");
-    codeInputRef.current.focus();
+    
+    // Focus back to code input for next item entry
+    setTimeout(() => codeInputRef.current?.focus(), 0);
+  };
+
+  // Handle Enter key on add button - triggers add action
+  const handleAddButtonKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddClick();
+    }
   };
 
   return (
@@ -275,10 +302,7 @@ const AddItemForm = ({
                 Product not found
               </div>
               <div className="px-2 py-1.5 text-[9px] text-slate-600">
-                <span className="font-medium">
-                  "{truncate(debouncedSearchTerm, 10)}"
-                </span>{" "}
-                does not exist in inventory
+                <span className="font-medium">"{searchTerm}"</span> does not exist in inventory
               </div>
             </div>
           )}
@@ -290,12 +314,10 @@ const AddItemForm = ({
             Name
           </label>
           <input
+            ref={nameInputRef}
             type="text"
             disabled
             value={localItem.itemName}
-            onChange={(e) =>
-              setLocalItem({ ...localItem, itemName: e.target.value })
-            }
             className="w-full px-1.5 py-1 border border-slate-300 bg-slate-200  text-[9px] focus:ring-1 focus:ring-blue-500"
             placeholder="Name"
           />
@@ -307,10 +329,12 @@ const AddItemForm = ({
             Unit
           </label>
           <select
+            ref={unitInputRef}
             value={localItem.unit}
             onChange={(e) =>
               setLocalItem({ ...localItem, unit: e.target.value })
             }
+            onKeyDown={handleUnitKeyDown}
             className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
           >
             {units.map((unit) => (
@@ -321,55 +345,49 @@ const AddItemForm = ({
           </select>
         </div>
 
-        {/* QTY */}
+        {/* QUANTITY INPUT - Allows empty values, no default zero */}
         <div>
           <label className="block text-[9px] font-medium text-slate-700 mb-1">
             Qty
           </label>
           <NumericFormat
-            // type="number"
+            getInputRef={quantityInputRef}
             value={localItem.quantity}
             allowLeadingZeros={false}
             allowNegative={false}
             decimalScale={3}
             onKeyDown={handleQuantityKeyDown}
-            onChange={(e) =>
+            onValueChange={(values) => {
+              const { value } = values;
               setLocalItem({
                 ...localItem,
-                quantity: e.target.value || "0",
-              })
-            }
+                quantity: value,
+              });
+            }}
             className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
             placeholder="0"
           />
         </div>
 
-        {/* RATE */}
+        {/* RATE INPUT - Allows empty values and editing */}
         <div>
           <label className="block text-[9px] font-medium text-slate-700 mb-1">
             Rate
           </label>
           <NumericFormat
-            value={localItem.rate.toString()}
+            getInputRef={rateInputRef}
+            value={localItem.rate}
             allowLeadingZeros={false}
             allowNegative={false}
-            // decimalScale={2}
-            // prefix="₹"
             fixedDecimalScale
             onKeyDown={handleRateKeyDown}
-            onChange={(e) => {
+            onValueChange={(values) => {
+              const { value } = values;
               setLocalItem({
                 ...localItem,
-                rate: e.target.value || "0",
+                rate: value,
               });
             }}
-            // onValueChange={(values) => {
-            //   const { floatValue } = values;
-            //   setLocalItem({
-            //     ...localItem,
-            //     rate: floatValue || "0",
-            //   });
-            // }}
             className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
             placeholder="₹0.00"
           />
@@ -377,13 +395,9 @@ const AddItemForm = ({
 
         {/* ADD BUTTON */}
         <button
+          ref={addButtonRef}
           onClick={handleAddClick}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleAddClick();
-            }
-          }}
+          onKeyDown={handleAddButtonKeyDown}
           className="bg-teal-600 hover:bg-teal-700 text-white px-2 py-1 rounded-xs flex items-center justify-center transition-colors"
         >
           <Plus className="w-3 h-4" />
