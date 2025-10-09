@@ -43,10 +43,10 @@ const CreateCashTransaction = () => {
     [location, CashtransactionData.transactionType]
   );
 
-   useEffect(() => {
-      updateTransactionField("currentTransactionType", currentTransactionType);
-    }, [currentTransactionType, updateTransactionField]);
-  console.log("cashCashtransactionData", CashtransactionData);
+  useEffect(() => {
+    updateTransactionField("transactionType", currentTransactionType);
+  }, [currentTransactionType, updateTransactionField]);
+  console.log("Cash transaction data:", CashtransactionData);
   return (
     <div>
       <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
@@ -61,6 +61,7 @@ const CreateCashTransaction = () => {
           {/* Receipt Details - Top */}
           <div className=" bg-white rounded-lg shadow-sm ">
             <TransactionAccountSelector
+            transactionType="payment"
              accountName={CashtransactionData?.accountName}
     amount={CashtransactionData?.amount}
     previousBalanceAmount={CashtransactionData?.previousBalanceAmount}

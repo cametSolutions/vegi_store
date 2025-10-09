@@ -4,19 +4,20 @@ import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '../../../hooks/useDebounce';
 import { accountMasterQueries } from '@/hooks/queries/accountMaster.queries';
 import { truncate } from '../../../../../shared/utils/string';
+import { NumericFormat } from 'react-number-format';
 
-const AccountTransactionDetails = ({
-  accountType,
+const CashTransactionAccountSelector = ({
   accountName,
-  amount,
-  previousBalanceAmount,
-  narration,
-  closingBalanceAmount,
   accountId,
+  previousBalanceAmount,
+  amount,
+  closingBalanceAmount,
+  narration,
   updateTransactionField,
   updateTransactionData,
   branch,
   company,
+  transactionType
 }) => {
   // ============================================================================
   // CONSTANTS
@@ -62,7 +63,10 @@ const AccountTransactionDetails = ({
       company,
       branch,
       'customer',
-      RESULT_LIMIT
+      RESULT_LIMIT,
+      {
+        withOutstanding: true,
+      }
     ),
     enabled: isSearchEnabled,
     refetchOnWindowFocus: false,
@@ -78,6 +82,19 @@ const AccountTransactionDetails = ({
   // ============================================================================
   // EFFECTS
   // ============================================================================
+
+  /**
+   * Calculate closing balance when previous balance or amount changes
+   */
+  useEffect(() => {
+    const prevBalance = parseFloat(previousBalanceAmount) || 0;
+    const amountValue = parseFloat(amount) || 0;
+    const closing = prevBalance - amountValue;
+    
+    if (closing !== closingBalanceAmount) {
+      updateTransactionField('closingBalanceAmount', closing);
+    }
+  }, [previousBalanceAmount, amount]);
 
   /**
    * Handle clicks outside dropdown to close it
@@ -118,15 +135,16 @@ const AccountTransactionDetails = ({
     const value = e.target.value;
     setSearchTerm(value);
     setShowDropdown(true);
-    
+
     // Clear account ID when user starts typing
     if (accountId) {
-      updateTransactionData({
-        accountId: '',
-        accountName: value,
-      });
-    } else {
-      updateTransactionField('accountName', value);
+      if (updateTransactionData) {
+        updateTransactionData({
+          accountId: '',
+          accountName: value,
+          previousBalanceAmount: 0,
+        });
+      }
     }
   };
 
@@ -138,15 +156,27 @@ const AccountTransactionDetails = ({
       const truncatedName = truncate(account.accountName, TRUNCATE_LENGTH);
       setSearchTerm(truncatedName);
 
-      updateTransactionData({
-        accountName: account.accountName,
-        accountId: account._id,
-        previousBalanceAmount: account.openingBalance || 0,
-      });
+
+   const previousBalance = transactionType?.toLowerCase() === 'payment' 
+        ? (account.outstandingCr || 0)
+        : (account.outstandingDr || 0);
+
+
+      if (updateTransactionData) {
+        updateTransactionData({
+          accountName: account.accountName,
+          accountId: account._id,
+          previousBalanceAmount: previousBalance || 0,
+        });
+      } else {
+        updateTransactionField('accountName', account.accountName);
+        updateTransactionField('accountId', account._id);
+        updateTransactionField('previousBalanceAmount', previousBalance || 0);
+      }
 
       setShowDropdown(false);
     },
-    [updateTransactionData]
+    [updateTransactionData, updateTransactionField]
   );
 
   /**
@@ -162,13 +192,23 @@ const AccountTransactionDetails = ({
    * Clear selected account
    */
   const handleClearAccount = useCallback(() => {
-    updateTransactionData({
-      accountName: '',
-      accountId: '',
-      previousBalanceAmount: 0,
-    });
+    if (updateTransactionData) {
+      updateTransactionData({
+        accountName: '',
+        accountId: '',
+        previousBalanceAmount: 0,
+        amount: 0,
+        closingBalanceAmount: 0,
+      });
+    } else {
+      updateTransactionField('accountName', '');
+      updateTransactionField('accountId', '');
+      updateTransactionField('previousBalanceAmount', 0);
+      updateTransactionField('amount', 0);
+      updateTransactionField('closingBalanceAmount', 0);
+    }
     setSearchTerm('');
-  }, [updateTransactionData]);
+  }, [updateTransactionData, updateTransactionField]);
 
   // ============================================================================
   // RENDER HELPERS
@@ -305,33 +345,47 @@ const AccountTransactionDetails = ({
           </div>
         </div>
 
-        {/* Amount and Total Amount */}
+        {/* Customer Name Display */}
+        <div className="flex items-center gap-2">
+          <label className="w-28 text-gray-700 text-[9px] font-medium">
+            Customer Name
+          </label>
+          <input
+            type="text"
+            value={accountName}
+            readOnly
+            className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-slate-200 text-gray-900 focus:outline-none"
+          />
+        </div>
+
+        {/* Amount and Balance Details */}
         <div className="flex items-end gap-2">
           <div className="flex-1 grid grid-cols-3 gap-3">
             <div>
               <label className="block text-gray-700 text-[9px] font-medium mb-1">
                 Previous Balance Amount
               </label>
-              <input
-                type="text"
-                name="previousBalanceAmount"
+              <NumericFormat
+                prefix="₹"
+                thousandsGroupStyle="lakh"
+                thousandSeparator=","
                 value={previousBalanceAmount}
-                onChange={(e) =>
-                  updateTransactionField('previousBalanceAmount', e.target.value)
-                }
-                readOnly
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-slate-200 text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                disabled
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-slate-200 text-gray-900 focus:outline-none"
               />
             </div>
             <div>
               <label className="block text-gray-700 text-[9px] font-medium mb-1">
                 Amount
               </label>
-              <input
-                type="text"
-                name="amount"
+              <NumericFormat
+                prefix="₹"
+                thousandsGroupStyle="lakh"
+                thousandSeparator=","
                 value={amount}
-                onChange={(e) => updateTransactionField('amount', e.target.value)}
+                onValueChange={(values) => {
+                  updateTransactionField('amount', values.floatValue || 0);
+                }}
                 className="w-full px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -340,15 +394,13 @@ const AccountTransactionDetails = ({
               <label className="block text-gray-700 text-[9px] font-medium mb-1">
                 Closing Balance Amount
               </label>
-              <input
-                type="text"
-                name="closingBalanceAmount"
+              <NumericFormat
+                prefix="₹"
+                thousandsGroupStyle="lakh"
+                thousandSeparator=","
                 value={closingBalanceAmount}
-                onChange={(e) =>
-                  updateTransactionField('closingBalanceAmount', e.target.value)
-                }
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-slate-200 text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                readOnly
+                disabled
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-slate-200 text-gray-900 focus:outline-none"
               />
             </div>
           </div>
@@ -363,7 +415,7 @@ const AccountTransactionDetails = ({
             name="narration"
             value={narration}
             onChange={(e) => updateTransactionField('narration', e.target.value)}
-            rows="3"
+            rows="2"
             placeholder="Enter narration..."
             className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-white text-gray-900 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
           />
@@ -373,4 +425,4 @@ const AccountTransactionDetails = ({
   );
 };
 
-export default AccountTransactionDetails;
+export default CashTransactionAccountSelector;
