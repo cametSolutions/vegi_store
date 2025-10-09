@@ -263,10 +263,17 @@ const TransactionAccountSelector = ({
       let selectedPriceLevel = priceLevel;
       let selectedPriceLevelName = priceLevelName;
 
+    
+      console.log("account.priceLevel", account.priceLevel);
+      
+
       if (account.priceLevel) {
         const matchingLevel = priceLevels.find(
-          (level) => level._id === account.priceLevel._id
+          (level) => level._id === account.priceLevel
         );
+
+        console.log("matchingLevel", matchingLevel);
+        
 
         if (matchingLevel) {
           selectedPriceLevel = matchingLevel._id;
