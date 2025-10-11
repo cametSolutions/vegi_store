@@ -76,7 +76,71 @@ export const AccountMonthlyBalanceSchema = new mongoose.Schema(
 AccountMonthlyBalanceSchema.index({ account: 1, periodKey: 1 }, { unique: true });
 AccountMonthlyBalanceSchema.index({ company: 1, branch: 1, periodKey: 1 });
 
-// Method to calculate closing balance
+// Static method to get opening balance for a specific month
+AccountMonthlyBalanceSchema.statics.getOpeningBalance = async function (
+  accountId, 
+  branchId, 
+  companyId, 
+  year, 
+  month, 
+  session
+) {
+  // Check if previous month exists
+  let prevYear = year;
+  let prevMonth = month - 1;
+  
+  if (prevMonth === 0) {
+    prevMonth = 12;
+    prevYear = year - 1;
+  }
+  
+  // Try to get previous month's closing balance
+  const previousMonth = await this.findOne({
+    company: companyId,
+    branch: branchId,
+    account: accountId,
+    year: prevYear,
+    month: prevMonth
+  })
+    .select('closingBalance')
+    .session(session);
+
+    console.log("previousMonth",previousMonth);
+    
+  
+  if (previousMonth) {
+    // Previous month exists - use its closing balance
+    return previousMonth.closingBalance;
+  }
+  
+  // No previous month - this is the first month
+  // Get opening balance from AccountMaster
+  const accountMaster = await mongoose.model('AccountMaster').findOne({
+    _id: accountId,
+    branch: branchId,
+    company: companyId
+  })
+    .select('openingBalance openingBalanceType')
+    .session(session);
+
+    console.log("branchId",branchId);
+    console.log("companyId",companyId);
+    console.log("accountId",accountId);
+    console.log("accountMaster",accountMaster);
+  
+  if (!accountMaster) {
+    return 0;
+  }
+
+  
+  
+  // Return signed opening balance
+  return accountMaster.openingBalanceType === 'dr' 
+    ? accountMaster.openingBalance 
+    : -accountMaster.openingBalance;
+};
+
+// Method to calculate and update closing balance
 AccountMonthlyBalanceSchema.methods.calculateClosingBalance = function () {
   this.closingBalance = this.openingBalance + this.totalDebit - this.totalCredit;
   return this.closingBalance;

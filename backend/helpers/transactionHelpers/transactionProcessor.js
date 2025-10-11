@@ -6,6 +6,7 @@ import {
   updateAccountMonthlyBalance,
   updateItemMonthlyBalances,
 } from "./monthlyBalanceService.js";
+import { transactionTypeToModelName } from "./transactionMappers.js";
 /**
  * Main transaction processor - orchestrates all steps
  */
@@ -43,6 +44,7 @@ export const processTransaction = async (transactionData, session) => {
           account: createdTransaction.account,
           accountName: createdTransaction.accountName,
           accountType: createdTransaction.accountType,
+          transactionModel: transactionTypeToModelName(createdTransaction.transactionType),
           sourceTransaction: createdTransaction._id,
           transactionType: createdTransaction.transactionType,
           transactionNumber: createdTransaction.transactionNumber,
@@ -50,7 +52,7 @@ export const processTransaction = async (transactionData, session) => {
           outstandingType: behavior.outstandingType,
           totalAmount: createdTransaction.netAmount,
           paidAmount: createdTransaction.paidAmount,
-          closingBalanceAmount: createdTransaction.balanceAmount,
+          closingBalanceAmount: createdTransaction.netAmount,
           paymentTermDays: 30, // Can be made configurable
           notes: createdTransaction.notes,
           createdBy: createdBy,
@@ -59,57 +61,57 @@ export const processTransaction = async (transactionData, session) => {
       );
     }
 
-    // // Step 5: Create account ledger entry
-    // const accountLedger = await createAccountLedger(
-    //   {
-    //     company: createdTransaction.company,
-    //     branch: createdTransaction.branch,
-    //     account: createdTransaction.account,
-    //     accountName: createdTransaction.accountName,
-    //     transactionId: createdTransaction._id,
-    //     transactionNumber: createdTransaction.transactionNumber,
-    //     transactionDate: createdTransaction.transactionDate,
-    //     transactionType: createdTransaction.transactionType,
-    //     ledgerSide: behavior.ledgerSide,
-    //     amount: createdTransaction.netAmount,
-    //     narration: `${transactionType} - ${createdTransaction.transactionNumber}`,
-    //     createdBy: createdBy,
-    //   },
-    //   session
-    // );
+    // Step 5: Create account ledger entry
+    const accountLedger = await createAccountLedger(
+      {
+        company: createdTransaction.company,
+        branch: createdTransaction.branch,
+        account: createdTransaction.account,
+        accountName: createdTransaction.accountName,
+        transactionId: createdTransaction._id,
+        transactionNumber: createdTransaction.transactionNumber,
+        transactionDate: createdTransaction.transactionDate,
+        transactionType: createdTransaction.transactionType,
+        ledgerSide: behavior.ledgerSide,
+        amount: createdTransaction.netAmount,
+        narration: `${transactionType} - ${createdTransaction.transactionNumber}`,
+        createdBy: createdBy,
+      },
+      session
+    );
 
-    // // Step 6: Create item ledger entries
-    // const itemLedgers = await createItemLedgers(
-    //   {
-    //     company: createdTransaction.company,
-    //     branch: createdTransaction.branch,
-    //     items: createdTransaction.items,
-    //     transactionId: createdTransaction._id,
-    //     transactionNumber: createdTransaction.transactionNumber,
-    //     transactionDate: createdTransaction.transactionDate,
-    //     transactionType: createdTransaction.transactionType,
-    //     movementType: behavior.stockDirection === "out" ? "out" : "in",
-    //     account: createdTransaction.account,
-    //     accountName: createdTransaction.accountName,
-    //     createdBy: createdBy,
-    //   },
-    //   session
-    // );
+    // Step 6: Create item ledger entries
+    const itemLedgers = await createItemLedgers(
+      {
+        company: createdTransaction.company,
+        branch: createdTransaction.branch,
+        items: createdTransaction.items,
+        transactionId: createdTransaction._id,
+        transactionNumber: createdTransaction.transactionNumber,
+        transactionDate: createdTransaction.transactionDate,
+        transactionType: createdTransaction.transactionType,
+        movementType: behavior.stockDirection === "out" ? "out" : "in",
+        account: createdTransaction.account,
+        accountName: createdTransaction.accountName,
+        createdBy: createdBy,
+      },
+      session
+    );
 
     // // Step 7: Update monthly balances (real-time)
     // // Account monthly balance
-    // await updateAccountMonthlyBalance(
-    //   {
-    //     company: createdTransaction.company,
-    //     branch: createdTransaction.branch,
-    //     account: createdTransaction.account,
-    //     accountName: createdTransaction.accountName,
-    //     transactionDate: createdTransaction.transactionDate,
-    //     ledgerSide: behavior.ledgerSide,
-    //     amount: createdTransaction.netAmount,
-    //   },
-    //   session
-    // );
+    await updateAccountMonthlyBalance(
+      {
+        company: createdTransaction.company,
+        branch: createdTransaction.branch,
+        account: createdTransaction.account,
+        accountName: createdTransaction.accountName,
+        transactionDate: createdTransaction.transactionDate,
+        ledgerSide: behavior.ledgerSide,
+        amount: createdTransaction.netAmount,
+      },
+      session
+    );
 
     // // Item monthly balances
     // await updateItemMonthlyBalances(

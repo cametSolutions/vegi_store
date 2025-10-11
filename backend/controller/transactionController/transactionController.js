@@ -13,7 +13,7 @@ export const createTransaction = async (req, res) => {
   try {
     // Extract data from request
     const transactionData = req.body;
-    const userId = req.user._id; // From authentication middleware
+    const userId = req.user.id; // From authentication middleware
 
     // Add audit fields
     transactionData.createdBy = userId;
@@ -35,7 +35,7 @@ export const createTransaction = async (req, res) => {
       });
     }
 
-    if (!transactionData.accountId) {
+    if (!transactionData.account) {
       return res.status(400).json({
         success: false,
         message: "Account is required",
@@ -54,8 +54,6 @@ export const createTransaction = async (req, res) => {
     const paymentStatus = determinePaymentStatus(netAmount, paidAmount);
     //// add some extra fields
     transactionData.paymentStatus = paymentStatus;
-    transactionData.createdBy = req.user.id;
-    transactionData.account = transactionData.accountId; /// for schema validation
 
 
     // Determine payment method

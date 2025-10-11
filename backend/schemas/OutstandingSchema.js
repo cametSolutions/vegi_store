@@ -127,6 +127,8 @@ const OutstandingSchema = new mongoose.Schema(
 OutstandingSchema.index({ account: 1, status: 1 });
 OutstandingSchema.index({ dueDate: 1, status: 1 });
 OutstandingSchema.index({ sourceTransaction: 1 });
+OutstandingSchema.index({ transactionNumber: 1 });
+
 
 // Instance method to update payment
 OutstandingSchema.methods.updatePayment = function (

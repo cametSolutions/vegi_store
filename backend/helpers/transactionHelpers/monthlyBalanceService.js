@@ -25,42 +25,63 @@ export const updateAccountMonthlyBalance = async (data, session) => {
     const periodKey = generatePeriodKey(transactionDate);
     const { month, year } = getMonthYear(transactionDate);
     
-    // Prepare update operations
-    const updateOps = {
-      $inc: {
-        transactionCount: 1
-      },
-      $set: {
+    // Check if this monthly balance already exists
+    let monthlyBalance = await AccountMonthlyBalance.findOne({
+      account,
+      periodKey
+    }).session(session);
+
+    console.log("monthlyBalance",monthlyBalance);
+    
+    
+    // If doesn't exist, we need to set opening balance
+    if (!monthlyBalance) {
+      // Get opening balance for this month
+      const openingBalance = await AccountMonthlyBalance.getOpeningBalance(
+        account,
+        branch,
+        company,
+        year,
+        month,
+        session
+      );
+
+      console.log("openingBalance",openingBalance);
+      
+      // Create new monthly balance with opening balance
+      monthlyBalance = new AccountMonthlyBalance({
         company,
         branch,
+        account,
         accountName,
         month,
         year,
+        periodKey,
+        openingBalance,  // Set opening balance from previous month or master
+        totalDebit: 0,
+        totalCredit: 0,
+        transactionCount: 0,
         lastUpdated: new Date()
-      }
-    };
-    
-    // Increment debit or credit
-    if (ledgerSide === 'debit') {
-      updateOps.$inc.totalDebit = amount;
-    } else if (ledgerSide === 'credit') {
-      updateOps.$inc.totalCredit = amount;
+      });
     }
     
-    // Find and update or create new
-    const monthlyBalance = await AccountMonthlyBalance.findOneAndUpdate(
-      { account, periodKey },
-      updateOps,
-      {
-        upsert: true,
-        new: true,
-        session,
-        setDefaultsOnInsert: true
-      }
-    );
+    // Update transaction counts and amounts
+    monthlyBalance.transactionCount += 1;
+    
+    if (ledgerSide === 'debit') {
+      monthlyBalance.totalDebit += amount;
+    } else if (ledgerSide === 'credit') {
+      monthlyBalance.totalCredit += amount;
+    }
+    
+    // Update metadata
+    monthlyBalance.accountName = accountName;
+    monthlyBalance.lastUpdated = new Date();
     
     // Calculate closing balance
     monthlyBalance.calculateClosingBalance();
+    
+    // Save
     await monthlyBalance.save({ session });
     
     return monthlyBalance;
@@ -68,6 +89,7 @@ export const updateAccountMonthlyBalance = async (data, session) => {
     throw error;
   }
 };
+
 
 /**
  * Update item monthly balances for all items (real-time)

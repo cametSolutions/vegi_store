@@ -37,7 +37,7 @@ export const AccountLedgerSchema = new mongoose.Schema(
     },
     transactionType: {
       type: String,
-      enum: ["sales", "purchase", "credit_note", "debit_note"],
+      enum: ["sale", "purchase", "credit_note", "debit_note"],
       required: [true, "Transaction type is required"],
     },
     ledgerSide: {
@@ -76,11 +76,39 @@ AccountLedgerSchema.index({ company: 1, branch: 1 });
 AccountLedgerSchema.index({ transactionId: 1 });
 
 // Static method to get last balance for an account
-AccountLedgerSchema.statics.getLastBalance = async function (accountId, session) {
-  const lastEntry = await this.findOne({ account: accountId })
+AccountLedgerSchema.statics.getLastBalance = async function (
+  accountId,
+  companyId,
+  branchId,
+  session
+) {
+  // Try to get last ledger entry
+  const lastEntry = await this.findOne({
+    account: accountId,
+    branch: branchId,
+    company: companyId,
+  })
     .sort({ transactionDate: -1, createdAt: -1 })
     .session(session);
-  
-  return lastEntry ? lastEntry.runningBalance : 0;
-};
 
+  // If ledger entry exists, return its running balance
+  if (lastEntry) {
+    return lastEntry.runningBalance || 0;
+  }
+
+  // No ledger entries found - get opening balance from AccountMaster
+  const accountMaster = await mongoose
+    .model("AccountMaster")
+    .findOne({
+      _id: accountId,
+      branch: branchId,
+      company: companyId,
+    })
+    .select("openingBalance")
+    .session(session);
+
+  if (!accountMaster) throw new Error("Account not found");
+
+  // Return opening balance or 0 if account not found
+  return accountMaster?.openingBalance || 0;
+};

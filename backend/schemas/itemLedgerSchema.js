@@ -46,7 +46,7 @@ export const ItemLedgerSchema = new mongoose.Schema(
     },
     transactionType: {
       type: String,
-      enum: ["sales", "purchase", "credit_note", "debit_note"],
+      enum: ["sale", "purchase", "credit_note", "debit_note"],
       required: [true, "Transaction type is required"],
     },
     movementType: {
@@ -64,11 +64,16 @@ export const ItemLedgerSchema = new mongoose.Schema(
       required: [true, "Rate is required"],
       min: [0, "Rate cannot be negative"],
     },
-    amount: {
-      type: Number,
-      required: [true, "Amount is required"],
-      min: [0, "Amount cannot be negative"],
-    },
+    // Primary amount for item-level tracking
+    baseAmount: { type: Number, required: true }, // Use this for reports
+
+    // Reference amount for reconciliation
+    amountAfterTax: { type: Number, required: true },
+
+    // Tax details
+    taxRate: { type: Number, default: 0 },
+    taxAmount: { type: Number, default: 0 },
+
     runningStockBalance: {
       type: Number,
       required: [true, "Running stock balance is required"],
@@ -102,6 +107,7 @@ ItemLedgerSchema.index({ account: 1 });
 // Static method to get last stock balance for an item
 ItemLedgerSchema.statics.getLastStockBalance = async function (
   itemId,
+  companyId,
   branchId,
   session
 ) {
@@ -109,5 +115,25 @@ ItemLedgerSchema.statics.getLastStockBalance = async function (
     .sort({ transactionDate: -1, createdAt: -1 })
     .session(session);
 
-  return lastEntry ? lastEntry.runningStockBalance : 0;
+  //// If ledger entry exists, return its running balance
+  if (lastEntry) {
+    return lastEntry.runningStockBalance || 0;
+  }
+
+  //// No ledger entries found - get opening balance from ItemMaster
+  const ItemMaster = mongoose.model("ItemMaster");
+  const itemMaster = await ItemMaster.findOne({
+    _id: itemId,
+    company: companyId,
+    "stock.branch": branchId,
+  });
+  if (!itemMaster) {
+    throw new Error("Item not found");
+  }
+
+  ////// If no stock entry found for this branch, return 0
+  return (
+    itemMaster.stock.find((s) => s.branch.toString() === branchId.toString())
+      .openingStock || 0
+  );
 };
