@@ -1,6 +1,73 @@
 import mongoose from "mongoose";
 import { nanoid } from "nanoid";
 
+const PriceLevelSchema = new mongoose.Schema(
+  {
+    priceLevel: {
+      _id: { type: mongoose.Schema.Types.ObjectId, ref: "Pricelevel" },
+      priceLevelName: { type: String },
+    },
+    rate: { type: Number, required: true, min: [0, "Rate cannot be negative"] },
+  },
+  { _id: false }
+);
+
+const ItemSchema = new mongoose.Schema(
+  {
+    _id: false,
+    item: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ItemMaster",
+      required: [true, "Item is required"],
+    },
+    itemCode: {
+      type: String,
+      required: [true, "Item code is required"],
+      trim: true,
+      uppercase: true,
+    },
+    itemName: { type: String, required: [true, "Item name is required"] },
+    unit: {
+      type: String,
+      required: [true, "Unit is required"],
+      enum: ["kg", "gm", "piece", "bundle", "dozen", "liter"],
+    },
+    quantity: {
+      type: Number,
+      required: [true, "Quantity is required"],
+      min: [0.001, "Quantity must be greater than 0"],
+    },
+    rate: {
+      type: Number,
+      required: [true, "Rate is required"],
+      min: [0, "Rate cannot be negative"],
+    },
+    baseAmount: {
+      type: Number,
+      required: [true, "Base amount is required"],
+      min: [0, "Base amount cannot be negative"],
+    },
+    amountAfterTax: {
+      type: Number,
+      required: [true, "Amount after tax is required"],
+      min: [0, "Amount after tax cannot be negative"],
+    },
+    taxable: { type: Boolean, default: true },
+    taxRate: {
+      type: Number,
+      default: 0,
+      min: [0, "Tax rate cannot be negative"],
+    },
+    taxAmount: {
+      type: Number,
+      default: 0,
+      min: [0, "Tax amount cannot be negative"],
+    },
+    priceLevels: [PriceLevelSchema],
+  },
+  { _id: false }
+);
+
 const TransactionSchema = new mongoose.Schema(
   {
     // ==================== HEADER INFORMATION ====================
@@ -16,9 +83,10 @@ const TransactionSchema = new mongoose.Schema(
     },
     transactionType: {
       type: String,
-      enum: ["sales", "purchase", "credit_note", "debit_note"],
+      enum: ["sale", "purchase", "credit_note", "debit_note"],
       required: [true, "Transaction type is required"],
     },
+
     transactionDate: {
       type: Date,
       required: [true, "Transaction date is required"],
@@ -28,24 +96,26 @@ const TransactionSchema = new mongoose.Schema(
       type: String,
       unique: true,
       required: [true, "Transaction number is required"],
-      default: () => nanoid(),
+      default: function () {
+        const prefix = this.transactionType?.toUpperCase().slice(0, 3) || "TXN";
+        return `${prefix}-${nanoid(4)}`;
+      },
     },
 
     // ==================== PARTY INFORMATION ====================
     accountType: {
       type: String,
       enum: ["customer", "supplier", "others"],
-      required: [true, "Party type is required"],
+      required: [true, "Account type is required"],
     },
     account: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AccountMaster",
-      required: [true, "Account is required"],
     },
-    accountName: {
-      type: String,
-      required: [true, "Account name is required"],
-    },
+
+    accountName: { type: String, required: [true, "Account name is required"] },
+    email: { type: String, trim: true },
+    phone: { type: Number },
     openingBalance: {
       type: Number,
       default: 0,
@@ -55,80 +125,29 @@ const TransactionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Pricelevel",
     },
-    priceLevelName: {
-      type: String,
-    },
+    priceLevelName: { type: String },
 
-    // ==================== ITEMS ARRAY ====================
-    items: [
-      {
-        _id: false,
-        itemCode: {
-          type: String,
-          required: [true, "Item code is required"],
-          trim: true,
-          uppercase: true,
-        },
-        item: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "ItemMaster",
-          required: [true, "Item is required"],
-        },
-        itemName: {
-          type: String,
-          required: [true, "Item name is required"],
-        },
-        unit: {
-          type: String,
-          required: [true, "Unit is required"],
-          enum: ["kg", "gm", "piece", "bundle", "dozen", "liter"],
-        },
-        quantity: {
-          type: Number,
-          required: [true, "Quantity is required"],
-          min: [0.001, "Quantity must be greater than 0"],
-        },
-        rate: {
-          type: Number,
-          required: [true, "Rate is required"],
-          min: [0, "Rate cannot be negative"],
-        },
-        amount: {
-          type: Number,
-          required: [true, "Amount is required"],
-          min: [0, "Amount cannot be negative"],
-        },
-        taxable: {
-          type: Boolean,
-          default: true,
-        },
-      },
-    ],
+    // ==================== ITEMS ====================
+    items: [ItemSchema],
 
-    // ==================== TOTALS SECTION ====================
+    // ==================== TOTALS ====================
     subtotal: {
       type: Number,
       required: [true, "Subtotal is required"],
       min: [0, "Subtotal cannot be negative"],
-      default: 0, // sum of items amounts
-    },
-    taxableAmount: {
-      type: Number,
-      required: [true, "Taxable amount is required"],
-      min: [0, "Taxable amount cannot be negative"],
-      default: 0, // sum of taxable items
-    },
-    taxAmount: {
-      type: Number,
-      required: [true, "Tax amount is required"],
-      min: [0, "Tax amount cannot be negative"],
       default: 0,
     },
-    amountAfterTax: {
+    totalTaxAmount: {
       type: Number,
-      required: [true, "Amount after tax is required"],
-      min: [0, "Amount after tax cannot be negative"],
-      default: 0, // subtotal + taxAmount
+      required: [true, "Total tax amount is required"],
+      min: [0, "Total tax amount cannot be negative"],
+      default: 0,
+    },
+    totalAmountAfterTax: {
+      type: Number,
+      required: [true, "Total amount after tax is required"],
+      min: [0, "Total amount after tax cannot be negative"],
+      default: 0,
     },
     discount: {
       type: Number,
@@ -144,16 +163,22 @@ const TransactionSchema = new mongoose.Schema(
       type: Number,
       required: [true, "Net amount is required"],
       min: [0, "Net amount cannot be negative"],
-      default: 0, // amountAfterTax - discountAmount + openingBalance
+      default: 0,
+    },
+    totalDue: {
+      type: Number,
+      default: 0,
+      min: [0, "Total due cannot be negative"],
     },
     paidAmount: {
       type: Number,
       default: 0,
       min: [0, "Paid amount cannot be negative"],
     },
-    closingBalanceAmount: {
+    balanceAmount: {
       type: Number,
-      default: 0, // netAmount - paidAmount
+      default: 0,
+      min: [0, "Balance amount cannot be negative"],
     },
 
     // ==================== PAYMENT & STATUS ====================
@@ -174,13 +199,14 @@ const TransactionSchema = new mongoose.Schema(
     },
 
     // ==================== REFERENCE & NOTES ====================
+    reference: { type: String, trim: true },
     notes: {
       type: String,
       trim: true,
       maxlength: [500, "Notes cannot exceed 500 characters"],
     },
 
-    // ==================== AUDIT FIELDS ====================
+    // ==================== AUDIT ====================
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -197,6 +223,36 @@ const TransactionSchema = new mongoose.Schema(
     toObject: { virtuals: true },
   }
 );
+
+TransactionSchema.virtual("totalItems").get(function () {
+  return this.items.length;
+});
+
+TransactionSchema.virtual("totalQuantity").get(function () {
+  return this.items.reduce((total, item) => total + item.quantity, 0);
+});
+
+TransactionSchema.virtual("isFullyPaid").get(function () {
+  return this.paidAmount >= this.netAmount;
+});
+
+TransactionSchema.virtual("displayType").get(function () {
+  const types = {
+    sale: "Sales Invoice",
+    purchase: "Purchase Invoice",
+    credit_note: "Credit Note",
+    debit_note: "Debit Note",
+  };
+  return types[this.transactionType];
+});
+
+TransactionSchema.virtual("accountDisplayName").get(function () {
+  return this.accountType === "customer"
+    ? "Customer"
+    : this.accountType === "supplier"
+    ? "Supplier"
+    : "Others";
+});
 
 // ==================== INDEXES ====================
 TransactionSchema.index({
@@ -217,36 +273,5 @@ TransactionSchema.index({ company: 1, paymentStatus: 1 });
 TransactionSchema.index({ transactionDate: -1 });
 TransactionSchema.index({ "items.item": 1 });
 TransactionSchema.index({ "items.itemCode": 1 });
-
-// ==================== VIRTUALS ====================
-TransactionSchema.virtual("totalItems").get(function () {
-  return this.items.length;
-});
-
-TransactionSchema.virtual("totalQuantity").get(function () {
-  return this.items.reduce((total, item) => total + item.quantity, 0);
-});
-
-TransactionSchema.virtual("isFullyPaid").get(function () {
-  return this.paidAmount >= this.netAmount;
-});
-
-TransactionSchema.virtual("displayType").get(function () {
-  const types = {
-    sales: "Sales Invoice",
-    purchase: "Purchase Invoice",
-    credit_note: "Credit Note",
-    debit_note: "Debit Note",
-  };
-  return types[this.transactionType];
-});
-
-TransactionSchema.virtual("accountDisplayName").get(function () {
-  return this.accountType === "customer"
-    ? "Customer"
-    : this.accountType === "supplier"
-    ? "Supplier"
-    : "Others";
-});
 
 export default TransactionSchema;

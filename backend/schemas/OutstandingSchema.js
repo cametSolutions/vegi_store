@@ -27,20 +27,26 @@ const OutstandingSchema = new mongoose.Schema(
       type: String,
       enum: {
         values: ["customer", "supplier"],
-        message: "Account type must be either customer or supplier"
+        message: "Account type must be either customer or supplier",
       },
       required: [true, "Account type is required"],
     },
+
+    transactionModel: {
+      type: String,
+      required: [true, "Transaction model is required"],
+      enum: ["Sale", "Purchase", "CreditNote", "DebitNote"],
+    },
     sourceTransaction: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Transaction",
+      refPath: "transactionModel",
       required: [true, "Source transaction is required"],
     },
     transactionType: {
       type: String,
       enum: {
-        values: ["sales", "purchase", "credit_note", "debit_note"],
-        message: "Invalid transaction type"
+        values: ["sale", "purchase", "credit_note", "debit_note"],
+        message: "Invalid transaction type",
       },
       required: [true, "Transaction type is required"],
     },
@@ -57,7 +63,7 @@ const OutstandingSchema = new mongoose.Schema(
       type: String,
       enum: {
         values: ["dr", "cr"],
-        message: "Outstanding type must be either dr (debit) or cr (credit)"
+        message: "Outstanding type must be either dr (debit) or cr (credit)",
       },
       required: [true, "Outstanding type is required"],
     },
@@ -83,8 +89,15 @@ const OutstandingSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: {
-        values: ["pending", "partial", "paid", "overdue", "disputed", "written_off"],
-        message: "Invalid status"
+        values: [
+          "pending",
+          "partial",
+          "paid",
+          "overdue",
+          "disputed",
+          "written_off",
+        ],
+        message: "Invalid status",
       },
       default: "pending",
     },
@@ -116,22 +129,25 @@ OutstandingSchema.index({ dueDate: 1, status: 1 });
 OutstandingSchema.index({ sourceTransaction: 1 });
 
 // Instance method to update payment
-OutstandingSchema.methods.updatePayment = function (additionalPaidAmount, userId) {
+OutstandingSchema.methods.updatePayment = function (
+  additionalPaidAmount,
+  userId
+) {
   this.paidAmount += additionalPaidAmount;
   this.closingBalanceAmount = this.totalAmount - this.paidAmount;
-  
+
   // Update status based on balance
   if (this.closingBalanceAmount <= 0) {
     this.status = "paid";
   } else if (this.paidAmount > 0) {
     this.status = "partial";
   }
-  
+
   // Check if overdue
   if (this.closingBalanceAmount > 0 && new Date() > this.dueDate) {
     this.status = "overdue";
   }
-  
+
   this.lastModifiedBy = userId;
   return this;
 };
@@ -166,29 +182,34 @@ OutstandingSchema.methods.calculateAgingDays = function () {
 OutstandingSchema.statics.findPendingByAccount = async function (accountId) {
   return await this.find({
     account: accountId,
-    status: { $in: ["pending", "partial", "overdue"] }
+    status: { $in: ["pending", "partial", "overdue"] },
   }).sort({ dueDate: 1 });
 };
 
 // Static method to get aging report
-OutstandingSchema.statics.getAgingReport = async function (accountId, asOfDate = new Date()) {
+OutstandingSchema.statics.getAgingReport = async function (
+  accountId,
+  asOfDate = new Date()
+) {
   const outstandingRecords = await this.find({
     account: accountId,
-    status: { $in: ["pending", "partial", "overdue"] }
+    status: { $in: ["pending", "partial", "overdue"] },
   });
-  
+
   const aging = {
-    current: 0,      // 0-30 days
-    days31_60: 0,    // 31-60 days
-    days61_90: 0,    // 61-90 days
-    over90: 0,       // 90+ days
-    total: 0
+    current: 0, // 0-30 days
+    days31_60: 0, // 31-60 days
+    days61_90: 0, // 61-90 days
+    over90: 0, // 90+ days
+    total: 0,
   };
-  
-  outstandingRecords.forEach(record => {
-    const agingDays = Math.ceil((asOfDate - record.dueDate) / (1000 * 60 * 60 * 24));
+
+  outstandingRecords.forEach((record) => {
+    const agingDays = Math.ceil(
+      (asOfDate - record.dueDate) / (1000 * 60 * 60 * 24)
+    );
     const amount = record.closingBalanceAmount;
-    
+
     if (agingDays <= 30) {
       aging.current += amount;
     } else if (agingDays <= 60) {
@@ -198,31 +219,34 @@ OutstandingSchema.statics.getAgingReport = async function (accountId, asOfDate =
     } else {
       aging.over90 += amount;
     }
-    
+
     aging.total += amount;
   });
-  
+
   return aging;
 };
 
 // Static method to get total outstanding
-OutstandingSchema.statics.getTotalOutstanding = async function (accountId, outstandingType) {
+OutstandingSchema.statics.getTotalOutstanding = async function (
+  accountId,
+  outstandingType
+) {
   const result = await this.aggregate([
     {
       $match: {
         account: mongoose.Types.ObjectId(accountId),
         outstandingType: outstandingType,
-        status: { $in: ["pending", "partial", "overdue"] }
-      }
+        status: { $in: ["pending", "partial", "overdue"] },
+      },
     },
     {
       $group: {
         _id: null,
-        totalOutstanding: { $sum: "$closingBalanceAmount" }
-      }
-    }
+        totalOutstanding: { $sum: "$closingBalanceAmount" },
+      },
+    },
   ]);
-  
+
   return result.length > 0 ? result[0].totalOutstanding : 0;
 };
 

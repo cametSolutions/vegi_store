@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+// const mongoose = require('mongoose');
 
 const FundTransactionSchema = new mongoose.Schema(
   {
@@ -64,4 +64,4 @@ FundTransactionSchema.methods.settleAmountFIFO = async function(settleAmount) {
 };
 
 // Model export
-module.exports = mongoose.model('Transaction', FundTransactionSchema);
+// module.exports = mongoose.model('Transaction', FundTransactionSchema);

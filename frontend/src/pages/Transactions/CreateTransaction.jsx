@@ -89,7 +89,7 @@ const CreateTransaction = () => {
               accountType={transactionData?.accountType}
               accountName={transactionData?.accountName}
               openingBalance={transactionData?.openingBalance}
-              accountId={transactionData?.accountId}
+              account={transactionData?.account}
               transactionType={transactionData?.transactionType}
               priceLevel={transactionData?.priceLevel}
               priceLevelName={transactionData?.priceLevelName}
