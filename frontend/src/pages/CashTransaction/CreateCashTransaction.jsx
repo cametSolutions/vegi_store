@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useCallback } from "react";
-import TransactionActionsComponent from "../CommonTransactionComponents/TransactionActions";
+import React, { useEffect, useMemo, useCallback, use } from "react";
+import TransactionActionsComponent from "./Components/cashTransactionAction";
 import CashTransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
 import BankPaymentDetails from "./Components/BankPaymentReciept";
 import CashTransactionAccountSelector from "./Components/CashTransactionAccountSelector";
@@ -7,30 +7,25 @@ import { useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { getTransactionType } from "./Utils/CashTransactionUtils";
 import { useCashTransaction } from "./hooks/useCashTransaction";
-import { useCashTransactionAction } from "./hooks/useCashTransactionAction";
-
+import { useCashTransactionActions } from "./hooks/useCashTransactionAction";
 
 
 const TransactionHeader = React.memo(CashTransactionHeaderComponent);
-const TransactionActions = React.memo(TransactionActionsComponent);
+const CashTransactionAction = React.memo(TransactionActionsComponent);
 const TransactionAccountSelector = React.memo(CashTransactionAccountSelector);
 const TransactionBankPaymentDetails = React.memo(BankPaymentDetails);
 
 const CreateCashTransaction = () => {
   const location = useLocation();
 
-
- const {
+  const {
     CashtransactionData,
-   
+     resetCashTransactionData,
     updateCashtransactionData,
     updateTransactionField,
-   
+
     setCashtransactionData,
-    
   } = useCashTransaction();
-
-
 
   const selectedCompanyFromStore = useSelector(
     (state) => state.companyBranch?.selectedCompany
@@ -43,12 +38,21 @@ const CreateCashTransaction = () => {
     [location, CashtransactionData.transactionType]
   );
 
-   useEffect(() => {
-      updateTransactionField("currentTransactionType", currentTransactionType);
-    }, [currentTransactionType, updateTransactionField]);
+  useEffect(() => {
+     resetCashTransactionData();
+    updateTransactionField("transactionType", currentTransactionType);
+  }, [currentTransactionType, updateTransactionField]);
 
-    
-  console.log("cashCashtransactionData", CashtransactionData);
+
+useEffect(() => {
+  // Cleanup function - runs when component unmounts
+  return () => {
+    resetCashTransactionData();
+  };
+}, []); 
+
+// Empty dependency array means this only sets up on mount
+  console.log("Cash transaction data:", CashtransactionData);
   return (
     <div>
       <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
@@ -58,47 +62,50 @@ const CreateCashTransaction = () => {
           date={CashtransactionData.date}
           updateTransactionField={updateTransactionField}
         />
-        
+
         <div className="flex flex-col  p-2 gap-2">
           {/* Receipt Details - Top */}
           <div className=" bg-white rounded-lg shadow-sm ">
             <TransactionAccountSelector
-             accountName={CashtransactionData?.accountName}
-    amount={CashtransactionData?.amount}
-    previousBalanceAmount={CashtransactionData?.previousBalanceAmount}
-    narration={CashtransactionData?.narration}
-    closingBalanceAmount={CashtransactionData?.closingBalanceAmount}
-      accountType={CashtransactionData?.accountType}
-    accountId={CashtransactionData?.accountId}
-     updateTransactionField={updateTransactionField}
+              transactionType={CashtransactionData?.transactionType}
+              accountName={CashtransactionData?.accountName}
+              amount={CashtransactionData?.amount}
+              previousBalanceAmount={CashtransactionData?.previousBalanceAmount}
+              narration={CashtransactionData?.narration}
+              closingBalanceAmount={CashtransactionData?.closingBalanceAmount}
+              accountType={CashtransactionData?.accountType}
+              account={CashtransactionData?.account}
+              updateTransactionField={updateTransactionField}
+              updateCashtransactionData={updateCashtransactionData}
+              branch={selectedBranchFromStore?._id}
+              company={selectedCompanyFromStore?._id}
+                // resetCashTransactionData={resetCashTransactionData}
+            />
+          </div>
+
+          {/* Bank Payment Details - Middle */}
+          <div className="flex-1 bg-white rounded-lg shadow-sm ">
+            <TransactionBankPaymentDetails
+              chequeNumber={CashtransactionData?.chequeNumber}
+              bank={CashtransactionData?.bank}
+              description={CashtransactionData?.description}
+              paymentMode={CashtransactionData?.paymentMode}
+              updateTransactionField={updateTransactionField}
               updateCashtransactionData={updateCashtransactionData}
               branch={selectedBranchFromStore?._id}
               company={selectedCompanyFromStore?._id}
             />
           </div>
-          
-          {/* Bank Payment Details - Middle */}
-          <div className="flex-1 bg-white rounded-lg shadow-sm ">
-            <TransactionBankPaymentDetails
-                chequeNumber={CashtransactionData?.chequeNumber}
-    bank={CashtransactionData?.bank}
-    description={CashtransactionData?.description}
-    paymentMode={CashtransactionData?.paymentMode}
-     updateTransactionField={updateTransactionField}
-              updateCashtransactionData={updateCashtransactionData}
-              branch={selectedBranchFromStore?._id}
-              company={selectedCompanyFromStore?._id} 
-              />
-          </div>
-          
+
           {/* Transaction Actions - Bottom */}
-         <div className=" flex-1 w-full">
-            <TransactionActions
-              onSave={useCashTransactionAction?.handleSave}
-              onView={useCashTransactionAction?.handleView}
-              onDelete={useCashTransactionAction?.handleDelete}
-              onCancel={useCashTransactionAction?.handleCancel}
-              onPrint={useCashTransactionAction?.handlePrint}
+          <div className=" flex-1 w-full">
+            <CashTransactionAction
+              CashtransactionData={CashtransactionData}
+              onSave={useCashTransactionActions?.handleSave}
+              onView={useCashTransactionActions?.handleView}
+              onDelete={useCashTransactionActions?.handleDelete}
+              onCancel={useCashTransactionActions?.handleCancel}
+              onPrint={useCashTransactionActions?.handlePrint}
               isEditMode={false}
             />
           </div>

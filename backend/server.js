@@ -20,6 +20,7 @@ import userRoute from "./routes/user/userRoute.js";
 import pricelevelRoute from "./routes/pricelevel/pricelevelRoute.js";
 import acccountmasterRoute from "./routes/accountmaster/accountMasterRoute.js";
 import itemRoute from "./routes/itemmaster/itemRoute.js";
+import PaymentRoutes from "./routes/FundTransactionRoutes/PaymentRoutes.js";
 
 // ----------------- App Init -----------------
 dotenv.config();
@@ -84,6 +85,7 @@ app.use("/api/user", authMiddleware, userRoute);
 app.use("/api/pricelevel", authMiddleware, pricelevelRoute);
 app.use("/api/accountmaster", authMiddleware, acccountmasterRoute);
 app.use("/api/item", authMiddleware, itemRoute);
+app.use("/api/transaction", authMiddleware,PaymentRoutes);
 
 // ----------------- Error Handling -----------------
 app.use((err, req, res, next) => {

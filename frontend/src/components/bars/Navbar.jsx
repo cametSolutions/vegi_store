@@ -27,7 +27,8 @@ const Navbar = () => {
     { label: "Account Master", path: "/masters/accountMaster" },
     { label: "Purchase Return", path: "/purchase-return" },
     { label: "Purchase", path: "/purchase" },
-    { label: "Receipt", path: "/transactions/reciept/create" },
+    { label: "Payment", path: "/transactions/payment/create" },
+    { label: "receipt", path: "/transactions/receipt/create" },
     { label: "Sales", path: "/transactions/sale/create" },
   ];
 

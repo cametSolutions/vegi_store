@@ -3,13 +3,14 @@ import TransactionAccountSelectorComponent from "./components/TransactionAccount
 import AddItemFormComponent from "./components/AddItemForm";
 import ItemsTableComponent from "./components/ItemsTable";
 import TransactionSummaryComponent from "./components/TransactionSummary";
-import TransactionActionsComponent from "../CommonTransactionComponents/TransactionActions";
+import TransactionActionsComponent from "./components/TransactionActions";
 import TransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
 import { products, getTransactionType } from "./utils/transactionUtils";
 import { useTransaction } from "./hooks/useTransaction";
 import { useTransactionActions } from "./hooks/useTransactionActions";
 import { useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
+import CashTransactionAction from "../CashTransaction/Components/cashTransactionAction";
 
 // Memoized components
 const TransactionHeader = React.memo(TransactionHeaderComponent);
