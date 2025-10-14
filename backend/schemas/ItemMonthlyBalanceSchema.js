@@ -58,18 +58,18 @@ export const ItemMonthlyBalanceSchema = new mongoose.Schema(
     closingStock: {
       type: Number,
       default: 0,
-      min: [0, "Closing stock cannot be negative"],
+      // min: [0, "Closing stock cannot be negative"],
     },
-    averageRate: {
-      type: Number,
-      default: 0,
-      min: [0, "Average rate cannot be negative"],
-    },
-    totalValue: {
-      type: Number,
-      default: 0,
-      min: [0, "Total value cannot be negative"],
-    },
+    // averageRate: {
+    //   type: Number,
+    //   default: 0,
+    //   // min: [0, "Average rate cannot be negative"],
+    // },
+    // totalValue: {
+    //   type: Number,
+    //   default: 0,
+    //   // min: [0, "Total value cannot be negative"],
+    // },
     transactionCount: {
       type: Number,
       default: 0,
@@ -100,8 +100,62 @@ ItemMonthlyBalanceSchema.methods.calculateClosingStock = function () {
 };
 
 // Method to calculate total value
-ItemMonthlyBalanceSchema.methods.calculateTotalValue = function () {
-  this.totalValue = this.closingStock * this.averageRate;
-  return this.totalValue;
-};
+// ItemMonthlyBalanceSchema.methods.calculateTotalValue = function () {
+//   this.totalValue = this.closingStock * this.averageRate;
+//   return this.totalValue;
+// };
 
+// Static method to get opening stock for a specific month
+ItemMonthlyBalanceSchema.statics.getOpeningStock = async function (
+  itemId,
+  branchId,
+  companyId,
+  year,
+  month,
+  session
+) {
+  // Check if previous month exists
+  let prevYear = year;
+  let prevMonth = month - 1;
+
+  if (prevMonth === 0) {
+    prevMonth = 12;
+    prevYear = year - 1;
+  }
+
+  // Try to get previous month's closing stock
+  const previousMonth = await this.findOne({
+    company: companyId,
+    branch: branchId,
+    item: itemId,
+    year: prevYear,
+    month: prevMonth,
+  })
+    .select("closingStock")
+    .session(session);
+
+  if (previousMonth) {
+    // Previous month exists - use its closing stock as opening stock
+    return previousMonth.closingStock;
+  }
+
+  // No previous month - this is the first month
+  // Get opening stock from ItemMaster
+  const itemMaster = await mongoose
+    .model("ItemMaster")
+    .findById(itemId)
+    .select("stock")
+    .session(session);
+
+  if (!itemMaster) {
+    return 0;
+  }
+
+  // Find the branch stock entry
+  const branchStock = itemMaster.stock.find(
+    (s) => s.branch.toString() === branchId.toString()
+  );
+
+  // Return opening stock from ItemMaster, or 0 if not found
+  return branchStock?.openingStock || 0;
+};

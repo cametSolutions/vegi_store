@@ -114,24 +114,24 @@ export const processTransaction = async (transactionData, session) => {
     );
 
     // // Item monthly balances
-    // await updateItemMonthlyBalances(
-    //   {
-    //     company: createdTransaction.company,
-    //     branch: createdTransaction.branch,
-    //     items: createdTransaction.items,
-    //     transactionDate: createdTransaction.transactionDate,
-    //     movementType: behavior.stockDirection === "out" ? "out" : "in",
-    //   },
-    //   session
-    // );
+    await updateItemMonthlyBalances(
+      {
+        company: createdTransaction.company,
+        branch: createdTransaction.branch,
+        items: createdTransaction.items,
+        transactionDate: createdTransaction.transactionDate,
+        movementType: behavior.stockDirection === "out" ? "out" : "in",
+      },
+      session
+    );
 
-    // // Return all created documents
-    // return {
-    //   transaction: createdTransaction,
-    //   outstanding,
-    //   accountLedger,
-    //   itemLedgers,
-    // };
+    // Return all created documents
+    return {
+      transaction: createdTransaction,
+      outstanding,
+      accountLedger,
+      itemLedgers,
+    };
   } catch (error) {
     throw error;
   }

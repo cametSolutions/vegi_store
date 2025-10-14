@@ -5,11 +5,14 @@ import {
   calculateTransactionTotals,
   recalculateTransactionOnPriceLevelChange,
 } from "../utils/transactionUtils";
+import { set } from "zod";
 
 export const useTransaction = (initialData = null) => {
   const [transactionData, setTransactionData] = useState(
     initialData || createEmptyTransaction()
   );
+
+
 
   const [newItem, setNewItem] = useState({
     code: "",
@@ -126,10 +129,10 @@ export const useTransaction = (initialData = null) => {
     [updateTransactionField]
   );
 
-const resetTransactionData = useCallback(() => {
-  console.log("resetting transaction data");
-  setTransactionData(createEmptyTransaction());
-}, []);
+  const resetTransactionData = useCallback(() => {
+    console.log("resetting transaction data");
+    setTransactionData(createEmptyTransaction());
+  }, []);
 
   /// ===================== UPDATE TOTALS AUTOMATICALLY =====================
   useEffect(() => {
@@ -154,6 +157,7 @@ const resetTransactionData = useCallback(() => {
     setTransactionData,
     clickedItemInTable,
     handleItemClickInItemsTable,
-    resetTransactionData
+    resetTransactionData,
+    
   };
 };

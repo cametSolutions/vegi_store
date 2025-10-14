@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import TransactionAccountSelectorComponent from "./components/TransactionAccountSelector";
 import AddItemFormComponent from "./components/AddItemForm";
 import ItemsTableComponent from "./components/ItemsTable";
 import TransactionSummaryComponent from "./components/TransactionSummary";
 import TransactionActionsComponent from "../CommonTransactionComponents/TransactionActions";
 import TransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
+import CustomMoonLoader from "../../components/loaders/CustomMoonLoader"; // Import the loader
 import { products, getTransactionType } from "./utils/transactionUtils";
 import { useTransaction } from "./hooks/useTransaction";
 import { useTransactionActions } from "./hooks/useTransactionActions";
@@ -25,6 +26,7 @@ const TransactionActions = React.memo(TransactionActionsComponent);
 
 const CreateTransaction = () => {
   const location = useLocation();
+  const [isLoading, setIsLoading] = useState(false);
 
   const {
     transactionData,
@@ -73,7 +75,14 @@ const CreateTransaction = () => {
   // Memoized callbacks to prevent child re-renders
 
   return (
-    <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
+    <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
+      {/* Loader Overlay */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-white/60  z-50 flex items-center justify-center">
+          <CustomMoonLoader />
+        </div>
+      )}
+
       {/* Header */}
       <TransactionHeader
         currentTransactionType={currentTransactionType}
@@ -133,6 +142,8 @@ const CreateTransaction = () => {
             <TransactionActions
               onSave={useTransactionActions?.handleSave}
               transactionData={transactionData}
+              onLoadingChange={setIsLoading}
+              resetTransactionData={resetTransactionData}
               // onView={useTransactionActions?.handleView}
               // onDelete={useTransactionActions?.handleDelete}
               // onCancel={useTransactionActions?.handleCancel}

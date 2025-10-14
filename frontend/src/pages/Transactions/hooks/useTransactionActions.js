@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { transactionMutations } from "../../../hooks/mutations/transaction.mutations";
 import { useSelector } from "react-redux";
 import { convertStringNumbersToNumbers } from "../utils/transactionUtils";
+import { toast } from "sonner";
 
 export const useTransactionActions = (transactionData, isEditMode = false) => {
   const queryClient = useQueryClient();
@@ -21,18 +22,19 @@ export const useTransactionActions = (transactionData, isEditMode = false) => {
     try {
       console.log("Saving transaction:", transactionData);
 
-      const convertedTransactionData=convertStringNumbersToNumbers(transactionData);
+      const convertedTransactionData =
+        convertStringNumbersToNumbers(transactionData);
 
       // Validation
-      // if (!transactionData.partyName.trim()) {
-      //   alert("Please enter party name");
-      //   return false;
-      // }
+      if (!transactionData.accountName.trim() && !transactionData.account) {
+        toast.error("Add a customer");
+        return false;
+      }
 
-      // if (transactionData.items.length === 0) {
-      //   alert("Please add at least one item");
-      //   return false;
-      // }
+      if (transactionData.items.length === 0) {
+        toast.error("Please add at least one item");
+        return false;
+      }
 
       // Choose mutation based on mode
       if (isEditMode) {
