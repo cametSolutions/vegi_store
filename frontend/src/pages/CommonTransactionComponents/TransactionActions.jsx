@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { Save, Eye, Trash2, X, FileText } from "lucide-react";
 import { useTransactionActions } from "../Transactions/hooks/useTransactionActions";
+import { toast } from "sonner";
 
 const TransactionActions = ({
   transactionData,
@@ -24,8 +25,17 @@ const TransactionActions = ({
     }
   }, [isLoading, onLoadingChange]);
 
+  const handleSaveClick = async () => {
+    // Validation
+    if (!transactionData.accountName.trim() && !transactionData.account) {
+      toast.error("Add a customer");
+      return false;
+    }
 
-   const handleSaveClick = async () => {
+    if (transactionData.items.length === 0) {
+      toast.error("Please add at least one item");
+      return false;
+    }
     await handleSave(); // save using your hook
     if (resetTransactionData) resetTransactionData(); // 👈 reset after success
   };

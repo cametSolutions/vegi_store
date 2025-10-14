@@ -25,16 +25,7 @@ export const useTransactionActions = (transactionData, isEditMode = false) => {
       const convertedTransactionData =
         convertStringNumbersToNumbers(transactionData);
 
-      // Validation
-      if (!transactionData.accountName.trim() && !transactionData.account) {
-        toast.error("Add a customer");
-        return false;
-      }
-
-      if (transactionData.items.length === 0) {
-        toast.error("Please add at least one item");
-        return false;
-      }
+      
 
       // Choose mutation based on mode
       if (isEditMode) {

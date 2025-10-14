@@ -12,6 +12,7 @@ import { transactionQueries } from "@/hooks/queries/transaction.queries";
 import { useSelector } from "react-redux";
 import CustomMoonLoader from "@/components/loaders/CustomMoonLoader";
 import { LoaderCircle } from "lucide-react";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const TransactionList = () => {
   const location = useLocation();
@@ -29,6 +30,8 @@ const TransactionList = () => {
     (state) => state.companyBranch?.selectedBranch?._id
   );
 
+  const DEBOUNCE_DELAY = 500;
+
   const {
     sortField,
     sortDirection,
@@ -40,6 +43,8 @@ const TransactionList = () => {
     getTypeColor,
     handleSearchChange,
   } = useTransactionListActions();
+
+  const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY);
 
   // Fetch data with useInfiniteQuery
   const {
@@ -54,7 +59,7 @@ const TransactionList = () => {
   } = useInfiniteQuery(
     transactionQueries.infiniteList(
       currentTransactionType,
-      searchTerm,
+      debouncedSearchTerm,
       companyId,
       branchId,
       25,
