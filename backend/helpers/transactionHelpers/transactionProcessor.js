@@ -6,7 +6,7 @@ import {
   updateAccountMonthlyBalance,
   updateItemMonthlyBalances,
 } from "./monthlyBalanceService.js";
-import { transactionTypeToModelName } from "./transactionMappers.js";
+import { getTransactionModel, transactionTypeToModelName } from "./transactionMappers.js";
 /**
  * Main transaction processor - orchestrates all steps
  */
@@ -25,8 +25,10 @@ export const processTransaction = async (transactionData, session) => {
       session
     );
 
+    const transactionModel=getTransactionModel(transactionType);
+
     // // Step 3: Create transaction record
-    const transaction = await SalesModel.create([transactionData], {
+    const transaction = await transactionModel.create([transactionData], {
       session,
     });
 

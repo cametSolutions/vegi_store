@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { processTransaction } from "../../helpers/transactionHelpers/transactionProcessor.js";
 import { determinePaymentStatus } from "../../helpers/transactionHelpers/calculationHelper.js";
+import { getTransactionModel, transactionTypeToModelName } from "../../helpers/transactionHelpers/transactionMappers.js";
 
 /**
  * Create transaction (handles sales, purchase, credit_note, debit_note)
@@ -55,7 +56,6 @@ export const createTransaction = async (req, res) => {
     //// add some extra fields
     transactionData.paymentStatus = paymentStatus;
 
-
     // Determine payment method
     if (paidAmount >= netAmount) {
       transactionData.paymentMethod = "cash";
@@ -68,10 +68,7 @@ export const createTransaction = async (req, res) => {
     // console.log("transactionData", transactionData);
 
     // Process transaction using helper (orchestrates all steps)
-    const result = await processTransaction(
-      transactionData,
-      session
-    );
+    const result = await processTransaction(transactionData, session);
 
     // Commit transaction
     await session.commitTransaction();
@@ -118,5 +115,61 @@ export const createTransaction = async (req, res) => {
   } finally {
     // End session
     session.endSession();
+  }
+};
+
+/**
+ * get transactions (handles sales, purchase, credit_note, debit_note)
+ */
+
+export const getTransactions = async (req, res) => {
+  try {
+    const transactionType = req.query.transactionType;
+
+    // Validate transaction type
+    const validTypes = ["sale", "purchase", "credit_note", "debit_note"];
+    if (!validTypes.includes(transactionType)) {
+      return res.status(400).json({ message: "Invalid transaction type" });
+    }
+
+    const transactionModel = getTransactionModel(transactionType);
+
+    console.log("Transaction",transactionModel);
+    
+
+    // Get query parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const searchTerm = req.query.searchTerm || "";
+    const companyId = req.query.companyId;
+    const branchId = req.query.branchId;
+
+    // Build filter - MUST include transactionType
+    const filter = { transactionType };
+
+    if (searchTerm) {
+      filter.$or = [
+        { accountName: { $regex: searchTerm, $options: "i" } },
+        { transactionNumber: { $regex: searchTerm, $options: "i" } },
+      ];
+    }
+    if (companyId) filter.company = companyId;
+    if (branchId) filter.branch = branchId;
+
+    // Use the static method for pagination
+    const result = await transactionModel.getPaginatedTransactions(
+      filter,
+      page,
+      limit,
+      { transactionDate: -1 }
+    );
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error fetching transactions:", error);
+    res.status(500).json({
+      message: "Error fetching transactions",
+      error: error.message,
+    });
   }
 };

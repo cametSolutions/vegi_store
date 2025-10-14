@@ -123,7 +123,7 @@ const TransactionSchema = new mongoose.Schema(
     },
     priceLevel: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Pricelevel",
+      ref: "PriceLevel",
     },
     priceLevelName: { type: String },
 
@@ -253,6 +253,94 @@ TransactionSchema.virtual("accountDisplayName").get(function () {
     ? "Supplier"
     : "Others";
 });
+
+// ==================== STATIC METHODS ====================
+
+/**
+ * Count documents matching the filter with optimized indexing
+ * @param {Object} filter - MongoDB filter object
+ * @returns {Promise<Number>} - Count of matching documents
+ */
+TransactionSchema.statics.getCount = function (filter = {}) {
+  return this.countDocuments(filter);
+};
+
+/**
+ * Get paginated transactions with count
+ * @param {Object} filter - MongoDB filter object
+ * @param {Number} page - Page number (starts from 1)
+ * @param {Number} limit - Number of documents per page
+ * @param {Object} sort - Sort object (default: { transactionDate: -1 })
+ * @returns {Promise<Object>} - Object containing data, count, and pagination info
+ */
+TransactionSchema.statics.getPaginatedTransactions = async function (
+  filter = {},
+  page = 1,
+  limit = 20,
+  sort = { transactionDate: -1 }
+) {
+  const skip = (page - 1) * limit;
+
+  // Execute count and find in parallel for better performance
+  const [totalCount, transactions] = await Promise.all([
+    this.countDocuments(filter),
+    this.find(filter)
+
+      .select(
+        "transactionNumber transactionDate totalAmount totalAmountAfterTax discountAmount paidAmount balanceAmount"
+      )
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(), // Use lean() for better performance when you don't need Mongoose documents
+  ]);
+
+  const hasMore = skip + transactions.length < totalCount;
+
+  return {
+    data: transactions,
+    nextPage: hasMore ? page + 1 : undefined,
+    totalCount,
+    currentPage: page,
+    totalPages: Math.ceil(totalCount / limit),
+    hasMore,
+  };
+};
+
+/**
+ * Get transaction summary by type
+ * @param {String} transactionType - Type of transaction
+ * @param {Object} filter - Additional filter criteria
+ * @returns {Promise<Object>} - Summary object with totals
+ */
+TransactionSchema.statics.getSummaryByType = async function (
+  transactionType,
+  filter = {}
+) {
+  const mergedFilter = { ...filter, transactionType };
+
+  const summary = await this.aggregate([
+    { $match: mergedFilter },
+    {
+      $group: {
+        _id: null,
+        totalTransactions: { $sum: 1 },
+        totalAmount: { $sum: "$netAmount" },
+        totalPaid: { $sum: "$paidAmount" },
+        totalDue: { $sum: "$balanceAmount" },
+      },
+    },
+  ]);
+
+  return (
+    summary[0] || {
+      totalTransactions: 0,
+      totalAmount: 0,
+      totalPaid: 0,
+      totalDue: 0,
+    }
+  );
+};
 
 // ==================== INDEXES ====================
 TransactionSchema.index({

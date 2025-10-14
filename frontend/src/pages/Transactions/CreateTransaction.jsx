@@ -43,8 +43,8 @@ const CreateTransaction = () => {
   } = useTransaction();
 
   const currentTransactionType = useMemo(
-    () => getTransactionType(location, transactionData.type),
-    [location, transactionData.type]
+    () => getTransactionType(location),
+    [location]
   );
 
   useEffect(() => {
