@@ -284,10 +284,11 @@ TransactionSchema.statics.getPaginatedTransactions = async function (
   // Execute count and find in parallel for better performance
   const [totalCount, transactions] = await Promise.all([
     this.countDocuments(filter),
-    this.find(filter)
+    this.find(filter).
+    populate({path: "account", select: "accountName accountType"})
 
       .select(
-        "transactionNumber transactionDate totalAmount totalAmountAfterTax discountAmount paidAmount balanceAmount"
+        "transactionNumber transactionDate totalAmount totalAmountAfterTax discountAmount paidAmount balanceAmount "
       )
       .sort(sort)
       .skip(skip)

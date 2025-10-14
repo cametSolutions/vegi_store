@@ -44,7 +44,7 @@ const ItemsTable = ({ items, onRemoveItem, handleItemClickInItemsTable }) => {
               <tr
                 onClick={() => handleItemClickInItemsTable(item)}
                 key={index}
-                className="hover:bg-slate-200 cursor-pointer"
+                className= " bg-slate-100 hover:bg-slate-200 cursor-pointer"
               >
                 <td className="px-5 py-1.5 font-medium text-slate-900 text-left">
                   {truncate(item?.itemCode, 7)}

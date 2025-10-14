@@ -10,6 +10,8 @@ import { getTransactionType } from "../../utils/transactionUtils";
 import { useLocation } from "react-router-dom";
 import { transactionQueries } from "@/hooks/queries/transaction.queries";
 import { useSelector } from "react-redux";
+import CustomMoonLoader from "@/components/loaders/CustomMoonLoader";
+import { LoaderCircle } from "lucide-react";
 
 const TransactionList = () => {
   const location = useLocation();
@@ -27,7 +29,17 @@ const TransactionList = () => {
     (state) => state.companyBranch?.selectedBranch?._id
   );
 
-  console.log("currentTransactionType", currentTransactionType);
+  const {
+    sortField,
+    sortDirection,
+    sortedData,
+    handleSort,
+    searchTerm,
+    totals: { totalAmount, totalOutstanding, totalPaid },
+    getStatusColor,
+    getTypeColor,
+    handleSearchChange,
+  } = useTransactionListActions();
 
   // Fetch data with useInfiniteQuery
   const {
@@ -38,13 +50,15 @@ const TransactionList = () => {
     isFetching,
     isFetchingNextPage,
     status,
+    refetch,
   } = useInfiniteQuery(
     transactionQueries.infiniteList(
       currentTransactionType,
-      "",
+      searchTerm,
       companyId,
       branchId,
-      20
+      25,
+      { refetchOnWindowFocus: false, retry: 2 }
     )
   );
 
@@ -53,33 +67,7 @@ const TransactionList = () => {
     return data?.pages.flatMap((page) => page.data) ?? [];
   }, [data]);
 
-  const {
-    sortField,
-    sortDirection,
-    searchTerm,
-    sortedData,
-    totals: { totalAmount, totalOutstanding, totalPaid },
-    getStatusColor,
-    getTypeColor,
-    handleSort,
-    handleSearchChange,
-  } = useTransactionListActions(allTransactions);
-
-  if (status === "pending") {
-    return (
-      <div className="w-full h-[calc(100vh-110px)] flex items-center justify-center">
-        <p className="text-gray-500">Loading transactions...</p>
-      </div>
-    );
-  }
-
-  if (status === "error") {
-    return (
-      <div className="w-full h-[calc(100vh-110px)] flex items-center justify-center">
-        <p className="text-red-500">Error: {error.message}</p>
-      </div>
-    );
-  }
+  console.log("allTransactions", allTransactions);
 
   return (
     <div className="w-full h-[calc(100vh-110px)] bg-white rounded-xs shadow-sm border flex flex-col">
@@ -102,27 +90,30 @@ const TransactionList = () => {
         className="flex-1 overflow-y-auto overflow-x-auto"
       >
         <InfiniteScroll
-          dataLength={sortedData.length}
+          dataLength={allTransactions.length}
           next={fetchNextPage}
           hasMore={!!hasNextPage}
           loader={
             <div className="text-center py-4 text-gray-500">
-              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+              <LoaderCircle className="animate-spin" />
               <p className="mt-2">Loading more transactions...</p>
             </div>
           }
-          endMessage={
-            <div className="text-center py-4 text-gray-400">
-              <b>No more transactions to load</b>
-            </div>
-          }
+          // endMessage={
+          //   <div className="text-center py-4 text-gray-400">
+          //     <b>No more transactions to load</b>
+          //   </div>
+          // }
           scrollableTarget="scrollableDiv"
         >
           <table className="w-full">
             <ListTable
-              data={sortedData}
+              data={allTransactions}
               getStatusColor={getStatusColor}
               getTypeColor={getTypeColor}
+              isFetching={isFetching}
+              status={status}
+              refetch={refetch}
             />
           </table>
         </InfiniteScroll>
@@ -136,13 +127,6 @@ const TransactionList = () => {
           totalOutstanding={totalOutstanding}
         />
       </div>
-
-      {/* Optional: Show fetching indicator */}
-      {isFetching && !isFetchingNextPage && (
-        <div className="absolute top-2 right-2 text-xs text-gray-500">
-          Refreshing...
-        </div>
-      )}
     </div>
   );
 };

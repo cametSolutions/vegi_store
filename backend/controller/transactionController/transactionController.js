@@ -1,7 +1,11 @@
 import mongoose from "mongoose";
 import { processTransaction } from "../../helpers/transactionHelpers/transactionProcessor.js";
 import { determinePaymentStatus } from "../../helpers/transactionHelpers/calculationHelper.js";
-import { getTransactionModel, transactionTypeToModelName } from "../../helpers/transactionHelpers/transactionMappers.js";
+import {
+  getTransactionModel,
+  transactionTypeToModelName,
+} from "../../helpers/transactionHelpers/transactionMappers.js";
+import { sleep } from "../../../shared/utils/delay.js";
 
 /**
  * Create transaction (handles sales, purchase, credit_note, debit_note)
@@ -124,6 +128,9 @@ export const createTransaction = async (req, res) => {
 
 export const getTransactions = async (req, res) => {
   try {
+
+    // sleep(10000);
+    // throw new Error("sleep");
     const transactionType = req.query.transactionType;
 
     // Validate transaction type
@@ -133,9 +140,6 @@ export const getTransactions = async (req, res) => {
     }
 
     const transactionModel = getTransactionModel(transactionType);
-
-    console.log("Transaction",transactionModel);
-    
 
     // Get query parameters
     const page = parseInt(req.query.page) || 1;
@@ -161,7 +165,7 @@ export const getTransactions = async (req, res) => {
       filter,
       page,
       limit,
-      { transactionDate: -1 }
+      { transactionDate: 1 }
     );
 
     res.status(200).json(result);

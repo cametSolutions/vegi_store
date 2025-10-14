@@ -8,13 +8,17 @@ export const transactionMutations = {
     mutationFn: ({ formData, transactionType }) =>
       transactionServices.create(formData, transactionType),
 
-    onSuccess: (data, variables) => {
-      //   queryClient.invalidateQueries({
-      //     queryKey: ['transaction', variables.transactionType]
-      //   });
+    onSuccess: (response, variables) => {
+      // The response structure is { success, message, data: { transaction, ... } }
+      const { company, branch, transactionType } = response?.data?.transaction;
+
+      queryClient.invalidateQueries({
+        queryKey: ["transactions", transactionType, "", company, branch],
+      });
+
       toast.success(
         `${capitalizeFirstLetter(
-          data?.transaction?.transactionType || "Transaction"
+          response?.data?.transaction?.transactionType || "Transaction"
         )} created successfully!`
       );
     },

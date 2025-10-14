@@ -1,5 +1,5 @@
 /// Utility to format a date to a readable string
-export const formatDate = (date) => new Date(date).toLocaleDateString();
+export const formatDate = (date) => new Date(date).toLocaleDateString("en-GB");
 
 /**
  * Generate period key from date (format: YYYY-MM)
