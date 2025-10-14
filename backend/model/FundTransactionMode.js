@@ -1,7 +1,11 @@
 import mongoose from "mongoose";
-import FundTransactionSchema from "../schemas/FundTransactionSchema.js";
+import { FundTransactionSchema } from "../schemas/FundTransactionSchema.js";
 
-const ReceiptModel = mongoose.model("Receipt", FundTransactionSchema);
-const PayMentModel = mongoose.model("Payment", FundTransactionSchema);
+// Create base model
+const FundTransaction = mongoose.model("FundTransaction", FundTransactionSchema);
 
-export { ReceiptModel, PayMentModel };
+// Create discriminators
+const ReceiptModel = FundTransaction.discriminator("Receipt", new mongoose.Schema({}));
+const PaymentModel = FundTransaction.discriminator("Payment", new mongoose.Schema({}));
+
+export { ReceiptModel, PaymentModel, FundTransaction };

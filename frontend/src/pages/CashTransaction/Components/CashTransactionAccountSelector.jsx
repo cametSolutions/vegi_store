@@ -1,14 +1,14 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Search, Loader2, X } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { useDebounce } from '../../../hooks/useDebounce';
-import { accountMasterQueries } from '@/hooks/queries/accountMaster.queries';
-import { truncate } from '../../../../../shared/utils/string';
-import { NumericFormat } from 'react-number-format';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Search, Loader2, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useDebounce } from "../../../hooks/useDebounce";
+import { accountMasterQueries } from "@/hooks/queries/accountMaster.queries";
+import { truncate } from "../../../../../shared/utils/string";
+import { NumericFormat } from "react-number-format";
 
 const CashTransactionAccountSelector = ({
   accountName,
-  accountId,
+  account,
   previousBalanceAmount,
   amount,
   closingBalanceAmount,
@@ -17,7 +17,8 @@ const CashTransactionAccountSelector = ({
   updateTransactionData,
   branch,
   company,
-  transactionType
+  transactionType,
+  // resetCashTransactionData,
 }) => {
   // ============================================================================
   // CONSTANTS
@@ -30,9 +31,9 @@ const CashTransactionAccountSelector = ({
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
-  const [searchTerm, setSearchTerm] = useState(accountName || '');
+  const [searchTerm, setSearchTerm] = useState(accountName || "");
   const [showDropdown, setShowDropdown] = useState(false);
-
+  console.log("transactionType", transactionType);
   // ============================================================================
   // REFS
   // ============================================================================
@@ -47,7 +48,7 @@ const CashTransactionAccountSelector = ({
     company &&
     debouncedSearchTerm?.trim() &&
     debouncedSearchTerm.trim().length >= MIN_SEARCH_LENGTH &&
-    !accountId
+    !account
   );
 
   // ============================================================================
@@ -62,7 +63,7 @@ const CashTransactionAccountSelector = ({
       debouncedSearchTerm,
       company,
       branch,
-      'customer',
+      "customer",
       RESULT_LIMIT,
       {
         withOutstanding: true,
@@ -90,9 +91,8 @@ const CashTransactionAccountSelector = ({
     const prevBalance = parseFloat(previousBalanceAmount) || 0;
     const amountValue = parseFloat(amount) || 0;
     const closing = prevBalance - amountValue;
-    
     if (closing !== closingBalanceAmount) {
-      updateTransactionField('closingBalanceAmount', closing);
+      updateTransactionField("closingBalanceAmount", closing);
     }
   }, [previousBalanceAmount, amount]);
 
@@ -111,8 +111,8 @@ const CashTransactionAccountSelector = ({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   /**
@@ -123,6 +123,12 @@ const CashTransactionAccountSelector = ({
       setSearchTerm(accountName);
     }
   }, [accountName]);
+
+  useEffect(() => {
+    return () => {
+      setSearchTerm("");
+    };
+  }, []);
 
   // ============================================================================
   // EVENT HANDLERS
@@ -137,10 +143,10 @@ const CashTransactionAccountSelector = ({
     setShowDropdown(true);
 
     // Clear account ID when user starts typing
-    if (accountId) {
+    if (account) {
       if (updateTransactionData) {
         updateTransactionData({
-          accountId: '',
+          account: "",
           accountName: value,
           previousBalanceAmount: 0,
         });
@@ -155,28 +161,32 @@ const CashTransactionAccountSelector = ({
     (account) => {
       const truncatedName = truncate(account.accountName, TRUNCATE_LENGTH);
       setSearchTerm(truncatedName);
+      console.log("Transaction Type:", transactionType); // Add this for debugging
+      console.log("Outstanding Dr:", account.outstandingDr);
+      console.log("Outstanding Cr:", account.outstandingCr);
 
+      // Select previous balance based on transaction type
+      const previousBalance =
+        transactionType?.toLowerCase() === "receipt"
+          ? account.outstandingDr || 0
+          : account.outstandingCr || 0;
 
-   const previousBalance = transactionType?.toLowerCase() === 'payment' 
-        ? (account.outstandingCr || 0)
-        : (account.outstandingDr || 0);
-
-
+      console.log("Selected Previous Balance:", previousBalance);
       if (updateTransactionData) {
         updateTransactionData({
           accountName: account.accountName,
-          accountId: account._id,
+          account: account._id,
           previousBalanceAmount: previousBalance || 0,
         });
       } else {
-        updateTransactionField('accountName', account.accountName);
-        updateTransactionField('accountId', account._id);
-        updateTransactionField('previousBalanceAmount', previousBalance || 0);
+        updateTransactionField("accountName", account.accountName);
+        updateTransactionField("account", account._id);
+        updateTransactionField("previousBalanceAmount", previousBalance || 0);
       }
 
       setShowDropdown(false);
     },
-    [updateTransactionData, updateTransactionField]
+    [updateTransactionData, updateTransactionField, transactionType]
   );
 
   /**
@@ -194,20 +204,20 @@ const CashTransactionAccountSelector = ({
   const handleClearAccount = useCallback(() => {
     if (updateTransactionData) {
       updateTransactionData({
-        accountName: '',
-        accountId: '',
+        accountName: "",
+        account: "",
         previousBalanceAmount: 0,
         amount: 0,
         closingBalanceAmount: 0,
       });
     } else {
-      updateTransactionField('accountName', '');
-      updateTransactionField('accountId', '');
-      updateTransactionField('previousBalanceAmount', 0);
-      updateTransactionField('amount', 0);
-      updateTransactionField('closingBalanceAmount', 0);
+      updateTransactionField("accountName", "");
+      updateTransactionField("account", "");
+      updateTransactionField("previousBalanceAmount", 0);
+      updateTransactionField("amount", 0);
+      updateTransactionField("closingBalanceAmount", 0);
     }
-    setSearchTerm('');
+    setSearchTerm("");
   }, [updateTransactionData, updateTransactionField]);
 
   // ============================================================================
@@ -218,13 +228,13 @@ const CashTransactionAccountSelector = ({
    * Render input icon based on current state
    */
   const renderInputIcon = () => {
-    if (isFetching && !accountId) {
+    if (isFetching && !account) {
       return (
         <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 animate-spin text-blue-500" />
       );
     }
 
-    if (accountId) {
+    if (account) {
       return (
         <X
           className="absolute mt-[1px] right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 hover:text-slate-600 cursor-pointer"
@@ -274,7 +284,7 @@ const CashTransactionAccountSelector = ({
         {totalCount > RESULT_LIMIT && (
           <div className="px-3 py-1.5 text-[8px] bg-blue-50 text-blue-700 border-b border-blue-100 sticky top-0 z-10">
             Showing {accounts.length} of {totalCount} results
-            {hasMore && ' - Type more to refine'}
+            {hasMore && " - Type more to refine"}
           </div>
         )}
 
@@ -384,7 +394,7 @@ const CashTransactionAccountSelector = ({
                 thousandSeparator=","
                 value={amount}
                 onValueChange={(values) => {
-                  updateTransactionField('amount', values.floatValue || 0);
+                  updateTransactionField("amount", values.floatValue || 0);
                 }}
                 className="w-full px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
               />
@@ -414,7 +424,9 @@ const CashTransactionAccountSelector = ({
           <textarea
             name="narration"
             value={narration}
-            onChange={(e) => updateTransactionField('narration', e.target.value)}
+            onChange={(e) =>
+              updateTransactionField("narration", e.target.value)
+            }
             rows="2"
             placeholder="Enter narration..."
             className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-white text-gray-900 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"

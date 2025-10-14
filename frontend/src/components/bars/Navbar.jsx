@@ -28,7 +28,7 @@ const Navbar = () => {
     { label: "Purchase Return", path: "/purchase-return" },
     { label: "Purchase", path: "/purchase" },
     { label: "Payment", path: "/transactions/payment/create" },
-    { label: "Receipt", path: "/transactions/reciept/create" },
+    { label: "receipt", path: "/transactions/receipt/create" },
     { label: "Sales", path: "/transactions/sale/create" },
   ];
 

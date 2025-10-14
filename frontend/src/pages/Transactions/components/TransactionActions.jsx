@@ -1,6 +1,6 @@
 import React from "react";
 import { Save, Eye, Trash2, X, FileText } from "lucide-react";
-import { useTransactionActions } from "../Transactions/hooks/useTransactionActions";
+import { useTransactionActions } from "../hooks/useTransactionActions";
 
 const TransactionActions = ({
   transactionData,

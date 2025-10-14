@@ -17,9 +17,10 @@ export const cashTransactionServices = {
 
   // Custom search method specific to account master
   create: async (formData, transactionType) => {
+    console.log("formdata",transactionType)
     try {
       const response = await api.post(
-        `/transaction/${transactionType}/create`,
+        `/transaction/${transactionType}/createFundTransaction`,
         formData
       );
 

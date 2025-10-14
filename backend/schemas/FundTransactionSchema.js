@@ -1,67 +1,82 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
+import { nanoid } from "nanoid";
 
-const FundTransactionSchema = new mongoose.Schema(
+// Base schema for fund transactions
+export const FundTransactionSchema = new mongoose.Schema(
   {
     company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", required: true },
     branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", required: true },
-    transactionType: { type: String, enum: ["receipt", "payment"], required: true },
-    transactionNumber: { type: String, required: true, unique: true, trim: true },
-    date: { type: Date, required: true, default: Date.now },
 
+    // transactionType: { 
+    //   type: String, 
+    //   enum: ["receipt", "payment"], // ✅ fixed spelling
+    //   required: true 
+    // },
+
+    transactionNumber: {
+      type: String,
+      unique: true,
+      required: true,
+      default: function () {
+        // 'this' will have __t field which is the discriminator value
+        const prefix = this.__t?.toUpperCase().slice(0, 3) || "TXN";
+        return `${prefix}-${nanoid(8)}`;
+      },
+    },
+
+    date: { type: Date, required: true, default: Date.now },
     account: { type: mongoose.Schema.Types.ObjectId, ref: "AccountMaster", required: true },
     accountName: { type: String, required: true, trim: true },
-
-    previousBalanceAmount: { type: Number, required: true, min: 0 },
+    previousBalanceAmount: { type: Number, default: 0 },
     amount: { type: Number, required: true, min: 0 },
-    closingBalanceAmount: { type: Number, required: true, min: 0 },
-
-    paymentMode: { type: String, enum: ["cash", "cheque", "dd", "bank_transfer"], required: true },
-    chequeNumber: { type: String, trim: true },
-    bank: { type: String, trim: true },
+    closingBalanceAmount: { type: Number, default: 0 },
+    paymentMode: { 
+      type: String, 
+      enum: ["cash", "cheque", "dd", "bank_transfer"], 
+      default: "cash"
+    },
+     chequeNumber: String,
+    chequeDate: Date,
+    bank: String,
+    bankAccount: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AccountMaster"
+    },
+    narration: String,
+    description: String,
 
     settlementDetails: [
       {
-        outstandingTransaction: { type: mongoose.Schema.Types.ObjectId, ref: "Outstanding", required: true },
-        previousOutstanding: { type: Number, required: true, min: 0 },
-        settledAmount: { type: Number, required: true, min: 0 },
-        remainingOutstanding: { type: Number, required: true, min: 0 },
+        outstandingTransaction: { type: mongoose.Schema.Types.ObjectId, ref: "Outstanding" },
+        outstandingTransactionNumber: String,
+        previousOutstanding: Number,
+        settledAmount: Number,
+        remainingOutstanding: Number,
         settlementDate: { type: Date, default: Date.now },
       }
     ],
 
-    narration: { type: String, trim: true },
-    description: { type: String, trim: true },
     attachments: [
       {
-        fileName: { type: String },
-        url: { type: String },
+        fileName: String,
+        url: String,
         uploadedAt: { type: Date, default: Date.now },
       }
     ],
 
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     lastModifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   {
     timestamps: true,
+    discriminatorKey:  "__t",
   }
 );
 
-// Indexes for optimized queries
+// Indexes
 FundTransactionSchema.index({ transactionNumber: 1 });
 FundTransactionSchema.index({ date: -1 });
 FundTransactionSchema.index({ account: 1, transactionType: 1 });
+FundTransactionSchema.index({ company: 1, branch: 1 });
 
-// Static methods: example for fetching outstanding transactions
-FundTransactionSchema.statics.getOutstandingTransactions = async function(accountId) {
-  return this.find({ account: accountId, closingBalanceAmount: { $gt: 0 } });
-};
 
-// Instance method to settle an amount FIFO
-FundTransactionSchema.methods.settleAmountFIFO = async function(settleAmount) {
-  // Implementation of FIFO settlement logic
-  // Update settlementDetails accordingly
-};
-
-// Model export
-module.exports = mongoose.model('Transaction', FundTransactionSchema);

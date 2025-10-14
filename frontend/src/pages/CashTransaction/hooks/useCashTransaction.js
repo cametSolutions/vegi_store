@@ -19,10 +19,17 @@ export const useCashTransaction = (initialData = null) => {
     setCashtransactionData((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-    return {
+   const resetCashTransactionData = useCallback(() => {
+    console.log("resetCashTransactionData");
+    setCashtransactionData(createEmptyTransaction());
+  }, []);
+    
+  
+  return {
     CashtransactionData,
    updateCashtransactionData,
     updateTransactionField,
+    resetCashTransactionData,
    
     setCashtransactionData,
   };

@@ -24,7 +24,7 @@ const AccountMasterSchema = new mongoose.Schema(
       type: String,
       required: [true, "Account type is required"],
       enum: {
-        values: ["customer", "other"],
+        values: ["customer","cash", "bank", "other"],
         message: "Account type must be either customer or other",
       },
     },

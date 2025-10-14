@@ -1,7 +1,7 @@
 // hooks/mutations/transactionMutations.js
 import { cashTransactionServices } from "../../api/services/cashTransaction.service";
 
-export const transactionMutations = {
+export const cashtransactionMutations = {
   create: (queryClient) => ({
     mutationFn: ({ formData, transactionType }) =>
       cashTransactionServices.create(formData, transactionType),
@@ -22,7 +22,7 @@ export const transactionMutations = {
 
   update: (queryClient) => ({
     mutationFn: ({ id, formData, transactionType }) =>
-      transactionServices.update(id, formData, transactionType),
+      cashTransactionServices.update(id, formData, transactionType),
 
     onSuccess: (data, variables) => {
       console.log("Transaction updated successfully:", data);
