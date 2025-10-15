@@ -122,7 +122,7 @@ export const settleOutstandingFIFO = async ({
     }
   }
 
-  console.log("🔍 Validated createdBy:", validCreatedBy);
+  // console.log("🔍 Validated createdBy:", validCreatedBy);
 
   for (const outstanding of unpaidOutstandings) {
     if (remainingAmount <= 0) {
@@ -160,6 +160,9 @@ export const settleOutstandingFIFO = async ({
       transactionNumber,
       date: transactionDate || new Date()
     });
+
+    console.log("outstanding",outstanding);
+    
 
     await outstanding.save({ session });
     console.log("💾 Outstanding saved successfully");

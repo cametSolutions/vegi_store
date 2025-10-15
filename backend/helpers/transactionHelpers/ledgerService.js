@@ -18,6 +18,7 @@ export const createAccountLedger = async (data, session) => {
       transactionDate,
       transactionType,
       ledgerSide, // "debit" or "credit"
+      
       amount,
       narration,
       createdBy,
