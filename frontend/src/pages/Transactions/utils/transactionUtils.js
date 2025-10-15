@@ -65,7 +65,8 @@ export const calculateItemAmount = (qty, rate) => qty * rate;
 export const createEmptyTransaction = () => ({
   transactionType: "sale",
   transactionDate: new Date().toISOString().split("T")[0],
-  transactionNumber: "",
+  // transactionNumber: "",
+  account: "",
   accountType: "customer",
   accountName: "",
   priceLevel: "",
@@ -197,3 +198,24 @@ export const recalculateTransactionOnPriceLevelChange = (transaction) => {
 
   return recalculatedTransaction;
 };
+
+
+// Utility function to convert string numbers to actual numbers
+export const convertStringNumbersToNumbers=(data) =>{
+  if (Array.isArray(data)) {
+    return data.map(convertStringNumbersToNumbers);
+  } else if (data !== null && typeof data === "object") {
+    const converted = {};
+    for (const [key, value] of Object.entries(data)) {
+      converted[key] = convertStringNumbersToNumbers(value);
+    }
+    return converted;
+  } else if (typeof data === "string" && data.trim() !== "" && !isNaN(data)) {
+    // Convert only if it’s a valid numeric string (integer or float)
+    return Number(data);
+  } else {
+    return data;
+  }
+}
+
+

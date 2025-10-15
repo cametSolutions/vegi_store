@@ -58,7 +58,7 @@ export const settleOutstandingFIFO = async ({
   session
 }) => {
   console.log("\n🔄 ===== STARTING FIFO SETTLEMENT =====");
-  console.log("📋 Parameters:", {
+  console.log("parameters:", {
     accountId,
     amount,
     type,

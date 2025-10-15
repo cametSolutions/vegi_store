@@ -25,7 +25,7 @@ function MainLayout() {
       <main
         className={` ${
           isLoading ? "opacity-50 pointer-events-none" : ""
-        }   relative flex-1 flex max-w-screen overflow-x-hidden bg-[#e9f5eb]`}
+        }   relative flex-1 flex   bg-[#e9f5eb]`}
       >
         {}
         <div

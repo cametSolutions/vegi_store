@@ -1,4 +1,4 @@
-import { createResourceApi } from "./client/apiClient";
+import { createResourceApi } from "../api/client/apiClient";
 export const pricelevelApi=createResourceApi("pricelevel",{
 create:"createpricelevel",//POST route
 getAll:"getallpricelevel",//GET route

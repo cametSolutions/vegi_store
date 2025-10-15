@@ -1,5 +1,7 @@
+
 import mongoose from "mongoose";
 import { nanoid } from "nanoid";
+
 
 // Base schema for fund transactions
 export const FundTransactionSchema = new mongoose.Schema(
@@ -80,3 +82,11 @@ FundTransactionSchema.index({ account: 1, transactionType: 1 });
 FundTransactionSchema.index({ company: 1, branch: 1 });
 
 
+// Instance method to settle an amount FIFO
+FundTransactionSchema.methods.settleAmountFIFO = async function(settleAmount) {
+  // Implementation of FIFO settlement logic
+  // Update settlementDetails accordingly
+};
+
+// Model export
+// module.exports = mongoose.model('Transaction', FundTransactionSchema);
