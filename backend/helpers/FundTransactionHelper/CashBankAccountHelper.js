@@ -51,7 +51,7 @@ export const getBankAccount = async (companyId, branchId, session) => {
   console.log("\n🏦 Finding Bank Account...");
 
   // Find any active bank account for this branch
-  bankAccount = await AccountMaster.findOne({
+ const  bankAccount = await AccountMaster.findOne({
     company: companyId,
     branch: branchId,
     accountType: "bank",

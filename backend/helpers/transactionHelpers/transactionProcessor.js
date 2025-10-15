@@ -1,11 +1,11 @@
 import { SalesModel } from "../../model/TransactionModel.js";
 import { updateStock } from "./stockManager.js";
-import { createAccountLedger, createItemLedgers } from "./ledgerService.js";
+import { createAccountLedger, createItemLedgers } from "../CommonTransactionHelper/ledgerService.js";
 import { createOutstanding } from "./outstandingService.js";
 import {
   updateAccountMonthlyBalance,
   updateItemMonthlyBalances,
-} from "./monthlyBalanceService.js";
+} from "../CommonTransactionHelper/monthlyBalanceService.js";
 import { getTransactionModel, transactionTypeToModelName } from "./transactionMappers.js";
 /**
  * Main transaction processor - orchestrates all steps

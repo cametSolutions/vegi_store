@@ -5,16 +5,18 @@ import {
   validateTransactionData, 
   getTransactionModel,
   prepareTransactionData 
-} from '../../Helper/FundTransactionHelper/FundTransactionHelper.js';
+} from '../../helpers/FundTransactionHelper/FundTransactionHelper.js';
 import { 
   // updateAccountOutstanding,
   settleOutstandingFIFO 
-} from '../../Helper/FundTransactionHelper/OutstandingSettlementHelper.js';
+} from '../../helpers/FundTransactionHelper/OutstandingSettlementHelper.js';
 import { 
   createCashBankLedgerEntry,
   getAllCashBankBalances 
-} from '../../Helper/FundTransactionHelper/CashBankLedgerHelper.js';
-import { getCashBankAccountForPayment } from '../../Helper/FundTransactionHelper/CashBankAccountHelper.js';
+} from '../../helpers/FundTransactionHelper/CashBankLedgerHelper.js';
+import { getCashBankAccountForPayment } from '../../helpers/FundTransactionHelper/CashBankAccountHelper.js';
+import { createAccountLedger } from '../../helpers/CommonTransactionHelper/ledgerService.js';
+import { updateAccountMonthlyBalance } from '../../helpers/CommonTransactionHelper/monthlyBalanceService.js';
 import AccountMaster from '../../model/masters/AccountMasterModel.js';
 
 /**
@@ -188,6 +190,47 @@ export const createFundTransaction = async (req, res) => {
       cashOrBank: cashBankAccount.isCash ? 'Cash' : cashBankAccount.accountName
     });
 
+
+    const partyLedgerSide = transactionType.toLowerCase() === 'receipt' ? 'debit' : 'credit';
+    
+    const partyLedger = await createAccountLedger({
+      company: requestData.company,
+      branch: requestData.branch,
+      account: finalAccountId,
+      accountName: partyAccount.accountName,
+      transactionId: newTransaction._id,
+      transactionNumber: newTransaction.transactionNumber,
+      transactionDate: newTransaction.date,
+      transactionType: transactionType.toLowerCase(),
+      ledgerSide: partyLedgerSide,
+      amount: amount,
+      narration: requestData.narration || `${transactionType} transaction`,
+      createdBy: req.user._id,
+    }, session);
+
+    console.log("✅ Party account ledger created:", {
+      id: partyLedger._id,
+      side: partyLedgerSide,
+      amount: partyLedger.amount,
+      runningBalance: partyLedger.runningBalance
+    });
+
+    // Step 11: Update Monthly Balance for Party Account
+    const monthlyBalance = await updateAccountMonthlyBalance({
+      company: requestData.company,
+      branch: requestData.branch,
+      account: finalAccountId,
+      accountName: partyAccount.accountName,
+      transactionDate: newTransaction.date,
+      ledgerSide: partyLedgerSide,
+      amount: amount,
+    }, session);
+
+    console.log("✅ Monthly balance updated:", {
+      month: monthlyBalance.month,
+      year: monthlyBalance.year,
+      closingBalance: monthlyBalance.closingBalance
+    });
     // Step 11: Commit transaction
     await session.commitTransaction();
 
@@ -203,6 +246,16 @@ export const createFundTransaction = async (req, res) => {
           accountUsed: cashBankAccount.accountName,
           entryType: ledgerEntry.entryType,
           amount: ledgerEntry.amount
+        },
+        partyLedger: {
+          id: partyLedger._id,
+          side: partyLedgerSide,
+          runningBalance: partyLedger.runningBalance
+        },
+        monthlyBalance: {
+          month: monthlyBalance.month,
+          year: monthlyBalance.year,
+          closingBalance: monthlyBalance.closingBalance
         }
       }
     });
