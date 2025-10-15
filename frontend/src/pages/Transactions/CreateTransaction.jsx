@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import TransactionAccountSelectorComponent from "./components/TransactionAccountSelector";
 import AddItemFormComponent from "./components/AddItemForm";
 import ItemsTableComponent from "./components/ItemsTable";
 import TransactionSummaryComponent from "./components/TransactionSummary";
 import TransactionActionsComponent from "./components/TransactionActions";
 import TransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
+import CustomMoonLoader from "../../components/loaders/CustomMoonLoader"; // Import the loader
 import { products, getTransactionType } from "./utils/transactionUtils";
 import { useTransaction } from "./hooks/useTransaction";
 import { useTransactionActions } from "./hooks/useTransactionActions";
@@ -26,6 +27,7 @@ const TransactionActions = React.memo(TransactionActionsComponent);
 
 const CreateTransaction = () => {
   const location = useLocation();
+  const [isLoading, setIsLoading] = useState(false);
 
   const {
     transactionData,
@@ -38,16 +40,27 @@ const CreateTransaction = () => {
     addItem,
     clickedItemInTable,
     handleItemClickInItemsTable,
+    resetTransactionData,
   } = useTransaction();
 
   const currentTransactionType = useMemo(
-    () => getTransactionType(location, transactionData.type),
-    [location, transactionData.type]
+    () => getTransactionType(location),
+    [location]
   );
 
   useEffect(() => {
+    console.log("Transaction type changed, resetting data");
+    resetTransactionData();
     updateTransactionField("currentTransactionType", currentTransactionType);
   }, [currentTransactionType, updateTransactionField]);
+
+  // Reset transaction data when navigating away from this page
+  useEffect(() => {
+    return () => {
+      console.log("Cleaning up - resetting transaction data");
+      resetTransactionData();
+    };
+  }, [resetTransactionData]);
 
   const selectedCompanyFromStore = useSelector(
     (state) => state.companyBranch?.selectedCompany
@@ -63,7 +76,14 @@ const CreateTransaction = () => {
   // Memoized callbacks to prevent child re-renders
 
   return (
-    <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
+    <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
+      {/* Loader Overlay */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-white/60  z-50 flex items-center justify-center">
+          <CustomMoonLoader />
+        </div>
+      )}
+
       {/* Header */}
       <TransactionHeader
         currentTransactionType={currentTransactionType}
@@ -79,7 +99,7 @@ const CreateTransaction = () => {
               accountType={transactionData?.accountType}
               accountName={transactionData?.accountName}
               openingBalance={transactionData?.openingBalance}
-              accountId={transactionData?.accountId}
+              account={transactionData?.account}
               transactionType={transactionData?.transactionType}
               priceLevel={transactionData?.priceLevel}
               priceLevelName={transactionData?.priceLevelName}
@@ -123,6 +143,8 @@ const CreateTransaction = () => {
             <TransactionActions
               onSave={useTransactionActions?.handleSave}
               transactionData={transactionData}
+              onLoadingChange={setIsLoading}
+              resetTransactionData={resetTransactionData}
               // onView={useTransactionActions?.handleView}
               // onDelete={useTransactionActions?.handleDelete}
               // onCancel={useTransactionActions?.handleCancel}

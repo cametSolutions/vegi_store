@@ -22,7 +22,7 @@ import { hideLoader, showLoader } from "@/store/slices/loaderSlice";
  * @param {string} props.accountType - Type of account ("customer" or "cash")
  * @param {string} props.accountName - Selected account name
  * @param {number} props.openingBalance - Opening balance value
- * @param {string} props.accountId - Selected account ID
+ * @param {string} props.account - Selected account ID
  * @param {string} props.priceLevel - Selected price level ID
  * @param {string} props.priceLevelName - Selected price level name
  * @param {Function} props.updateTransactionField - Updates single field
@@ -34,7 +34,7 @@ const TransactionAccountSelector = ({
   accountType,
   accountName,
   openingBalance,
-  accountId,
+  account,
   transactionType,
   priceLevel,
   priceLevelName,
@@ -74,7 +74,7 @@ const TransactionAccountSelector = ({
     debouncedSearchTerm?.trim() &&
     debouncedSearchTerm.trim().length >= MIN_SEARCH_LENGTH &&
     accountType === "customer" &&
-    !accountId
+    !account
   );
 
   // ============================================================================
@@ -105,7 +105,7 @@ const TransactionAccountSelector = ({
   // Query for "Cash" account when "cash" is selected
   const { data: cashAccountResponse } = useQuery({
     ...accountMasterQueries.search("Cash", company, branch, "cash", 1),
-    enabled: !!(company && accountType === "cash" && !accountId),
+    enabled: !!(company && accountType === "cash" && !account),
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     select: (data) => data?.data?.[0], // Select first result
@@ -182,7 +182,7 @@ const TransactionAccountSelector = ({
     if (
       accountType === "cash" &&
       cashAccountResponse &&
-      !accountId &&
+      !account &&
       company
     ) {
       const truncatedName = truncate(
@@ -193,7 +193,7 @@ const TransactionAccountSelector = ({
 
       updateTransactionData({
         accountName: cashAccountResponse?.accountName,
-        accountId: cashAccountResponse?._id,
+        account: cashAccountResponse?._id,
         openingBalance: cashAccountResponse?.outstandingNet || 0,
         netAmount: 0,
         email: cashAccountResponse?.email || "",
@@ -203,7 +203,7 @@ const TransactionAccountSelector = ({
   }, [
     accountType,
     cashAccountResponse,
-    accountId,
+    account,
     company,
     updateTransactionData,
   ]);
@@ -283,7 +283,7 @@ const TransactionAccountSelector = ({
 
       updateTransactionData({
         accountName: account?.accountName,
-        accountId: account?._id,
+        account: account?._id,
         openingBalance: account?.outstandingNet || 0,
         netAmount: 0,
         email: account?.email,
@@ -314,7 +314,7 @@ const TransactionAccountSelector = ({
       updateTransactionData({
         accountType: newType,
         accountName: "",
-        accountId: "",
+        account: "",
         openingBalance: 0,
         netAmount: 0,
         email: "",
@@ -332,7 +332,7 @@ const TransactionAccountSelector = ({
     updateTransactionData({
       accountType: "customer",
       accountName: "",
-      accountId: "",
+      account: "",
       openingBalance: 0,
       netAmount: 0,
       email: "",
@@ -367,13 +367,13 @@ const TransactionAccountSelector = ({
    * Render input icon based on current state
    */
   const renderInputIcon = () => {
-    if (isFetching && !accountId) {
+    if (isFetching && !account) {
       return (
         <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 animate-spin text-blue-500" />
       );
     }
 
-    if (accountId) {
+    if (account) {
       return (
         <X
           className="absolute mt-[1px] right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 hover:text-slate-600 cursor-pointer"

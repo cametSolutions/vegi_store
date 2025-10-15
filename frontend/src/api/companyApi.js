@@ -1,5 +1,5 @@
 
-import { createResourceApi } from "./client/apiClient";
+import { createResourceApi } from "../api/client/apiClient";
 export const companyApi=createResourceApi("company",{
 create:"createcompanies",//POST route
 getAll:"getallcompanies",//GET route

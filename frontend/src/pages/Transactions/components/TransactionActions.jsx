@@ -1,19 +1,44 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Save, Eye, Trash2, X, FileText } from "lucide-react";
 import { useTransactionActions } from "../hooks/useTransactionActions";
+import { toast } from "sonner";
 
 const TransactionActions = ({
   transactionData,
-  onSave,
+  onLoadingChange,
+  isEditMode = false,
+  resetTransactionData,
   // onView,
   // onDelete,
   // onCancel,
   // onPrint,
-  isEditMode = false,
 }) => {
+  const { handleSave, isLoading } = useTransactionActions(
+    transactionData,
+    isEditMode
+  );
 
-    const { handleSave, isLoading } = useTransactionActions(transactionData, isEditMode);
+  // 👇 Notify parent whenever loading changes
+  useEffect(() => {
+    if (onLoadingChange) {
+      onLoadingChange(isLoading);
+    }
+  }, [isLoading, onLoadingChange]);
 
+  const handleSaveClick = async () => {
+    // Validation
+    if (!transactionData.accountName.trim() && !transactionData.account) {
+      toast.error("Add a customer");
+      return false;
+    }
+
+    if (transactionData.items.length === 0) {
+      toast.error("Please add at least one item");
+      return false;
+    }
+    await handleSave(); // save using your hook
+    if (resetTransactionData) resetTransactionData(); // 👈 reset after success
+  };
 
   console.log("transaction actions component renders");
 
@@ -22,7 +47,7 @@ const TransactionActions = ({
       <div className="grid grid-cols-3 gap-2">
         {/* Primary Action - Darkest Blue */}
         <button
-          onClick={() => handleSave()}
+          onClick={handleSaveClick}
           className="bg-blue-700 hover:bg-blue-800 text-white px-2 py-2.5 rounded font-bold flex items-center justify-center gap-1 transition-colors text-[9px]"
         >
           <Save className="w-3 h-3" />

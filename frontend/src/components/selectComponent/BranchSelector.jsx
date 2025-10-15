@@ -1,38 +1,34 @@
-import { useAppSelector } from "../../hooks/hooks"
+import { useAppSelector } from "../../hooks/hooks";
 import {
   FormControl,
   Select,
   MenuItem,
   Checkbox,
-  ListItemText
-} from "@mui/material"
-import { useState, useEffect } from "react"
-
+  ListItemText,
+} from "@mui/material";
+import { useState, useEffect } from "react";
 
 const BranchSelector = ({ onChange }) => {
-  const branches = useAppSelector((state) => state.companyBranch.branches)
-console.log("brances",branches)
-  const [selectedBranchIds, setSelectedBranchIds] = useState([])
+  const branches = useAppSelector((state) => state.companyBranch.branches);
+  const [selectedBranchIds, setSelectedBranchIds] = useState([]);
 
   // Default select all branches
   useEffect(() => {
     if (branches.length > 0) {
-      const allIds = branches.map((b) => b._id)
-      setSelectedBranchIds(allIds)
-      onChange?.(allIds)
+      const allIds = branches.map((b) => b._id);
+      setSelectedBranchIds(allIds);
+      onChange?.(allIds);
     }
-  }, [branches])
+  }, [branches]);
 
   const handleChange = (event) => {
-    const value = event.target.value
-console.log("value",value)
-console.log("typeof value",typeof value)
-    const updated = typeof value === "string" ? value.split(",") : value
-console.log("updated",updated)
-    setSelectedBranchIds(updated)
-    onChange?.(updated) //notify parent
+    const value = event.target.value;
+
+    const updated = typeof value === "string" ? value.split(",") : value;
+    setSelectedBranchIds(updated);
+    onChange?.(updated); //notify parent
     // setSelectedBranchIds(typeof value === "string" ? value.split(",") : value)
-  }
+  };
 
   return (
     <FormControl size="small" className="w-60">
@@ -44,12 +40,12 @@ console.log("updated",updated)
         onChange={handleChange}
         // input={<OutlinedInput label="Branches" />}
         renderValue={(selected) => {
-          if (selected.length === branches.length) return "All Branches"
-          if (selected.length === 0) return "None"
-          return `${selected.length} Selected`
+          if (selected.length === branches.length) return "All Branches";
+          if (selected.length === 0) return "None";
+          return `${selected.length} Selected`;
         }}
         MenuProps={{
-          PaperProps: { style: { maxHeight: 300 } } // scroll if many branches
+          PaperProps: { style: { maxHeight: 300 } }, // scroll if many branches
         }}
       >
         {branches.map((branch) => (
@@ -60,7 +56,7 @@ console.log("updated",updated)
         ))}
       </Select>
     </FormControl>
-  )
-}
+  );
+};
 
-export default BranchSelector
+export default BranchSelector;
