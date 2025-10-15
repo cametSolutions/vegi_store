@@ -147,7 +147,6 @@ export const createFundTransaction = async (req, res) => {
       paymentMode: requestData.paymentMode || 'cash',
       companyId: requestData.company,
       branchId: requestData.branch,
-      bankAccountId: requestData.bankAccount, // Optional: user can specify specific bank
       session
     });
 
