@@ -232,7 +232,7 @@ export const useTransactionListActions = () => {
   // Calculate totals for the footer
   const totals = useMemo(() => {
     const totalAmount = sortedData.reduce(
-      (sum, transaction) => sum + transaction.total,
+      (sum, transaction) => sum + transaction.balance,
       0
     );
     const totalOutstanding = sortedData.reduce(
@@ -240,7 +240,7 @@ export const useTransactionListActions = () => {
       0
     );
     const totalPaid = sortedData.reduce(
-      (sum, transaction) => sum + transaction.paid,
+      (sum, transaction) => sum + transaction.total,
       0
     );
 

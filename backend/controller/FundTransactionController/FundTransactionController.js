@@ -363,18 +363,31 @@ export const getTransactions = async (req, res) => {
 
     const [transactions, total] = await Promise.all([
       TransactionModel.find(query)
-        .populate('account', 'accountName accountType phoneNo')
-        .populate('company', 'name')
-        .populate('branch', 'name')
+        .select('transactionNumber date amount previousBalanceAmount closingBalanceAmount settlementDetails')
+        .populate('account', 'accountName')
         .sort({ date: -1, createdAt: -1 })
         .skip(skip)
-        .limit(parseInt(limit)),
+        .limit(parseInt(limit))
+        .lean(),
       TransactionModel.countDocuments(query)
     ]);
 
+    // Transform data for frontend table
+    const formattedTransactions = transactions.map(transaction => {
+      return {
+        billNo: transaction.transactionNumber || 'N/A',
+        payDate: transaction.date,
+        accountName: transaction.account?.accountName || 'N/A',
+        previousBalanceAmount: transaction.previousBalanceAmount || 0,
+        amount: transaction.amount || 0,
+        closingBalanceAmount: transaction.closingBalanceAmount || 0,
+        status: (transaction.closingBalanceAmount || 0) === 0 ? 'paid' : 'unpaid'
+      };
+    });
+
     res.status(200).json({
       success: true,
-      data: transactions,
+      data: formattedTransactions,
       pagination: {
         total,
         page: parseInt(page),
@@ -392,7 +405,6 @@ export const getTransactions = async (req, res) => {
     });
   }
 };
-
 /**
  * Delete/Cancel transaction
  */
