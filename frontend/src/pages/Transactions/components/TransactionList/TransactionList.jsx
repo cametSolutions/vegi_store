@@ -22,7 +22,6 @@ const TransactionList = () => {
   );
 
   // Get company and branch IDs form redux
-
   const companyId = useSelector(
     (state) => state.companyBranch?.selectedCompany?._id
   );
@@ -90,38 +89,18 @@ const TransactionList = () => {
       </div>
 
       {/* Table Section with Infinite Scroll */}
-      <div
-        id="scrollableDiv"
-        className="flex-1 overflow-y-auto overflow-x-auto"
-      >
-        <InfiniteScroll
-          dataLength={allTransactions.length}
-          next={fetchNextPage}
-          hasMore={!!hasNextPage}
-          loader={
-            <div className="text-center py-4 text-gray-500">
-              <LoaderCircle className="animate-spin" />
-              <p className="mt-2">Loading more transactions...</p>
-            </div>
-          }
-          // endMessage={
-          //   <div className="text-center py-4 text-gray-400">
-          //     <b>No more transactions to load</b>
-          //   </div>
-          // }
-          scrollableTarget="scrollableDiv"
-        >
-          <table className="w-full">
-            <ListTable
-              data={allTransactions}
-              getStatusColor={getStatusColor}
-              getTypeColor={getTypeColor}
-              isFetching={isFetching}
-              status={status}
-              refetch={refetch}
-            />
-          </table>
-        </InfiniteScroll>
+      <div className="flex-1 overflow-hidden">
+        <ListTable
+          data={allTransactions}
+          getStatusColor={getStatusColor}
+          getTypeColor={getTypeColor}
+          isFetching={isFetching}
+          status={status}
+          refetch={refetch}
+          fetchNextPage={fetchNextPage}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+        />
       </div>
 
       {/* Footer Section */}
