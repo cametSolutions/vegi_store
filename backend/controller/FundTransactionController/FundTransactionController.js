@@ -13,8 +13,8 @@ import {
 import { 
   createCashBankLedgerEntry,
   getAllCashBankBalances 
-} from '../../helpers/FundTransactionHelper/CashBankLedgerHelper.js';
-import { getCashBankAccountForPayment } from '../../helpers/FundTransactionHelper/CashBankAccountHelper.js';
+} from '../../helpers/CommonTransactionHelper/CashBankLedgerHelper.js';
+import { getCashBankAccountForPayment } from '../../helpers/CommonTransactionHelper/CashBankAccountHelper.js';
 import { createAccountLedger } from '../../helpers/CommonTransactionHelper/ledgerService.js';
 import { updateAccountMonthlyBalance } from '../../helpers/CommonTransactionHelper/monthlyBalanceService.js';
 import AccountMaster from '../../model/masters/AccountMasterModel.js';

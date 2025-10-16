@@ -105,7 +105,7 @@ const TransactionSchema = new mongoose.Schema(
     // ==================== PARTY INFORMATION ====================
     accountType: {
       type: String,
-      enum: ["customer", "supplier", "others"],
+      enum: ["customer", "supplier", "others", "cash", "bank"],
       required: [true, "Account type is required"],
     },
     account: {

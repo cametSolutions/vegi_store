@@ -91,12 +91,7 @@ export const getCashBankAccountForPayment = async ({
   branchId,
   session,
 }) => {
-  console.log(
-    "\n🔍 Getting Cash/Bank account for payment mode:",
-    paymentMode,
-    companyId,
-    branchId
-  );
+
 
   const normalizedPaymentMode = (paymentMode || "cash").toLowerCase();
   const isCashPayment = normalizedPaymentMode === "cash";
@@ -104,7 +99,6 @@ export const getCashBankAccountForPayment = async ({
   if (isCashPayment) {
     // For cash payments, get the cash account from AccountMaster
     const cashAccount = await getCashAccount(companyId, branchId, session);
-    console.log("cash account", cashAccount);
     return {
       accountId: cashAccount._id,
       accountName: cashAccount.accountName,

@@ -1,44 +1,80 @@
 import { SalesModel } from "../../model/TransactionModel.js";
 import { updateStock } from "./stockManager.js";
-import { createAccountLedger, createItemLedgers } from "../CommonTransactionHelper/ledgerService.js";
+import {
+  createAccountLedger,
+  createItemLedgers,
+} from "../CommonTransactionHelper/ledgerService.js";
 import { createOutstanding } from "./outstandingService.js";
 import {
   updateAccountMonthlyBalance,
   updateItemMonthlyBalances,
 } from "../CommonTransactionHelper/monthlyBalanceService.js";
-import { getTransactionModel, transactionTypeToModelName } from "./transactionMappers.js";
+import {
+  getTransactionModel,
+  transactionTypeToModelName,
+} from "./transactionMappers.js";
+import { getCashBankAccountForPayment } from "../CommonTransactionHelper/CashBankAccountHelper.js";
+import { createCashBankLedgerEntry } from "../../helpers/CommonTransactionHelper/CashBankLedgerHelper.js";
 /**
  * Main transaction processor - orchestrates all steps
  */
-export const processTransaction = async (transactionData, session) => {
+export const processTransaction = async (transactionData, userId, session) => {
   try {
-    const { transactionType, branch, items, createdBy } = transactionData;
+    const { transactionType, branch, items, createdBy, company } =
+      transactionData;
 
     // Step 1: Determine transaction behavior
     const behavior = determineTransactionBehavior(transactionType);
 
     // // Step 2: Update stock
-    await updateStock(
-      items,
-      behavior.stockDirection,
-      branch,
-      session
-    );
+    await updateStock(items, behavior.stockDirection, branch, session);
 
-    const transactionModel=getTransactionModel(transactionType);
+    const transactionModel = getTransactionModel(transactionType);
 
     // // Step 3: Create transaction record
     const transaction = await transactionModel.create([transactionData], {
       session,
     });
 
-   
-    
     const createdTransaction = transaction[0];
 
-    // Step 4: Create outstanding (if balance exists)
+    // Step 4: Create outstanding (if balance exists) only if accountType is customer
+    // else we create a settlement for cash since we have only two options for transactions customer or cash(other)
     let outstanding = null;
-    if (createdTransaction.balanceAmount > 0) {
+    if (createdTransaction.accountType === "cash") {
+      // This finds the actual Cash/Bank account based on payment mode
+      const cashBankAccount = await getCashBankAccountForPayment({
+        paymentMode: "cash",
+        companyId: company,
+        branchId: branch,
+        session,
+      });
+      console.log("cashBankAccount", cashBankAccount);
+
+      console.log("createdTransaction", createdTransaction);
+
+      /// create cash ledger entry for cash transaction
+      const ledgerEntry = await createCashBankLedgerEntry({
+        transactionId: createdTransaction._id,
+        transactionType: transactionType.toLowerCase(),
+        transactionNumber: createdTransaction.transactionNumber,
+        transactionDate: createdTransaction.transactionDate,
+        accountId: createdTransaction.account,
+        accountName: createdTransaction?.accountName,
+        amount: createdTransaction?.netAmount,
+        paymentMode: "cash",
+        cashBankAccountId: cashBankAccount.accountId,
+        cashBankAccountName: cashBankAccount.accountName,
+        isCash: cashBankAccount.isCash,
+        company: company,
+        branch: branch,
+        createdBy: userId,
+        session,
+      });
+    } else if (
+      createdTransaction.balanceAmount > 0 &&
+      createdTransaction.accountType === "customer"
+    ) {
       outstanding = await createOutstanding(
         {
           company: createdTransaction.company,
@@ -46,7 +82,9 @@ export const processTransaction = async (transactionData, session) => {
           account: createdTransaction.account,
           accountName: createdTransaction.accountName,
           accountType: createdTransaction.accountType,
-          transactionModel: transactionTypeToModelName(createdTransaction.transactionType),
+          transactionModel: transactionTypeToModelName(
+            createdTransaction.transactionType
+          ),
           sourceTransaction: createdTransaction._id,
           transactionType: createdTransaction.transactionType,
           transactionNumber: createdTransaction.transactionNumber,

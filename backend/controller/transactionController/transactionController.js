@@ -72,7 +72,7 @@ export const createTransaction = async (req, res) => {
     // console.log("transactionData", transactionData);
 
     // Process transaction using helper (orchestrates all steps)
-    const result = await processTransaction(transactionData, session);
+    const result = await processTransaction(transactionData,userId, session);
 
     // Commit transaction
     await session.commitTransaction();

@@ -15,41 +15,41 @@ import mongoose from "mongoose";
       index: true
     },
 
-    // Reference to Fund Transaction (Receipt/Payment)
-    Transaction: {
+    // Reference to Fund transaction (Receipt/Payment)
+    transaction: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
       refPath: "FundTransaction",
       index: true
     },
-    TransactionModel: {
+    transactionModel: {
       type: String,
       required: true,
-      enum:  ["Receipt", "Payment"] // ✅ lowercase only
+      enum:  ["Receipt", "Payment","Sale"] // ✅ lowercase only
     },
-    TransactionNumber: {
+    transactionNumber: {
       type: String,
       required: true,
       index: true
     },
-    TransactionDate: {
+    transactionDate: {
       type: Date,
       required: true,
       index: true
     },
-    TransactionType: {
+    transactionType: {
       type: String,
       required: true,
-      enum: ["receipt", "payment"] // ✅ lowercase only
+      enum: ["receipt", "payment", "sale"] // ✅ lowercase only
     },
 
-    Account: {
+    account: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AccountMaster",
       required: true,
       index: true
     },
-    AccountName: { type: String, required: true },
+    accountName: { type: String, required: true },
 
     cashAccount: {
       type: mongoose.Schema.Types.ObjectId,
@@ -106,12 +106,12 @@ import mongoose from "mongoose";
 // --- Validation Logic ---
 cashBankLedgerSchema.pre("save", function (next) {
   if (this.isNew) {
-    const expectedEntryType = this.TransactionType === "receipt" ? "debit" : "credit";
+    const expectedEntryType = this.transactionType === "receipt" ? "debit" : "credit";
 
     if (this.entryType !== expectedEntryType) {
       return next(
         new Error(
-          `Entry type mismatch: ${this.TransactionType} should be ${expectedEntryType}`
+          `Entry type mismatch: ${this.transactionType} should be ${expectedEntryType}`
         )
       );
     }
