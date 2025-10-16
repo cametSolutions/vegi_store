@@ -15,14 +15,11 @@ export function authMiddleware(req, res, next) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
     // 3. Attach user info to request
-      req.user = {
+    req.user = {
       ...decoded,
-      _id: decoded._id || decoded.id || decoded.userId // Normalize to _id
+      _id: decoded._id || decoded.id || decoded.userId, // Normalize to _id
     };
- console.log("🔐 Authenticated user:", {
-      _id: req.user._id,
-      email: req.user.email
-    });
+
     // 4. Continue to next middleware / route
     next();
   } catch (err) {

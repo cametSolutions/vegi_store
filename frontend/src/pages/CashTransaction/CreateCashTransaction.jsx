@@ -63,7 +63,7 @@ useEffect(() => {
           updateTransactionField={updateTransactionField}
         />
 
-        <div className="flex flex-col  p-2 gap-2">
+        <div className="flex flex-col  p-1 gap-2">
           {/* Receipt Details - Top */}
           <div className=" bg-white rounded-lg shadow-sm ">
             <TransactionAccountSelector
