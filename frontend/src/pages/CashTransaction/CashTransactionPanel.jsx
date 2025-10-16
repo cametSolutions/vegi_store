@@ -7,9 +7,9 @@ const CashTransactionPanel = () => {
       <div className="w-1/2">
         <CreateCashTransaction />
       </div>
-      {/* <div className="w-1/2">
+      <div className="w-1/2">
         <CashTRansactionList/>
-      </div> */}
+      </div>
     </div>
   );
 };

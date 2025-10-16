@@ -32,4 +32,33 @@ export const cashTransactionServices = {
       throw new Error("An unexpected error occurred");
     }
   },
+
+ getAll: async (
+    transactionType,
+    pageParam = 1,
+    limit = 25,
+    searchTerm = "",
+    companyId,
+    branchId
+  ) => {
+    try {
+      const response = await api.get(`/transaction/${transactionType}/getall`, {
+        params: {
+          page: pageParam,
+          limit,
+          searchTerm,
+          companyId,
+          branchId,
+          transactionType,
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
 };
