@@ -111,7 +111,7 @@ export const createFundTransaction = async (req, res) => {
     const newTransaction = new TransactionModel(transactionData);
     await newTransaction.save({ session });
 
-    console.log("✅ Party transaction created:", newTransaction.transactionNumber);
+    console.log("✅ Party transaction created:", newTransaction);
 
     // Step 6: Update party account outstanding balance
     // await updateAccountOutstanding({
@@ -166,7 +166,7 @@ export const createFundTransaction = async (req, res) => {
       transactionId: newTransaction._id,
       transactionType: transactionType.toLowerCase(),
       transactionNumber: newTransaction.transactionNumber,
-      transactionDate: newTransaction.date,
+      transactionDate: newTransaction.transactionDate,
       accountId: finalAccountId,
       accountName: partyAccount.accountName,
       amount: amount,
@@ -200,7 +200,7 @@ export const createFundTransaction = async (req, res) => {
       accountName: partyAccount.accountName,
       transactionId: newTransaction._id,
       transactionNumber: newTransaction.transactionNumber,
-      transactionDate: newTransaction.date,
+      transactionDate: newTransaction.transactionDate,
       transactionType: transactionType.toLowerCase(),
       ledgerSide: partyLedgerSide,
       amount: amount,
@@ -221,7 +221,7 @@ export const createFundTransaction = async (req, res) => {
       branch: requestData.branch,
       account: finalAccountId,
       accountName: partyAccount.accountName,
-      transactionDate: newTransaction.date,
+      transactionDate: newTransaction.transactionDate,
       ledgerSide: partyLedgerSide,
       amount: amount,
     }, session);
@@ -323,18 +323,8 @@ export const getTransactionById = async (req, res) => {
 export const getTransactions = async (req, res) => {
   try {
     const { transactionType } = req.params;
-    const { 
-      accountId,
-      account,
-      company,
-      branch,
-      startDate, 
-      endDate, 
-      paymentMode,
-      page = 1,
-      limit = 50
-    } = req.query;
-
+    
+    // Validate transaction type first
     if (!transactionType || !['receipt', 'payment'].includes(transactionType.toLowerCase())) {
       return res.status(400).json({
         success: false,
@@ -344,11 +334,29 @@ export const getTransactions = async (req, res) => {
 
     const TransactionModel = getTransactionModel(transactionType);
 
+    // Get query parameters with proper defaults
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const sortBy = req.query.sortBy || "date";
+    const sortOrder = req.query.sortOrder || "desc";
+    const accountId = req.query.accountId || req.query.account;
+    const company = req.query.company;
+    const branch = req.query.branch;
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
+    const paymentMode = req.query.paymentMode;
+
+    // Build sort object
+    const sortDirection = sortOrder === "desc" ? -1 : 1;
+    const sort = {
+      [sortBy]: sortDirection,
+      _id: sortDirection, // Secondary sort for consistency
+    };
+
     // Build query
     const query = {};
     
-    const finalAccountId = accountId || account;
-    if (finalAccountId) query.account = finalAccountId;
+    if (accountId) query.account = accountId;
     if (company) query.company = company;
     if (branch) query.branch = branch;
     if (paymentMode) query.paymentMode = paymentMode;
@@ -363,9 +371,9 @@ export const getTransactions = async (req, res) => {
 
     const [transactions, total] = await Promise.all([
       TransactionModel.find(query)
-        .select('transactionNumber date amount previousBalanceAmount closingBalanceAmount settlementDetails')
+        .select('transactionNumber transactionDate amount previousBalanceAmount closingBalanceAmount settlementDetails')
         .populate('account', 'accountName')
-        .sort({ date: -1, createdAt: -1 })
+        .sort(sort)
         .skip(skip)
         .limit(parseInt(limit))
         .lean(),
@@ -373,17 +381,15 @@ export const getTransactions = async (req, res) => {
     ]);
 
     // Transform data for frontend table
-    const formattedTransactions = transactions.map(transaction => {
-      return {
-        billNo: transaction.transactionNumber || 'N/A',
-        payDate: transaction.date,
-        accountName: transaction.account?.accountName || 'N/A',
-        previousBalanceAmount: transaction.previousBalanceAmount || 0,
-        amount: transaction.amount || 0,
-        closingBalanceAmount: transaction.closingBalanceAmount || 0,
-        status: (transaction.closingBalanceAmount || 0) === 0 ? 'paid' : 'unpaid'
-      };
-    });
+    const formattedTransactions = transactions.map(transaction => ({
+      billNo: transaction.transactionNumber || 'N/A',
+      transactionDate: transaction.transactionDate,
+      accountName: transaction.account?.accountName || 'N/A',
+      previousBalanceAmount: transaction.previousBalanceAmount || 0,
+      amount: transaction.amount || 0,
+      closingBalanceAmount: transaction.closingBalanceAmount || 0,
+      status: (transaction.closingBalanceAmount || 0) === 0 ? 'paid' : 'unpaid'
+    }));
 
     res.status(200).json({
       success: true,

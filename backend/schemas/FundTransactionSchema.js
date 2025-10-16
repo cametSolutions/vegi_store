@@ -9,11 +9,11 @@ export const FundTransactionSchema = new mongoose.Schema(
     company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", required: true },
     branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", required: true },
 
-    // transactionType: { 
-    //   type: String, 
-    //   enum: ["receipt", "payment"], // ✅ fixed spelling
-    //   required: true 
-    // },
+    transactionType: { 
+      type: String, 
+      enum: ["receipt", "payment"], // ✅ fixed spelling
+      required: true 
+    },
 
     transactionNumber: {
       type: String,
@@ -26,7 +26,7 @@ export const FundTransactionSchema = new mongoose.Schema(
       },
     },
 
-    date: { type: Date, required: true, default: Date.now },
+    transactionDate: { type: Date, required: true, default: Date.now },
     account: { type: mongoose.Schema.Types.ObjectId, ref: "AccountMaster", required: true },
     accountName: { type: String, required: true, trim: true },
     previousBalanceAmount: { type: Number, default: 0 },
@@ -71,7 +71,7 @@ export const FundTransactionSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    discriminatorKey:  "__t",
+   
   }
 );
 

@@ -108,7 +108,7 @@ export const prepareTransactionData = (body, user = null) => {
     company,
     branch,
     transactionType,
-    date,
+    transactionDate,
     
     account,
     accountName,
@@ -130,7 +130,7 @@ export const prepareTransactionData = (body, user = null) => {
     company,
     branch,
     transactionType: transactionType.toLowerCase(),
-    date: date || new Date(),
+    transactionDate: transactionDate || new Date(),
     account: finalAccountId,
     accountName: accountName || '',
     previousBalanceAmount: previousBalanceAmount || 0,

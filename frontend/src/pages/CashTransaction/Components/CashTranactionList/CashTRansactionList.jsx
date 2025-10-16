@@ -58,6 +58,8 @@ const TransactionList = () => {
       companyId,
       branchId,
       25,
+        "transactionDate", /// sort by date
+      "desc", // sortOrder  for MongoDB
       { refetchOnWindowFocus: false, retry: 2 }
     )
   );

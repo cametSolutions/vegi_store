@@ -9,7 +9,10 @@ export const cashTransactionQueries = {
     searchTerm = "",
     companyId,
     branchId,
+   
     limit = 25,
+      sortBy,
+    sortOrder,
     options = {}
   ) =>
     infiniteQueryOptions({
@@ -19,6 +22,7 @@ export const cashTransactionQueries = {
         searchTerm,
         companyId,
         branchId,
+     
       ],
       queryFn: ({ pageParam }) =>
         cashTransactionServices.getAll(
@@ -27,7 +31,9 @@ export const cashTransactionQueries = {
           limit,
           searchTerm,
           companyId,
-          branchId
+          branchId,
+           sortBy,
+          sortOrder
         ),
       initialPageParam: 1,
       getNextPageParam: (lastPage) => lastPage.nextPage,

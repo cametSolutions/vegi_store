@@ -104,7 +104,7 @@ const TransactionList = ({
                     {transaction.billNo}
                   </td>
                   <td className="px-3 py-2 text-[8.5px] text-gray-600 text-center">
-                    {formatDate(transaction.payDate)}
+                    {formatDate(transaction.transactionDate)}
                   </td>
                   <td className="px-3 py-2 text-[8.5px] font-medium text-gray-900 truncate max-w-24 text-center">
                     {transaction.accountName}
