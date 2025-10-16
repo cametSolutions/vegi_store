@@ -427,7 +427,7 @@ const CashTransactionAccountSelector = ({
             onChange={(e) =>
               updateTransactionField("narration", e.target.value)
             }
-            rows="2"
+            rows="1"
             placeholder="Enter narration..."
             className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-white text-gray-900 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
           />

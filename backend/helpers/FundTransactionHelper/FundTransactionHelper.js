@@ -108,7 +108,7 @@ export const prepareTransactionData = (body, user = null) => {
     company,
     branch,
     transactionType,
-    date,
+    transactionDate,
     
     account,
     accountName,
@@ -120,7 +120,9 @@ export const prepareTransactionData = (body, user = null) => {
     bank,
     narration,
     description,
-    createdBy
+    createdBy,
+    reference,
+    referenceModel
   } = body;
 
   // Use accountId if available, otherwise use account
@@ -130,7 +132,7 @@ export const prepareTransactionData = (body, user = null) => {
     company,
     branch,
     transactionType: transactionType.toLowerCase(),
-    date: date || new Date(),
+    transactionDate: transactionDate || new Date(),
     account: finalAccountId,
     accountName: accountName || '',
     previousBalanceAmount: previousBalanceAmount || 0,
@@ -142,6 +144,8 @@ export const prepareTransactionData = (body, user = null) => {
     narration: narration || '',
     description: description || '',
     settlementDetails: [], // Will be populated after FIFO settlement
+    reference: reference || null,
+    referenceModel: referenceModel || null,
     createdBy: createdBy || user?._id || null
   };
 };

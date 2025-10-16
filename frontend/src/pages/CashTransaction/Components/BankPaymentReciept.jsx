@@ -78,7 +78,7 @@ const BankPaymentDetails = (  {
             name="description"
             value={description}
             onChange={(e) => updateTransactionField("description", e.target.value)}
-            rows="3"
+            rows="1"
             placeholder="Enter description..."
             className="w-full px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-white text-gray-900 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
           />

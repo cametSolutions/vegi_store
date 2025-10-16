@@ -7,25 +7,25 @@ import {
 } from "../../helpers/transactionHelpers/transactionMappers.js";
 import { sleep } from "../../../shared/utils/delay.js";
 
+import { createFundTransaction } from "../../services/fundTransactionService.js";
+
 /**
  * Create transaction (handles sales, purchase, credit_note, debit_note)
  */
 export const createTransaction = async (req, res) => {
-  // Start MongoDB session for transaction
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    // Extract data from request
     const transactionData = req.body;
-    const userId = req.user.id; // From authentication middleware
+    const userId = req.user.id;
 
-    // Add audit fields
     transactionData.createdBy = userId;
 
     // Validate transaction type
     const validTypes = ["sale", "purchase", "credit_note", "debit_note"];
     if (!validTypes.includes(transactionData.transactionType)) {
+      await session.abortTransaction();
       return res.status(400).json({
         success: false,
         message: "Invalid transaction type",
@@ -34,6 +34,7 @@ export const createTransaction = async (req, res) => {
 
     // Validate required fields
     if (!transactionData.company || !transactionData.branch) {
+      await session.abortTransaction();
       return res.status(400).json({
         success: false,
         message: "Company and branch are required",
@@ -41,6 +42,7 @@ export const createTransaction = async (req, res) => {
     }
 
     if (!transactionData.account) {
+      await session.abortTransaction();
       return res.status(400).json({
         success: false,
         message: "Account is required",
@@ -48,6 +50,7 @@ export const createTransaction = async (req, res) => {
     }
 
     if (!transactionData.items || transactionData.items.length === 0) {
+      await session.abortTransaction();
       return res.status(400).json({
         success: false,
         message: "At least one item is required",
@@ -57,25 +60,65 @@ export const createTransaction = async (req, res) => {
     // Calculate and validate totals
     const { netAmount, paidAmount } = transactionData;
     const paymentStatus = determinePaymentStatus(netAmount, paidAmount);
-    //// add some extra fields
+
     transactionData.paymentStatus = paymentStatus;
 
     // Determine payment method
     if (paidAmount >= netAmount) {
       transactionData.paymentMethod = "cash";
     } else if (paidAmount > 0) {
-      transactionData.paymentMethod = "credit"; // Partial payment
+      transactionData.paymentMethod = "credit";
     } else {
-      transactionData.paymentMethod = "credit"; // Full credit
+      transactionData.paymentMethod = "credit";
     }
 
-    // console.log("transactionData", transactionData);
-
-    // Process transaction using helper (orchestrates all steps)
+    // Process transaction using helper
     const result = await processTransaction(transactionData, userId, session);
+
+    // Create receipt if paid amount > 0
+    let receiptResult = null;
+    if (paidAmount > 0) {
+      const receiptType =
+        transactionData.transactionType === "sale" ||
+        transactionData.transactionType === "credit_note"
+          ? "receipt"
+          : "payment";
+
+      console.log(
+        "Model",
+        transactionTypeToModelName[transactionData.transactionType]
+      );
+
+      receiptResult = await createFundTransaction(
+        {
+          transactionType: receiptType,
+          account: transactionData.account,
+          accountName: transactionData.accountName,
+          amount: paidAmount,
+          company: transactionData.company,
+          branch: transactionData.branch,
+          paymentMode: "cash",
+          reference: result.transaction._id,
+          referenceModel:
+            transactionTypeToModelName[transactionData.transactionType],
+          referenceType: transactionData.transactionType,
+          date: transactionData.date || new Date(),
+          user: req.user,
+        },
+        session
+      );
+    }
+
+    console.log("receiptResult", receiptResult);
 
     // Commit transaction
     await session.commitTransaction();
+
+    // Query using the same session
+    // const receiptInTransaction = await getTransactionModel("receipt").findById(
+    //   receiptResult.transaction._id
+    // ).session(session);
+    // console.log("Receipt visible in transaction:", receiptInTransaction);
 
     // Send success response
     res.status(201).json({
@@ -86,15 +129,20 @@ export const createTransaction = async (req, res) => {
         outstanding: result.outstanding,
         accountLedger: result.accountLedger,
         itemLedgers: result.itemLedgers,
+        ...(receiptResult && {
+          receipt: {
+            transactionNumber: receiptResult.transaction.transactionNumber,
+            amount: receiptResult.transaction.amount,
+            settlementsCount: receiptResult.settlementsCount,
+          },
+        }),
       },
     });
   } catch (error) {
-    // Abort transaction on error (automatic rollback)
     await session.abortTransaction();
 
     console.error("Transaction creation error:", error);
 
-    // Handle specific errors
     if (error.message.includes("Insufficient stock")) {
       return res.status(422).json({
         success: false,
@@ -110,14 +158,12 @@ export const createTransaction = async (req, res) => {
       });
     }
 
-    // Generic error response
     res.status(500).json({
       success: false,
       message: "Failed to create transaction",
       error: error.message,
     });
   } finally {
-    // End session
     session.endSession();
   }
 };
