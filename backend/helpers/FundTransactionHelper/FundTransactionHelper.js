@@ -120,7 +120,9 @@ export const prepareTransactionData = (body, user = null) => {
     bank,
     narration,
     description,
-    createdBy
+    createdBy,
+    reference,
+    referenceModel
   } = body;
 
   // Use accountId if available, otherwise use account
@@ -142,6 +144,8 @@ export const prepareTransactionData = (body, user = null) => {
     narration: narration || '',
     description: description || '',
     settlementDetails: [], // Will be populated after FIFO settlement
+    reference: reference || null,
+    referenceModel: referenceModel || null,
     createdBy: createdBy || user?._id || null
   };
 };

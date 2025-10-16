@@ -1,5 +1,7 @@
 // hooks/mutations/transactionMutations.js
+import { toast } from "sonner";
 import { cashTransactionServices } from "../../api/services/cashTransaction.service";
+import { capitalizeFirstLetter } from "../../../../shared/utils/string";
 
 export const cashtransactionMutations = {
   create: (queryClient) => ({
@@ -14,17 +16,14 @@ export const cashtransactionMutations = {
     const branch = transaction?.branch?._id || transaction?.branch;
     const transactionType = transaction?.__t?.toLowerCase() || variables.transactionType;
 
-    console.log("Invalidating queries for:", { company, branch, transactionType });
 
     // Invalidate the transaction list query
     queryClient.invalidateQueries({
       queryKey: ["transactions", transactionType, "", company, branch],
     });
 
-    // Also invalidate without filters to refresh all lists
-    queryClient.invalidateQueries({
-      queryKey: ["transactions", transactionType],
-    });
+    toast.success(`${capitalizeFirstLetter(transactionType)} Transaction created successfully!`);
+
 
     // Invalidate account balance if needed
     if (transaction?.account) {
@@ -37,6 +36,8 @@ export const cashtransactionMutations = {
 
   onError: (error) => {
     console.error("Transaction creation failed:", error);
+    toast.error('Error creating transaction. Please try again.');
+    
   }
 }),
 
