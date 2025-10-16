@@ -114,6 +114,7 @@ export const getTransactions = async (req, res) => {
     // Get query parameters with proper defaults
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
+        const searchTerm = req.query.searchTerm || "";
     const sortBy = req.query.sortBy || "date";
     const sortOrder = req.query.sortOrder || "desc";
     const accountId = req.query.accountId || req.query.account;
@@ -131,23 +132,35 @@ export const getTransactions = async (req, res) => {
     };
 
     // Build query
-    const query = {};
+    const filter  = {};
 
+
+     if (searchTerm) {
+      filter.$or = [
+        { accountName: { $regex: searchTerm, $options: "i" } },
+        { transactionNumber: { $regex: searchTerm, $options: "i" } },
+      ];
+    }
     if (accountId) query.account = accountId;
     if (company) query.company = company;
     if (branch) query.branch = branch;
     if (paymentMode) query.paymentMode = paymentMode;
 
     if (startDate || endDate) {
-      query.date = {};
-      if (startDate) query.date.$gte = new Date(startDate);
-      if (endDate) query.date.$lte = new Date(endDate);
+      filter.date = {};
+      if (startDate) filter.date.$gte = new Date(startDate);
+      if (endDate) filter.date.$lte = new Date(endDate);
     }
-
+const result = await TransactionModel.getPaginatedTransactions(
+      filter,
+      page,
+      limit,
+      sort
+    );
     const skip = (page - 1) * limit;
 
     const [transactions, total] = await Promise.all([
-      TransactionModel.find(query)
+      TransactionModel.find(filter)
         .select(
           "transactionNumber transactionDate amount previousBalanceAmount closingBalanceAmount settlementDetails"
         )
@@ -156,7 +169,7 @@ export const getTransactions = async (req, res) => {
         .skip(skip)
         .limit(parseInt(limit))
         .lean(),
-      TransactionModel.countDocuments(query),
+      TransactionModel.countDocuments(filter),
     ]);
 
     // Transform data for frontend table
@@ -173,12 +186,8 @@ export const getTransactions = async (req, res) => {
     res.status(200).json({
       success: true,
       data: formattedTransactions,
-      pagination: {
-        total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(total / limit),
-      },
+       pagination: result.pagination
+      
     });
   } catch (error) {
     console.error("Error fetching transactions:", error);

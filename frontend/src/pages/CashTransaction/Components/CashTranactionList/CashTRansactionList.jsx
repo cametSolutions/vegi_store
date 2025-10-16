@@ -63,8 +63,9 @@ const TransactionList = () => {
       { refetchOnWindowFocus: false, retry: 2 }
     )
   );
-const allTransactions = useMemo(() => {
-    return data?.pages.flatMap((page) => page.data) ?? [];
+  const allTransactions = useMemo(() => {
+    if (!data?.pages) return [];
+    return data.pages.flatMap((page) => page.data);
   }, [data]);
 
   return (
@@ -73,7 +74,7 @@ const allTransactions = useMemo(() => {
       <div className="px-1 py-2 border-b  flex-shrink-0">
         <ListHeader
           title="Recent Transactions"
-          recordCount={sortedData.length}
+          recordCount={data?.pages[0]?.totalCount || 0}
         />
         <ListSearch
           searchTerm={searchTerm}
