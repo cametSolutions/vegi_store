@@ -37,7 +37,7 @@ export const FundTransactionSchema = new mongoose.Schema(
     closingBalanceAmount: { type: Number, default: 0 },
     paymentMode: {
       type: String,
-      enum: ["cash", "cheque", "dd", "bank_transfer"],
+      enum: ["cash", "cheque", "dd", "bankTransfer"],
       default: "cash",
     },
     chequeNumber: String,
@@ -112,7 +112,7 @@ FundTransactionSchema.statics.getPaginatedTransactions = async function (
     this.countDocuments(filter),
     this.find(filter)
       .populate('account', 'accountName')
-      .select('transactionNumber date amount previousBalanceAmount closingBalanceAmount settlementDetails')
+      .select('transactionNumber transactionDate amount previousBalanceAmount closingBalanceAmount settlementDetails')
       .sort(sort)
       .skip(skip)
       .limit(limit)

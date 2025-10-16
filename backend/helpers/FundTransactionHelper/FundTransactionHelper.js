@@ -67,7 +67,7 @@ export const validateTransactionData = async (data, session) => {
   }
 
   // Validate payment mode if provided
-  const validPaymentModes = ['cash', 'cheque', 'dd', 'bank_transfer'];
+  const validPaymentModes = ['cash', 'cheque', 'dd', 'bankTransfer'];
   if (data.paymentMode && !validPaymentModes.includes(data.paymentMode)) {
     return {
       status: 400,
