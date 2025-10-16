@@ -38,7 +38,9 @@ export const transactionServices = {
     limit = 25,
     searchTerm = "",
     companyId,
-    branchId
+    branchId,
+    sortBy,
+    sortOrder
   ) => {
     try {
       const response = await api.get(`/transaction/${transactionType}/getall`, {
@@ -49,6 +51,8 @@ export const transactionServices = {
           companyId,
           branchId,
           transactionType,
+          sortBy,
+          sortOrder,
         },
       });
 

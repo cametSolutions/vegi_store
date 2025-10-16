@@ -72,7 +72,7 @@ export const createTransaction = async (req, res) => {
     // console.log("transactionData", transactionData);
 
     // Process transaction using helper (orchestrates all steps)
-    const result = await processTransaction(transactionData,userId, session);
+    const result = await processTransaction(transactionData, userId, session);
 
     // Commit transaction
     await session.commitTransaction();
@@ -128,7 +128,6 @@ export const createTransaction = async (req, res) => {
 
 export const getTransactions = async (req, res) => {
   try {
-
     // sleep(10000);
     // throw new Error("sleep");
     const transactionType = req.query.transactionType;
@@ -147,6 +146,16 @@ export const getTransactions = async (req, res) => {
     const searchTerm = req.query.searchTerm || "";
     const companyId = req.query.companyId;
     const branchId = req.query.branchId;
+    const sortBy = req.query.sortBy || "transactionDate";
+    const sortOrder = req.query.sortOrder || "desc";
+
+    // Convert 'desc' to -1, 'asc' to 1
+    const sortDirection = sortOrder === "desc" ? -1 : 1;
+
+    const sort = {
+      [sortBy]: sortDirection,
+      _id: sortDirection, // Secondary sort for consistency
+    };
 
     // Build filter - MUST include transactionType
     const filter = { transactionType };
@@ -165,7 +174,7 @@ export const getTransactions = async (req, res) => {
       filter,
       page,
       limit,
-      { transactionDate: 1 }
+      sort
     );
 
     res.status(200).json(result);
