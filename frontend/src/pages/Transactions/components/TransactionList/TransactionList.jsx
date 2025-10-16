@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import InfiniteScroll from "react-infinite-scroll-component";
+
 import ListFooter from "../../../CommonTransactionListComponents/ListFooter";
 import ListHeader from "../../../CommonTransactionListComponents/ListHeader";
 import ListSearch from "../../../CommonTransactionListComponents/ListSearch";
@@ -10,8 +10,7 @@ import { getTransactionType } from "../../utils/transactionUtils";
 import { useLocation } from "react-router-dom";
 import { transactionQueries } from "@/hooks/queries/transaction.queries";
 import { useSelector } from "react-redux";
-import CustomMoonLoader from "@/components/loaders/CustomMoonLoader";
-import { LoaderCircle } from "lucide-react";
+
 import { useDebounce } from "@/hooks/useDebounce";
 
 const TransactionList = () => {

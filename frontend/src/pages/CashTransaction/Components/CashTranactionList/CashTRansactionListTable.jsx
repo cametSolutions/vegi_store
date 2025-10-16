@@ -1,73 +1,140 @@
-import React, { useState } from 'react';
-import { Search } from 'lucide-react';
+import React from 'react';
+import { LoaderCircle } from 'lucide-react';
+import { formatDate } from '../../../../../../shared/utils/date';
+import { formatINR } from '../../../../../../shared/utils/currency';
+import CustomMoonLoader from "@/components/loaders/CustomMoonLoader";
+import { Button } from "@/components/ui/button";
+import InfiniteScroll from "react-infinite-scroll-component";
 
-export default function TransactionList() {
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  const transactions = [
-    { billNo: 'PUR-280596', Paydate: '27/09/2025', AccountName: 'BABU SAS', PreviousBlanceAmount: '₹3716.40', amount: '₹0.00', paid: '₹3716.40', closingBalnceAmount: '₹2000.00', status: 'unpaid' },
-    { billNo: 'CN-280595', Paydate: '27/09/2025', AccountName: 'SULYMAN', PreviousBlanceAmount: '₹1051.30', amount: '₹130.00', paid: '₹961.30', closingBalnceAmount: '₹0.00', status: 'paid' },
-    { billNo: 'INV-280594', Paydate: '27/09/2025', AccountName: 'BAVU P', PreviousBlanceAmount: '₹6273.60', amount: '₹500.00', paid: '₹5773.60', closingBalnceAmount: '₹0.00', status: 'paid' },
-    { billNo: 'PUR-280593', Paydate: '27/09/2025', AccountName: 'ANTHU A.', PreviousBlanceAmount: '₹2144.80', amount: '₹0.00', paid: '₹2144.80', closingBalnceAmount: '₹0.00', status: 'paid' },
-    { billNo: 'INV-280592', Paydate: '27/09/2025', AccountName: 'UDUPP H.', PreviousBlanceAmount: '₹4545.50', amount: '₹0.00', paid: '₹0.00', closingBalnceAmount: '₹4545.50', status: 'unpaid' },
-    { billNo: 'PUR-280599', Paydate: '26/09/2025', AccountName: 'ESMAYL', PreviousBlanceAmount: '₹4407.60', amount: '₹0.00', paid: '₹0.00', closingBalnceAmount: '₹4407.60', status: 'unpaid' },
-    { billNo: 'INV-280598', Paydate: '26/09/2025', AccountName: 'HASSAN', PreviousBlanceAmount: '₹8460.80', amount: '₹0.00', paid: '₹8460.80', closingBalnceAmount: '₹0.00', status: 'paid' },
-    { billNo: 'DN-280597', Paydate: '26/09/2025', AccountName: 'S P', PreviousBlanceAmount: '₹4150.70', amount: '₹350.00', paid: '₹3800.70', closingBalnceAmount: '₹0.00', status: 'paid' },
-    { billNo: 'CN-280601', Paydate: '25/09/2025', AccountName: 'PEETER', PreviousBlanceAmount: '₹2640.80', amount: '₹500.00', paid: '₹2140.80', closingBalnceAmount: '₹0.00', status: 'paid' },
-    { billNo: 'CN-280601', Paydate: '25/09/2025', AccountName: 'PEETER', PreviousBlanceAmount: '₹2640.80', amount: '₹500.00', paid: '₹2140.80', closingBalnceAmount: '₹0.00', status: 'paid' },
-    { billNo: 'CN-280601', Paydate: '25/09/2025', AccountName: 'PEETER', PreviousBlanceAmount: '₹2640.80', amount: '₹500.00', paid: '₹2140.80', closingBalnceAmount: '₹0.00', status: 'paid' },
-    { billNo: 'CN-280601', Paydate: '25/09/2025', AccountName: 'PEETER', PreviousBlanceAmount: '₹2640.80', amount: '₹500.00', paid: '₹2140.80', closingBalnceAmount: '₹0.00', status: 'paid' }
+const TransactionList = ({ 
+  data, 
+  isFetching, 
+  status, 
+  refetch,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage
+}) => {
+  const columns = [
+    { key: "billNo", label: "Bill No", align: "left" },
+    { key: "payDate", label: "Pay Date", align: "center" },
+    { key: "accountName", label: "Account Name", align: "center" },
+    { key: "previousBalance", label: "Previous Balance", align: "right" },
+    { key: "amount", label: "Amount", align: "right" },
+    { key: "closingBalance", label: "Closing Balance", align: "right" },
   ];
 
-  const filteredTransactions = transactions.filter(t => 
-    t.billNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.AccountName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
-      
-
-      {/* Table */}
-      <div className="flex-1 overflow-auto">
-        <table className="w-full">
-          <thead className="bg-slate-700 text-white sticky top-0 z-10">
+  <div className="w-full border shadow bg-white">
+      <div 
+        id="scrollableDiv" 
+        className="h-[calc(100vh-228px)] overflow-auto"
+      >
+        <InfiniteScroll
+          dataLength={data.length}
+          next={fetchNextPage}
+          hasMore={!!hasNextPage}
+          loader={
+            <div className="text-center py-4 text-gray-500">
+              <LoaderCircle className="animate-spin mx-auto w-5 h-5" />
+              <p className="mt-2 text-xs">Loading more...</p>
+            </div>
+          }
+          scrollableTarget="scrollableDiv"
+        >
+        <table className="w-full border-collapse">
+          <thead className="sticky top-0 z-10 bg-slate-500">
             <tr>
-              <th className="px-4 py-3 text-center text-[9px] font-semibold uppercase">Bill No</th>
-              <th className="px-4 py-3 text-center text-[9px] font-semibold uppercase">Paydate</th>
-              <th className="px-4 py-3 text-center text-[9px] font-semibold uppercase">AccountName</th>
-              <th className="px-4 py-3 text-right text-[9px] font-semibold uppercase">PreviousBlanceAmount</th>
-              <th className="px-4 py-3 text-right text-[9px] font-semibold uppercase">amount</th>
-
-              <th className="px-4 py-3 text-right text-[9px] font-semibold uppercase">closingBalnceAmount</th>
+              {columns.map((column) => (
+                <th
+                  key={column.key}
+                  className={`text-white border-b px-3 py-2 text-[9px] font-medium uppercase`}
+                >
+                  <div
+                    className={`flex items-center ${
+                      column.align === "right"
+                        ? "justify-end"
+                        : column.align === "center"
+                        ? "justify-center"
+                        : "justify-start"
+                    } space-x-1`}
+                  >
+                    <span>{column.label}</span>
+                  </div>
+                </th>
+              ))}
             </tr>
           </thead>
-          <tbody className="bg-white">
-            {filteredTransactions.map((transaction, index) => (
-              <tr 
-                key={index}
-                className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
-              >
-                <td className="px-4 py-3 text-center text-[9px] text-gray-700">{transaction.billNo}</td>
-                <td className="px-4 py-3  text-center text-[9px] text-gray-600">{transaction.Paydate}</td>
-                <td className="px-4 py-3 text-center text-[9px] text-gray-700 font-medium">{transaction.AccountName}</td>
-                <td className="px-4 py-3 text-center text-[9px] text-gray-700 text-right">{transaction.PreviousBlanceAmount}</td>
-                <td className="px-4 py-3 text-center text-[9px] text-gray-700 text-right">{transaction.amount}</td>
-             
-                <td className={`px-4 py-3 text-[9px] text-right font-semibold ${
-                  transaction.status === 'unpaid' ? 'text-red-500' : 'text-green-500'
-                }`}>
-                  {transaction.closingBalnceAmount}
+          <tbody className="divide-y divide-gray-200">
+            {isFetching ? (
+              <tr>
+                <td colSpan={columns.length} className="text-center py-20">
+                  <div className="flex items-center justify-center h-[calc(100vh-460px)]">
+                    <LoaderCircle className="animate-spin w-8 h-8 text-slate-500" />
+                  </div>
                 </td>
               </tr>
-            ))}
+            ) : status === "error" ? (
+              <tr>
+                <td colSpan={columns.length} className="text-center py-20 h-[calc(100vh-260px)]">
+                  <p className="text-gray-500 text-xs font-semibold">
+                    !Oops..Error loading transactions
+                  </p>
+                  <button
+                    onClick={refetch}
+                    className="text-[10px] cursor-pointer font-semibold bg-blue-400 p-1 px-2 text-white rounded mt-2"
+                  >
+                    Retry
+                  </button>
+                </td>
+              </tr>
+            ) : !data || data.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="text-center py-20 h-[calc(100vh-260px)]">
+                  <p className="text-gray-500 text-sm">No transactions found</p>
+                </td>
+              </tr>
+            ) : (
+              data.map((transaction, index) => (
+                <tr
+                  key={transaction.billNo || index}
+                  className="bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                >
+                  <td className="px-3 py-2 text-[8.5px] font-medium text-gray-600">
+                    {transaction.billNo}
+                  </td>
+                  <td className="px-3 py-2 text-[8.5px] text-gray-600 text-center">
+                    {formatDate(transaction.payDate)}
+                  </td>
+                  <td className="px-3 py-2 text-[8.5px] font-medium text-gray-900 truncate max-w-24 text-center">
+                    {transaction.accountName}
+                  </td>
+                  <td className="px-3 py-2 text-[8.5px] text-gray-900 text-right font-mono">
+                    ₹{formatINR(transaction.previousBalanceAmount)}
+                  </td>
+                  <td className="px-3 py-2 text-[8.5px] text-gray-900 text-right font-mono">
+                    ₹{formatINR(transaction.amount)}
+                  </td>
+                  <td className="px-3 py-2 text-right text-[8.5px] font-mono">
+                    <span
+                      className={`${
+                        transaction.closingBalanceAmount > 0
+                          ? "text-red-600"
+                          : "text-green-600"
+                      }`}
+                    >
+                      ₹{formatINR(transaction.closingBalanceAmount)}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
+          </InfiniteScroll>
       </div>
-
-      {/* Footer */}
-     
     </div>
   );
-}
+};
+
+export default TransactionList;
