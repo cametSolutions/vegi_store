@@ -1,3 +1,4 @@
+import { ReceiptModel } from "../../model/FundTransactionMode.js";
 import { PurchaseModel, SalesModel } from "../../model/TransactionModel.js";
 
 export const transactionTypeToModelName = (transactionType) => {
@@ -15,6 +16,7 @@ export const getTransactionModel = (transactionType) => {
   const mapping = {
     sale: SalesModel,
     purchase: PurchaseModel,
+    receipt: ReceiptModel,
     // credit_note: CreditNoteModel, // You'll need to create these
     // debit_note: DebitNoteModel, // You'll need to create these
   };

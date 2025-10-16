@@ -49,9 +49,7 @@ export const processTransaction = async (transactionData, userId, session) => {
         branchId: branch,
         session,
       });
-      console.log("cashBankAccount", cashBankAccount);
-
-      console.log("createdTransaction", createdTransaction);
+      
 
       /// create cash ledger entry for cash transaction
       const ledgerEntry = await createCashBankLedgerEntry({
@@ -91,7 +89,7 @@ export const processTransaction = async (transactionData, userId, session) => {
           transactionDate: createdTransaction.transactionDate,
           outstandingType: behavior.outstandingType,
           totalAmount: createdTransaction.netAmount,
-          paidAmount: createdTransaction.paidAmount,
+          paidAmount: 0,
           closingBalanceAmount: createdTransaction.netAmount,
           paymentTermDays: 30, // Can be made configurable
           notes: createdTransaction.notes,
