@@ -286,7 +286,7 @@ TransactionSchema.statics.getPaginatedTransactions = async function (
     this.find(filter)
       .populate({ path: "account", select: "accountName accountType" })
       .select(
-        "transactionNumber transactionDate totalAmount totalAmountAfterTax discountAmount paidAmount balanceAmount"
+        "transactionNumber transactionDate totalAmount totalAmountAfterTax discountAmount paidAmount balanceAmount netAmount"
       )
       .sort(sort) // This should be { transactionDate: -1, _id: -1 }
       .skip(skip)
