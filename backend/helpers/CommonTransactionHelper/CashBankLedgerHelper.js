@@ -1,9 +1,9 @@
-import CashBankLedger from '../../model/CashBankLedgerModel.js';
+import CashBankLedger from "../../model/CashBankLedgerModel.js";
 
 /**
  * Create a Cash/Bank Ledger Entry
  * This records the movement of money in/out of cash or bank accounts
- * 
+ *
  * For Receipt: Debit Cash/Bank (money coming in)
  * For Payment: Credit Cash/Bank (money going out)
  */
@@ -25,26 +25,26 @@ export const createCashBankLedgerEntry = async ({
   company,
   branch,
   createdBy,
-  session
+  session,
 }) => {
   try {
     // ✅ Always force lowercase to match schema enum
     const type = transactionType.toLowerCase(); // "receipt" or "payment"
     const entryType = type === "receipt" ? "debit" : "credit";
-    
+
     // ✅ Capitalize for Mongoose model name
     const modelName = type.charAt(0).toUpperCase() + type.slice(1); // "Receipt" or "Payment"
 
     const ledgerData = {
       company,
       branch,
-      Transaction: transactionId,
-      TransactionModel: modelName,
-      TransactionNumber: transactionNumber,
-      TransactionDate: transactionDate,
-      TransactionType: type,
-      Account: accountId,
-      AccountName: accountName,
+      transaction: transactionId,
+      transactionModel: modelName,
+      transactionNumber: transactionNumber,
+      transactionDate: transactionDate,
+      transactionType: type,
+      account: accountId,
+      accountName: accountName,
       amount,
       entryType,
       paymentMode,
@@ -73,12 +73,11 @@ export const createCashBankLedgerEntry = async ({
   }
 };
 
-
 export const reverseCashBankLedgerEntry = async ({
   transactionId,
   userId,
-  reason = 'Transaction deleted',
-  session
+  reason = "Transaction deleted",
+  session,
 }) => {
   console.log("\n↩️ Reversing Cash/Bank Ledger Entry...");
 
@@ -103,11 +102,11 @@ export const getCashBankLedger = async ({
   startDate,
   endDate,
   page = 1,
-  limit = 50
+  limit = 50,
 }) => {
   const query = {
     company,
-    branch
+    branch,
   };
 
   // Filter by cash or specific bank account
@@ -115,7 +114,7 @@ export const getCashBankLedger = async ({
     query.bankAccount = bankAccountId;
   } else {
     query.bankAccount = null;
-    query.paymentMode = 'cash';
+    query.paymentMode = "cash";
   }
 
   if (startDate || endDate) {
@@ -128,13 +127,13 @@ export const getCashBankLedger = async ({
 
   const [entries, total, balance] = await Promise.all([
     CashBankLedger.find(query)
-      .populate('Account', 'accountName accountType')
-      .populate('bankAccount', 'accountName')
+      .populate("Account", "accountName accountType")
+      .populate("bankAccount", "accountName")
       .sort({ TransactionDate: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit),
     CashBankLedger.countDocuments(query),
-    CashBankLedger.getAccountBalance(bankAccountId, startDate, endDate)
+    CashBankLedger.getAccountBalance(bankAccountId, startDate, endDate),
   ]);
 
   return {
@@ -144,8 +143,8 @@ export const getCashBankLedger = async ({
       total,
       page,
       limit,
-      pages: Math.ceil(total / limit)
-    }
+      pages: Math.ceil(total / limit),
+    },
   };
 };
 
@@ -157,18 +156,18 @@ export const getCashBankStatement = async ({
   branch,
   bankAccountId = null,
   startDate,
-  endDate
+  endDate,
 }) => {
   const query = {
     company,
-    branch
+    branch,
   };
 
   if (bankAccountId) {
     query.bankAccount = bankAccountId;
   } else {
     query.bankAccount = null;
-    query.paymentMode = 'cash';
+    query.paymentMode = "cash";
   }
 
   if (startDate || endDate) {
@@ -178,14 +177,15 @@ export const getCashBankStatement = async ({
   }
 
   const entries = await CashBankLedger.find(query)
-    .populate('Account', 'accountName')
-    .populate('bankAccount', 'accountName')
+    .populate("Account", "accountName")
+    .populate("bankAccount", "accountName")
     .sort({ TransactionDate: 1, createdAt: 1 });
 
   // Calculate running balance
   let runningBalance = 0;
-  const statement = entries.map(entry => {
-    const balanceEffect = entry.entryType === 'debit' ? entry.amount : -entry.amount;
+  const statement = entries.map((entry) => {
+    const balanceEffect =
+      entry.entryType === "debit" ? entry.amount : -entry.amount;
     runningBalance += balanceEffect;
 
     return {
@@ -196,20 +196,26 @@ export const getCashBankStatement = async ({
       narration: entry.narration,
       paymentMode: entry.paymentMode,
       chequeNumber: entry.chequeNumber,
-      debit: entry.entryType === 'debit' ? entry.amount : 0,
-      credit: entry.entryType === 'credit' ? entry.amount : 0,
-      balance: runningBalance
+      debit: entry.entryType === "debit" ? entry.amount : 0,
+      credit: entry.entryType === "credit" ? entry.amount : 0,
+      balance: runningBalance,
     };
   });
 
   return {
     statement,
     summary: {
-      totalDebit: entries.reduce((sum, e) => sum + (e.entryType === 'debit' ? e.amount : 0), 0),
-      totalCredit: entries.reduce((sum, e) => sum + (e.entryType === 'credit' ? e.amount : 0), 0),
+      totalDebit: entries.reduce(
+        (sum, e) => sum + (e.entryType === "debit" ? e.amount : 0),
+        0
+      ),
+      totalCredit: entries.reduce(
+        (sum, e) => sum + (e.entryType === "credit" ? e.amount : 0),
+        0
+      ),
       closingBalance: runningBalance,
-      entryCount: entries.length
-    }
+      entryCount: entries.length,
+    },
   };
 };
 
@@ -221,66 +227,69 @@ export const getAllCashBankBalances = async (company, branch) => {
     {
       $match: {
         company: company,
-        branch: branch
-      }
+        branch: branch,
+      },
     },
     {
       $group: {
         _id: {
-          bankAccount: '$bankAccount',
-          bankAccountName: '$bankAccountName',
-          paymentMode: '$paymentMode'
+          bankAccount: "$bankAccount",
+          bankAccountName: "$bankAccountName",
+          paymentMode: "$paymentMode",
         },
         totalDebit: {
-          $sum: { $cond: [{ $eq: ['$entryType', 'debit'] }, '$amount', 0] }
+          $sum: { $cond: [{ $eq: ["$entryType", "debit"] }, "$amount", 0] },
         },
         totalCredit: {
-          $sum: { $cond: [{ $eq: ['$entryType', 'credit'] }, '$amount', 0] }
+          $sum: { $cond: [{ $eq: ["$entryType", "credit"] }, "$amount", 0] },
         },
-        lastTransactionDate: { $max: '$TransactionDate' },
-        entryCount: { $sum: 1 }
-      }
+        lastTransactionDate: { $max: "$TransactionDate" },
+        entryCount: { $sum: 1 },
+      },
     },
     {
       $project: {
-        accountId: '$_id.bankAccount',
-        accountName: '$_id.bankAccountName',
-        paymentMode: '$_id.paymentMode',
+        accountId: "$_id.bankAccount",
+        accountName: "$_id.bankAccountName",
+        paymentMode: "$_id.paymentMode",
         totalDebit: 1,
         totalCredit: 1,
-        balance: { $subtract: ['$totalDebit', '$totalCredit'] },
+        balance: { $subtract: ["$totalDebit", "$totalCredit"] },
         lastTransactionDate: 1,
         entryCount: 1,
-        isCash: { $eq: ['$_id.bankAccount', null] }
-      }
+        isCash: { $eq: ["$_id.bankAccount", null] },
+      },
     },
     {
-      $sort: { isCash: -1, accountName: 1 }
-    }
+      $sort: { isCash: -1, accountName: 1 },
+    },
   ];
 
   const accounts = await CashBankLedger.aggregate(pipeline);
 
-  const summary = accounts.reduce((acc, account) => {
-    acc.totalBalance += account.balance;
-    acc.totalDebit += account.totalDebit;
-    acc.totalCredit += account.totalCredit;
-    if (account.isCash) {
-      acc.cashBalance += account.balance;
-    } else {
-      acc.bankBalance += account.balance;
+  const summary = accounts.reduce(
+    (acc, account) => {
+      acc.totalBalance += account.balance;
+      acc.totalDebit += account.totalDebit;
+      acc.totalCredit += account.totalCredit;
+      if (account.isCash) {
+        acc.cashBalance += account.balance;
+      } else {
+        acc.bankBalance += account.balance;
+      }
+      return acc;
+    },
+    {
+      totalBalance: 0,
+      cashBalance: 0,
+      bankBalance: 0,
+      totalDebit: 0,
+      totalCredit: 0,
     }
-    return acc;
-  }, {
-    totalBalance: 0,
-    cashBalance: 0,
-    bankBalance: 0,
-    totalDebit: 0,
-    totalCredit: 0
-  });
+  );
 
   return {
     accounts,
-    summary
+    summary,
   };
 };

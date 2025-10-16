@@ -105,7 +105,7 @@ const TransactionSchema = new mongoose.Schema(
     // ==================== PARTY INFORMATION ====================
     accountType: {
       type: String,
-      enum: ["customer", "supplier", "others"],
+      enum: ["customer", "supplier", "others", "cash", "bank"],
       required: [true, "Account type is required"],
     },
     account: {
@@ -277,23 +277,21 @@ TransactionSchema.statics.getPaginatedTransactions = async function (
   filter = {},
   page = 1,
   limit = 20,
-  sort = { transactionDate: -1 }
+  sort = { transactionDate: -1, _id: -1 } // -1 = descending (newest first)
 ) {
   const skip = (page - 1) * limit;
 
-  // Execute count and find in parallel for better performance
   const [totalCount, transactions] = await Promise.all([
     this.countDocuments(filter),
-    this.find(filter).
-    populate({path: "account", select: "accountName accountType"})
-
+    this.find(filter)
+      .populate({ path: "account", select: "accountName accountType" })
       .select(
-        "transactionNumber transactionDate totalAmount totalAmountAfterTax discountAmount paidAmount balanceAmount "
+        "transactionNumber transactionDate totalAmount totalAmountAfterTax discountAmount paidAmount balanceAmount"
       )
-      .sort(sort)
+      .sort(sort) // This should be { transactionDate: -1, _id: -1 }
       .skip(skip)
       .limit(limit)
-      .lean(), // Use lean() for better performance when you don't need Mongoose documents
+      .lean(),
   ]);
 
   const hasMore = skip + transactions.length < totalCount;

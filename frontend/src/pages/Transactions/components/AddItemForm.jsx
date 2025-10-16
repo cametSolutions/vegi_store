@@ -69,7 +69,8 @@ const AddItemForm = ({
 
   // Update form fields when search results are received
   useEffect(() => {
-    if (shouldSearch && !isFetching) {
+    // Only process when we were searching and fetch is complete
+    if (shouldSearch && !isFetching && searchResponse !== undefined) {
       if (searchResponse?.data && searchResponse.data.length > 0) {
         const foundProduct = searchResponse.data[0];
 
@@ -114,7 +115,7 @@ const AddItemForm = ({
         setShouldSearch(false);
         // Auto-focus to unit field after successful search
         setTimeout(() => unitInputRef.current?.focus(), 100);
-      } else {
+      } else if (searchResponse?.data && searchResponse.data.length === 0) {
         // No items found - show dropdown with "not found" message
         setLocalItem((prev) => ({
           ...prev,
@@ -124,7 +125,14 @@ const AddItemForm = ({
         setShouldSearch(false);
       }
     }
-  }, [searchResponse, isFetching, shouldSearch, debouncedSearchTerm, priceLevel, branch]);
+  }, [
+    searchResponse,
+    isFetching,
+    shouldSearch,
+    debouncedSearchTerm,
+    priceLevel,
+    branch,
+  ]);
 
   // Update rate when priceLevel changes for an existing item
   useEffect(() => {
@@ -193,6 +201,7 @@ const AddItemForm = ({
     if (e.key === "Enter" && searchTerm.trim() !== "") {
       e.preventDefault();
       setShowDropdown(false);
+
       setShouldSearch(true);
     }
   };
@@ -259,7 +268,7 @@ const AddItemForm = ({
       taxAmount: "0",
     });
     setSearchTerm("");
-    
+
     // Focus back to code input for next item entry
     setTimeout(() => codeInputRef.current?.focus(), 0);
   };
@@ -302,7 +311,8 @@ const AddItemForm = ({
                 Product not found
               </div>
               <div className="px-2 py-1.5 text-[9px] text-slate-600">
-                <span className="font-medium">"{searchTerm}"</span> does not exist in inventory
+                <span className="font-medium">"{searchTerm}"</span> does not
+                exist in inventory
               </div>
             </div>
           )}

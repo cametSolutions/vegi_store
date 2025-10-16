@@ -10,6 +10,8 @@ export const transactionQueries = {
     companyId,
     branchId,
     limit = 25,
+    sortBy,
+    sortOrder,
     options = {}
   ) =>
     infiniteQueryOptions({
@@ -19,6 +21,8 @@ export const transactionQueries = {
         searchTerm,
         companyId,
         branchId,
+        sortBy,
+        sortOrder,
       ],
       queryFn: ({ pageParam }) =>
         transactionServices.getAll(
@@ -27,7 +31,9 @@ export const transactionQueries = {
           limit,
           searchTerm,
           companyId,
-          branchId
+          branchId,
+          sortBy,
+          sortOrder
         ),
       initialPageParam: 1,
       getNextPageParam: (lastPage) => lastPage.nextPage,
