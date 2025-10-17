@@ -74,7 +74,7 @@ const TransactionList = () => {
       <div className="px-1 py-2 border-b  flex-shrink-0">
         <ListHeader
           title="Recent Transactions"
-          recordCount={data?.pages[0]?.totalCount || 0}
+       recordCount={data?.pages[0]?.pagination?.total || 0}  // Access total from pagination
         />
         <ListSearch
           searchTerm={searchTerm}

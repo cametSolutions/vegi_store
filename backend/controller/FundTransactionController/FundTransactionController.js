@@ -173,6 +173,7 @@ export const getTransactions = async (req, res) => {
     res.status(200).json({
       success: true,
       data: formattedTransactions,
+        totalCount: result.pagination.total,
       pagination: result.pagination
     });
 
