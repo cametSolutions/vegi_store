@@ -315,7 +315,7 @@ const CashTransactionAccountSelector = ({
   // MAIN RENDER
   // ============================================================================
   return (
-    <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="w-full bg-white  shadow-sm border border-gray-200">
       <div className="p-2 space-y-2">
         {/* From Account with Search */}
         <div className="flex items-center gap-2">
@@ -331,7 +331,7 @@ const CashTransactionAccountSelector = ({
               onChange={handleInputChange}
               onFocus={handleInputFocus}
               placeholder="Search account name"
-              className="w-full px-2 py-1.5 pr-7 border border-gray-300 rounded text-[9px] bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-2 py-1.5 pr-7 border border-gray-300  text-[9px] bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
               autoComplete="off"
             />
             {renderInputIcon()}
@@ -340,7 +340,7 @@ const CashTransactionAccountSelector = ({
             {showDropdown && searchTerm.length >= MIN_SEARCH_LENGTH && (
               <div
                 ref={dropdownRef}
-                className="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded shadow-lg max-h-48 overflow-y-auto"
+                className="absolute z-50 w-full mt-1 bg-white border border-slate-300  shadow-lg max-h-48 overflow-y-auto"
               >
                 {renderDropdownContent()}
               </div>
@@ -364,7 +364,7 @@ const CashTransactionAccountSelector = ({
             type="text"
             value={accountName}
             readOnly
-            className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-slate-200 text-gray-900 focus:outline-none"
+            className="flex-1 px-2 py-1.5 border border-gray-300  text-[9px] bg-slate-200 text-gray-900 focus:outline-none"
           />
         </div>
 
@@ -381,7 +381,7 @@ const CashTransactionAccountSelector = ({
                 thousandSeparator=","
                 value={previousBalanceAmount}
                 disabled
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-slate-200 text-gray-900 focus:outline-none"
+                className="w-full px-2 py-1.5 border border-gray-300  text-[9px] bg-slate-200 text-gray-900 focus:outline-none"
               />
             </div>
             <div>
@@ -396,7 +396,7 @@ const CashTransactionAccountSelector = ({
                 onValueChange={(values) => {
                   updateTransactionField("amount", values.floatValue || 0);
                 }}
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-2 py-1.5 border border-gray-300  text-[9px] bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
@@ -410,7 +410,7 @@ const CashTransactionAccountSelector = ({
                 thousandSeparator=","
                 value={closingBalanceAmount}
                 disabled
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-slate-200 text-gray-900 focus:outline-none"
+                className="w-full px-2 py-1.5 border border-gray-300  text-[9px] bg-slate-200 text-gray-900 focus:outline-none"
               />
             </div>
           </div>
@@ -429,7 +429,7 @@ const CashTransactionAccountSelector = ({
             }
             rows="1"
             placeholder="Enter narration..."
-            className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-[9px] bg-white text-gray-900 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 px-2 py-1.5 border border-gray-300  text-[9px] bg-white text-gray-900 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
       </div>

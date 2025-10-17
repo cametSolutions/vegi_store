@@ -5,8 +5,8 @@ import TransactionList from "./components/TransactionList/TransactionList";
 const TransactionPanel = () => {
   return (
     <div className="flex  w-full justify-between bg-white gap-2 ">
-      {/* <div className="w-[55%]"> */}
-        <div className="">
+      <div className="w-[55%]">
+        {/* <div className=""> */}
         <CreateTransaction />
       </div>
        <div className="w-[45%]">
