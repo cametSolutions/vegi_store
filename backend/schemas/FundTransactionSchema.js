@@ -37,7 +37,7 @@ export const FundTransactionSchema = new mongoose.Schema(
     closingBalanceAmount: { type: Number, default: 0 },
     paymentMode: {
       type: String,
-      enum: ["cash", "cheque", "dd", "bank_transfer"],
+      enum: ["cash", "cheque", "dd", "bankTransfer"],
       default: "cash",
     },
     chequeNumber: String,
@@ -99,6 +99,38 @@ FundTransactionSchema.index({ transactionNumber: 1 });
 FundTransactionSchema.index({ date: -1 });
 FundTransactionSchema.index({ account: 1, transactionType: 1 });
 FundTransactionSchema.index({ company: 1, branch: 1 });
+
+FundTransactionSchema.statics.getPaginatedTransactions = async function (
+  filter = {},
+  page = 1,
+  limit = 50,
+  sort = { date: -1, _id: -1 }
+) {
+  const skip = (page - 1) * limit;
+
+  const [total, transactions] = await Promise.all([
+    this.countDocuments(filter),
+    this.find(filter)
+      .populate('account', 'accountName')
+      .select('transactionNumber transactionDate amount previousBalanceAmount closingBalanceAmount settlementDetails')
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+  ]);
+
+  return {
+    data: transactions,
+    pagination: {
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      pages: Math.ceil(total / limit),
+      hasMore: skip + transactions.length < total,
+      nextPage: skip + transactions.length < total ? page + 1 : null
+    }
+  };
+};
 
 // Instance method to settle an amount FIFO
 FundTransactionSchema.methods.settleAmountFIFO = async function (settleAmount) {

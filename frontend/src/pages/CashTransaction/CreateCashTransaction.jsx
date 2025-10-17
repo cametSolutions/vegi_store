@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useCallback, use } from "react";
+import React, { useEffect, useMemo, useCallback, useState } from "react";
 import TransactionActionsComponent from "./Components/cashTransactionAction";
 import CashTransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
 import BankPaymentDetails from "./Components/BankPaymentReciept";
@@ -8,7 +8,7 @@ import { useSelector } from "react-redux";
 import { getTransactionType } from "./Utils/CashTransactionUtils";
 import { useCashTransaction } from "./hooks/useCashTransaction";
 import { useCashTransactionActions } from "./hooks/useCashTransactionAction";
-
+import CustomMoonLoader from "../../components/loaders/CustomMoonLoader";
 
 const TransactionHeader = React.memo(CashTransactionHeaderComponent);
 const CashTransactionAction = React.memo(TransactionActionsComponent);
@@ -17,7 +17,7 @@ const TransactionBankPaymentDetails = React.memo(BankPaymentDetails);
 
 const CreateCashTransaction = () => {
   const location = useLocation();
-
+  const [isLoading, setIsLoading] = useState(false);
   const {
     CashtransactionData,
      resetCashTransactionData,
@@ -57,13 +57,20 @@ useEffect(() => {
     <div>
       <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
         {/* Header */}
+
+  {isLoading && (
+        <div className="absolute inset-0 bg-white/60  z-50 flex items-center justify-center">
+          <CustomMoonLoader />
+        </div>
+      )}
+
         <TransactionHeader
           currentTransactionType={currentTransactionType}
           date={CashtransactionData.date}
           updateTransactionField={updateTransactionField}
         />
 
-        <div className="flex flex-col  p-2 gap-2">
+        <div className="flex flex-col  p-1 gap-2">
           {/* Receipt Details - Top */}
           <div className=" bg-white rounded-lg shadow-sm ">
             <TransactionAccountSelector
@@ -101,6 +108,8 @@ useEffect(() => {
           <div className=" flex-1 w-full">
             <CashTransactionAction
               CashtransactionData={CashtransactionData}
+                 onLoadingChange={setIsLoading}
+              resetCashTransactionData={resetCashTransactionData}
               onSave={useCashTransactionActions?.handleSave}
               onView={useCashTransactionActions?.handleView}
               onDelete={useCashTransactionActions?.handleDelete}

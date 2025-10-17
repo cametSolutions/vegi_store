@@ -114,11 +114,12 @@ export const getTransactions = async (req, res) => {
     // Get query parameters with proper defaults
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
-    const sortBy = req.query.sortBy || "date";
+    const searchTerm = req.query.searchTerm || "";
+    const sortBy = req.query.sortBy || "transactionDate"; // ✅ Fixed: was "date"
     const sortOrder = req.query.sortOrder || "desc";
     const accountId = req.query.accountId || req.query.account;
-    const company = req.query.company;
-    const branch = req.query.branch;
+    const company = req.query.company || req.query.companyId;
+    const branch = req.query.branch || req.query.branchId;
     const startDate = req.query.startDate;
     const endDate = req.query.endDate;
     const paymentMode = req.query.paymentMode;
@@ -130,37 +131,36 @@ export const getTransactions = async (req, res) => {
       _id: sortDirection, // Secondary sort for consistency
     };
 
-    // Build query
-    const query = {};
+    // Build filter (not query!) - ✅ This was your main error
+    const filter = {};
 
-    if (accountId) query.account = accountId;
-    if (company) query.company = company;
-    if (branch) query.branch = branch;
-    if (paymentMode) query.paymentMode = paymentMode;
+    if (searchTerm) {
+      filter.$or = [
+        { accountName: { $regex: searchTerm, $options: "i" } },
+        { transactionNumber: { $regex: searchTerm, $options: "i" } },
+      ];
+    }
+    if (accountId) filter.account = accountId; // ✅ Fixed: was query.account
+    if (company) filter.company = company;     // ✅ Fixed: was query.company
+    if (branch) filter.branch = branch;        // ✅ Fixed: was query.branch
+    if (paymentMode) filter.paymentMode = paymentMode; // ✅ Fixed: was query.paymentMode
 
     if (startDate || endDate) {
-      query.date = {};
-      if (startDate) query.date.$gte = new Date(startDate);
-      if (endDate) query.date.$lte = new Date(endDate);
+      filter.transactionDate = {}; // ✅ Fixed: was filter.date
+      if (startDate) filter.transactionDate.$gte = new Date(startDate);
+      if (endDate) filter.transactionDate.$lte = new Date(endDate);
     }
 
-    const skip = (page - 1) * limit;
-
-    const [transactions, total] = await Promise.all([
-      TransactionModel.find(query)
-        .select(
-          "transactionNumber transactionDate amount previousBalanceAmount closingBalanceAmount settlementDetails"
-        )
-        .populate("account", "accountName")
-        .sort(sort)
-        .skip(skip)
-        .limit(parseInt(limit))
-        .lean(),
-      TransactionModel.countDocuments(query),
-    ]);
+    // ✅ Use the static method - Remove duplicate manual query
+    const result = await TransactionModel.getPaginatedTransactions(
+      filter,
+      page,
+      limit,
+      sort
+    );
 
     // Transform data for frontend table
-    const formattedTransactions = transactions.map((transaction) => ({
+    const formattedTransactions = result.data.map((transaction) => ({
       billNo: transaction.transactionNumber || "N/A",
       transactionDate: transaction.transactionDate,
       accountName: transaction.account?.accountName || "N/A",
@@ -173,13 +173,10 @@ export const getTransactions = async (req, res) => {
     res.status(200).json({
       success: true,
       data: formattedTransactions,
-      pagination: {
-        total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(total / limit),
-      },
+        totalCount: result.pagination.total,
+      pagination: result.pagination
     });
+
   } catch (error) {
     console.error("Error fetching transactions:", error);
     res.status(500).json({
