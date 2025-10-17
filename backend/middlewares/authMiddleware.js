@@ -20,6 +20,7 @@ export function authMiddleware(req, res, next) {
       _id: decoded._id || decoded.id || decoded.userId, // Normalize to _id
     };
 
+    
     // 4. Continue to next middleware / route
     next();
   } catch (err) {
