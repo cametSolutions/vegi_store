@@ -11,8 +11,10 @@ export const cashTransactionQueries = {
     branchId,
    
     limit = 25,
-      sortBy,
-    sortOrder,
+    sortBy = "transactionDate",
+    sortOrder = "desc",
+      startDate ,
+    endDate ,
     options = {}
   ) =>
     infiniteQueryOptions({
@@ -22,7 +24,10 @@ export const cashTransactionQueries = {
         searchTerm,
         companyId,
         branchId,
-     
+      sortBy,
+      sortOrder,
+      startDate instanceof Date ? startDate.toISOString() : startDate,
+      endDate instanceof Date ? endDate.toISOString() : endDate,
       ],
       queryFn: ({ pageParam }) =>
         cashTransactionServices.getAll(
@@ -33,7 +38,8 @@ export const cashTransactionQueries = {
           companyId,
           branchId,
            sortBy,
-          sortOrder
+          sortOrder,startDate ,
+          endDate
         ),
       initialPageParam: 1,
       getNextPageParam: (lastPage) => lastPage.nextPage,

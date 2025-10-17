@@ -41,7 +41,9 @@ export const cashTransactionServices = {
     companyId,
     branchId,
       sortBy,
-    sortOrder
+    sortOrder,
+    startDate,
+    endDate
   ) => {
     try {
       const response = await api.get(`/transaction/${transactionType}/getall`, {
@@ -54,6 +56,8 @@ export const cashTransactionServices = {
           transactionType,
             sortBy,
           sortOrder,
+          startDate,
+          endDate
         },
       });
 

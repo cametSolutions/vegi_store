@@ -3,7 +3,7 @@ import ListHeader from "../../../CommonTransactionListComponents/ListHeader";
 import ListSearch from "../../../CommonTransactionListComponents/ListSearch";
 import CashTRansactioListTable from "./CashTRansactionListTable";
 import { useTransactionListActions } from "../../../Transactions/hooks/useTransactionListActions";
-import { useMemo } from "react";
+import { useMemo,useState } from "react";
 import { getTransactionType } from "../../Utils/CashTransactionUtils";
 import { useLocation } from "react-router-dom";
 import { cashTransactionQueries } from "@/hooks/queries/cashTransaction.queries";
@@ -15,6 +15,13 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import InfiniteScroll from "react-infinite-scroll-component";
 const TransactionList = () => {
   const location = useLocation();
+   const [selectedDateRange, setSelectedDateRange] = useState("today");
+  const [dateFilter, setDateFilter] = useState({
+    startDate: new Date(),
+    endDate: new Date(),
+    rangeType: "today"
+  });
+
    const currentTransactionType = useMemo(
       () => getTransactionType(location),
       [location]
@@ -42,6 +49,12 @@ const TransactionList = () => {
 
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY);
 
+ const handleDateRangeChange = (range) => {
+    setDateFilter(range);
+    // The query will automatically refetch when dateFilter changes
+  };
+
+
   const { 
     data,
     error,
@@ -60,6 +73,8 @@ const TransactionList = () => {
       25,
         "transactionDate", /// sort by date
       "desc", // sortOrder  for MongoDB
+        dateFilter.startDate, // Add start date
+      dateFilter.endDate,  
       { refetchOnWindowFocus: false, retry: 2 }
     )
   );
@@ -74,7 +89,10 @@ const TransactionList = () => {
       <div className="px-1 py-2 border-b  flex-shrink-0">
         <ListHeader
           title="Recent Transactions"
-       recordCount={data?.pages[0]?.pagination?.total || 0}  // Access total from pagination
+       recordCount={data?.pages[0]?.pagination?.total || 0} 
+       onDateRangeChange={handleDateRangeChange}
+          selectedDateRange={selectedDateRange}
+          setSelectedDateRange={setSelectedDateRange} // Access total from pagination
         />
         <ListSearch
           searchTerm={searchTerm}
