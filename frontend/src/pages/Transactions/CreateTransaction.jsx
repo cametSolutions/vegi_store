@@ -43,21 +43,22 @@ const CreateTransaction = () => {
     resetTransactionData,
   } = useTransaction();
 
+
+  //// get current transaction type from the url////
   const currentTransactionType = useMemo(
     () => getTransactionType(location),
     [location]
   );
 
+////  for adding transaction type to the transaction data when the component loads or when the transaction type changes////
   useEffect(() => {
-    console.log("Transaction type changed, resetting data");
     resetTransactionData();
-    updateTransactionField("currentTransactionType", currentTransactionType);
+    updateTransactionField("transactionType", currentTransactionType);
   }, [currentTransactionType, updateTransactionField]);
 
   // Reset transaction data when navigating away from this page
   useEffect(() => {
     return () => {
-      console.log("Cleaning up - resetting transaction data");
       resetTransactionData();
     };
   }, [resetTransactionData]);
@@ -71,7 +72,6 @@ const CreateTransaction = () => {
 
   ///handle itemClick from the items table and pass it to item adding form for edit////
 
-  console.log("transactionData", transactionData);
 
   // Memoized callbacks to prevent child re-renders
 
@@ -138,6 +138,7 @@ const CreateTransaction = () => {
               totalDue={transactionData.totalDue}
               onDiscountChange={handleDiscountChange}
               onPaidAmountChange={handlePaidAmountChange}
+              transactionType={transactionData.transactionType}
             />
 
             <TransactionActions

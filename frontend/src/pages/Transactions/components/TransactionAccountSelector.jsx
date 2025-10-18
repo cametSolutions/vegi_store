@@ -68,6 +68,8 @@ const TransactionAccountSelector = ({
   // COMPUTED VALUES
   // ============================================================================
   const partyLabel = getPartyLabel(transactionType);
+
+  
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY);
   const isSearchEnabled = !!(
     company &&

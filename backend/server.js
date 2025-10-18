@@ -86,6 +86,7 @@ app.use("/api/user", authMiddleware, userRoute);
 app.use("/api/pricelevel", authMiddleware, pricelevelRoute);
 app.use("/api/accountmaster", authMiddleware, acccountmasterRoute);
 app.use("/api/transaction/sale", authMiddleware, saleRoutes );
+app.use("/api/transaction/purchase", authMiddleware, saleRoutes );
 app.use("/api/item", authMiddleware, itemRoute);
 app.use("/api/transaction", authMiddleware,PaymentRoutes);
 

@@ -26,7 +26,7 @@ const Navbar = () => {
     { label: "Item Master", path: "/master/item-master" },
     { label: "Account Master", path: "/masters/accountMaster" },
     { label: "Purchase Return", path: "/purchase-return" },
-    { label: "Purchase", path: "/purchase" },
+    { label: "Purchase", path: "/transactions/purchase/create" },
     { label: "Payment", path: "/transactions/payment/create" },
     { label: "receipt", path: "/transactions/receipt/create" },
     { label: "Sales", path: "/transactions/sale/create" },

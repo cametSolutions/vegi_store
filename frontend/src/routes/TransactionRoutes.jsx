@@ -18,6 +18,7 @@ export default function TransactionRoutes() {
       }
     >
       <Route path="sale/create" element={<TransactionPanel />} />
+      <Route path="purchase/create" element={<TransactionPanel />} />
       <Route path="receipt/create" element={<CashTransactionPanel />} />
       <Route path="payment/create" element={<CashTransactionPanel />} />
       {/* Add more transaction routes here */}

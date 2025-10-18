@@ -20,7 +20,7 @@ const CreateCashTransaction = () => {
   const [isLoading, setIsLoading] = useState(false);
   const {
     CashtransactionData,
-     resetCashTransactionData,
+    resetCashTransactionData,
     updateCashtransactionData,
     updateTransactionField,
 
@@ -39,30 +39,29 @@ const CreateCashTransaction = () => {
   );
 
   useEffect(() => {
-     resetCashTransactionData();
+    resetCashTransactionData();
     updateTransactionField("transactionType", currentTransactionType);
   }, [currentTransactionType, updateTransactionField]);
 
+  useEffect(() => {
+    // Cleanup function - runs when component unmounts
+    return () => {
+      resetCashTransactionData();
+    };
+  }, []);
 
-useEffect(() => {
-  // Cleanup function - runs when component unmounts
-  return () => {
-    resetCashTransactionData();
-  };
-}, []); 
-
-// Empty dependency array means this only sets up on mount
+  // Empty dependency array means this only sets up on mount
   console.log("Cash transaction data:", CashtransactionData);
   return (
     <div>
       <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
         {/* Header */}
 
-  {isLoading && (
-        <div className="absolute inset-0 bg-white/60  z-50 flex items-center justify-center">
-          <CustomMoonLoader />
-        </div>
-      )}
+        {isLoading && (
+          <div className="absolute inset-0 bg-white/60  z-50 flex items-center justify-center">
+            <CustomMoonLoader />
+          </div>
+        )}
 
         <TransactionHeader
           currentTransactionType={currentTransactionType}
@@ -86,7 +85,7 @@ useEffect(() => {
               updateCashtransactionData={updateCashtransactionData}
               branch={selectedBranchFromStore?._id}
               company={selectedCompanyFromStore?._id}
-                // resetCashTransactionData={resetCashTransactionData}
+              // resetCashTransactionData={resetCashTransactionData}
             />
           </div>
 
@@ -108,7 +107,7 @@ useEffect(() => {
           <div className=" flex-1 w-full">
             <CashTransactionAction
               CashtransactionData={CashtransactionData}
-                 onLoadingChange={setIsLoading}
+              onLoadingChange={setIsLoading}
               resetCashTransactionData={resetCashTransactionData}
               onSave={useCashTransactionActions?.handleSave}
               onView={useCashTransactionActions?.handleView}
