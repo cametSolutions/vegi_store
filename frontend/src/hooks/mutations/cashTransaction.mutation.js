@@ -4,7 +4,7 @@ import { cashTransactionServices } from "../../api/services/cashTransaction.serv
 import { capitalizeFirstLetter } from "../../../../shared/utils/string";
 
 export const cashtransactionMutations = {
-  create: (queryClient) => ({
+create: (queryClient) => ({
   mutationFn: ({ formData, transactionType }) =>
     cashTransactionServices.create(formData, transactionType),
 
