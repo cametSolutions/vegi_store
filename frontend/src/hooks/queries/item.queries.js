@@ -1,5 +1,5 @@
 // hooks/queries/itemMasterQueries.js
-import { queryOptions } from '@tanstack/react-query';
+import { queryOptions,infiniteQueryOptions  } from '@tanstack/react-query';
 import { itemServices } from '../../api/services/items.service';
 
 export const itemMasterQueries = {
@@ -11,10 +11,24 @@ export const itemMasterQueries = {
     ...options
   }),
 
-  list: (companyId) => queryOptions({
-    queryKey: [...itemMasterQueries.all(), 'list', companyId],
-    queryFn: () => itemServices.getAll(companyId),
-    enabled: !!companyId,
-    staleTime: 5 * 60 * 1000,
-  }),
+ list: (companyId, search = "") =>
+    infiniteQueryOptions({
+      queryKey: [...itemMasterQueries.all(), "list", companyId, search],
+      queryFn: ({ pageParam = 1 }) =>
+        itemServices.getAll(companyId, pageParam, 20, search),
+      getNextPageParam: (lastPage, allPages) => {
+        const hasMore = lastPage.data.items.length === 20;
+        return hasMore ? allPages.length + 1 : undefined;
+      },
+      enabled: !!companyId,
+      staleTime: 5 * 60 * 1000,
+    }),
+
+  detail: (id) =>
+    queryOptions({
+      queryKey: [...itemMasterQueries.all(), "detail", id],
+      queryFn: () => itemServices.getById(id),
+      enabled: !!id,
+      staleTime: 5 * 60 * 1000,
+    }),
 };

@@ -28,4 +28,42 @@ export const itemServices = {
       throw new Error("An unexpected error occurred");
     }
   },
+
+  getAll: async (companyId, page = 1, limit = 20, search = "") => {
+    try {
+      const response = await api.get("/itemmaster/getall", {
+        params: { companyId, page, limit, search },
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
+
+  create: async (formData) => {
+    try {
+      const response = await api.post("/itemmaster/create", formData);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
+
+  getById: async (id) => {
+    try {
+      const response = await api.get(`/itemmaster/${id}`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
 };
