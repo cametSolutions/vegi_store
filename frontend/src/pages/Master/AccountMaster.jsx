@@ -1,4 +1,4 @@
-import  { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 import {
   Search,
   Filter,
@@ -8,125 +8,19 @@ import {
   Building,
   MapPin,
   AlertCircle,
-  CheckCircle2
-} from "lucide-react"
-import {
-  
-  AccountmasterSchema
-} from "../../validation/accountmasterSchema"
-import { accountMasterApi } from "../../api/accountMasterApi"
-import { pricelevelApi } from "../../api/pricelevelApi"
-import { ZodError } from "zod"
-import { useSelector } from "react-redux"
+  CheckCircle2,
+} from "lucide-react";
 
 const AccountMaster = () => {
-  // Your existing input fields
-  const inputFields= [
-    {
-      name: "accountName",
-      label: "Account Name",
-      type: "text",
-      placeholder: "Enter account name"
-    },
-    {
-      name: "accountType",
-      label: "Account Type",
-      type: "radio"
-    },
-    {
-      name: "pricelevel",
-      label: "Price Level Type",
-      type: "select"
-    },
-    {
-      name: "openingBalance",
-      label: "Opening Balance",
-      type: "text",
-      placeholder: "0.00"
-    },
-    {
-      name: "openingBalanceType",
-      label: "Opening Balance Type",
-      type: "select"
-    },
-    {
-      name: "address",
-      label: "Address",
-      type: "text",
-      placeholder: "Enter address"
-    },
-    {
-      name: "phoneNo",
-      label: "Phone No",
-      type: "text",
-      placeholder: "+91-XXXXXXXXXX"
-    }
-  ]
-
-  // State management
-  const [accntholdersList, setaccntholdersList] = useState([])
-  const [accounts, setAccounts] = useState([
-    {
-      id: 1,
-      accountName: "John Doe",
-      accountType: "Savings",
-      pricelevel: "Standard",
-      openingBalance: 15000,
-      openingBalanceType: "Credit",
-      address: "123 Main St, Mumbai",
-      phoneNumber: "9876543210"
-    },
-    {
-      id: 2,
-      accountName: "Jane Smith",
-      accountType: "Current",
-      pricelevel: "Premium",
-      openingBalance: 25000,
-      openingBalanceType: "Debit",
-      address: "456 Park Ave, Delhi",
-      phoneNumber: "9876543211"
-    },
-    {
-      id: 3,
-      accountName: "Michael Brown",
-      accountType: "Savings",
-      pricelevel: "Standard",
-      openingBalance: 18000,
-      openingBalanceType: "Credit",
-      address: "789 Oak Rd, Bangalore",
-      phoneNumber: "9876543212"
-    },
-    {
-      id: 4,
-      accountName: "Emily Davis",
-      accountType: "Current",
-      pricelevel: "Premium",
-      openingBalance: 30000,
-      openingBalanceType: "Credit",
-      address: "321 Pine St, Chennai",
-      phoneNumber: "9876543213"
-    },
-    {
-      id: 5,
-      accountName: "Chris Wilson",
-      accountType: "Savings",
-      pricelevel: "Basic",
-      openingBalance: 12000,
-      openingBalanceType: "Debit",
-      address: "654 Elm Ave, Pune",
-      phoneNumber: "9876543214"
-    },
-    {
-      id: 6,
-      accountName: "Olivia Miller",
-      accountType: "Current",
-      pricelevel: "Premium",
-      openingBalance: 27000,
-      openingBalanceType: "Credit",
-      address: "987 Cedar Ln, Hyderabad",
-      phoneNumber: "9876543215"
-    }
-  ])
+  const [accountsList, setAccountsList] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [pricelevelOptions, setPricelevelOptions] = useState([]);
+  const [branchOptions, setBranchOptions] = useState([]);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const [formData, setFormData] = useState({
     accountName: "",
@@ -135,209 +29,128 @@ const AccountMaster = () => {
     openingBalance: "",
     openingBalanceType: "",
     address: "",
-    phoneNo: ""
-  })
+    phoneNo: "",
+    branch: "",
+  });
 
-  const [errors, setErrors] = useState({})
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedHolder, setselectedHolder] = useState(null)
-  const [filterType, setFilterType] = useState("")
-  const [isEditing, setIsEditing] = useState(false)
-  const [pricelevelOptions, setpricelevelOptions] = useState([])
-  const [editingId, setEditingId] = useState(null)
-  const [submitSuccess, setSubmitSuccess] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const selectedCompany = useSelector(
-    (state) => state.companyBranch.selectedCompany
-  )
-  const selectedBranch = useSelector(
-    (state) => state.companyBranch.selectedBranch
-  )
+  // Native validation function
+  const validateForm = () => {
+    const newErrors = {};
 
-  useEffect(() => {
-    const fetchPricelevel = async () => {
-      try {
-        const res = await pricelevelApi.getAll()
-        setpricelevelOptions(res.data)
-      } catch (err) {
-        console.error("Error fetching pricelevel", err)
-      }
+    if (!formData.branch || formData.branch.trim() === "") {
+      newErrors.branch = "Please select a branch";
     }
 
-    fetchPricelevel()
-  }, [])
-console.log("formdata",formData)
-  useEffect(() => {
-    const fetchAccntholder = async () => {
-      try {
-        const res = await accountMasterApi.getAll()
-        setaccntholdersList(res.data)
-      } catch (error) {
-        console.error(error)
-      }
+    if (!formData.accountName || formData.accountName.trim() === "") {
+      newErrors.accountName = "Account name is required";
+    } else if (formData.accountName.trim().length < 2) {
+      newErrors.accountName = "Account name must be at least 2 characters";
     }
-    fetchAccntholder()
-  }, [])
 
-  // Validate form using Zod schema
-  const validateForm = (
-    data
-  ) => {
-    try {
-      AccountmasterSchema.parse(data)
-      return {}
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const validationErrors= {}
-        error.issues.forEach((err) => {
-          if (err.path[0]) {
-            validationErrors[err.path[0]] = err.message
-          }
-        })
-        return validationErrors
-      }
-      return {}
+    if (!formData.accountType || formData.accountType.trim() === "") {
+      newErrors.accountType = "Please select an account type";
     }
-  }
 
-  // Validate single field
-  const validateField = (name, value) => {
-    try {
-      const singleFieldSchema = AccountmasterSchema.pick({ [name]: true })
-      singleFieldSchema.parse({ [name]: value })
-      setErrors((prev) => ({ ...prev, [name]: "" }))
-    } catch (error) {
-      if (error instanceof ZodError) {
-       
-        const message = error.issues[0]?.message || "Invalid input"
-        setErrors((prev) => ({
-          ...prev,
-          [name]: message
-        }))
-      }
+    if (!formData.pricelevel || formData.pricelevel.trim() === "") {
+      newErrors.pricelevel = "Please select a price level";
     }
-  }
 
-  // Handle form input changes with real-time validation
-  const handleInputChange = (
-    name,
-    value
-  ) => {
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Handle input change
+  const handleInputChange = (name, value) => {
     setFormData((prev) => ({
       ...prev,
-      [name]: value
-    }))
-
-    // Clear success message
-    setSubmitSuccess(false)
-
-    // Real-time validation for required fields
-    if (["accountName", "accountType", "pricelevel"].includes(name)) {
-      validateField(name, value)
+      [name]: value,
+    }));
+    
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
-  }
-console.log("selectedholder",selectedHolder)
-  // Handle form submission with Zod validation
+    setSubmitSuccess(false);
+  };
+
+  // Form submission
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    // Validate entire form
-    const validationErrors = validateForm(formData)
-    setErrors(validationErrors)
-
-    if (Object.keys(validationErrors).length > 0) {
-      return
-    }
-    const finalFormData = {
-      ...formData,
-      companyId: selectedCompany?._id || "",
-      branchId: selectedBranch?._id || ""
+    if (!validateForm()) {
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
-      let response
-      if (selectedHolder) {
-        response = await accountMasterApi.update(
-          {
-            id: selectedHolder._id,
-            companyId: selectedHolder.companyId,
-            branchId: selectedHolder.branchId
-          },
-          finalFormData
-        )
-      } else {
-        response = await accountMasterApi.create(finalFormData)
-      }
-
-      console.log("response", response.data)
-      setaccntholdersList(response.data)
-      setFormData({
-        accountName: "",
-        accountType: "",
-        pricelevel: "",
-        openingBalance: "",
-        openingBalanceType: "",
-        address: "",
-        phoneNo: ""
-      })
-
-      setErrors({})
-      setSubmitSuccess(true)
+      // Simulate API call
+      setTimeout(() => {
+        const newAccount = {
+          _id: Date.now().toString(),
+          ...formData,
+          pricelevel: { _id: formData.pricelevel, priceLevelName: "Standard" },
+          openingBalance: parseFloat(formData.openingBalance) || 0,
+        };
+        
+        if (selectedAccount) {
+          setAccountsList(prev => prev.map(acc => 
+            acc._id === selectedAccount._id ? { ...newAccount, _id: selectedAccount._id } : acc
+          ));
+        } else {
+          setAccountsList(prev => [...prev, newAccount]);
+        }
+        
+        handleClear();
+        setSubmitSuccess(true);
+        setTimeout(() => setSubmitSuccess(false), 3000);
+        setIsSubmitting(false);
+      }, 500);
     } catch (error) {
-      console.log("Form submission error:", error)
-    } finally {
-      setIsSubmitting(false)
+      console.error("Form submission error:", error);
+      setIsSubmitting(false);
     }
+  };
 
-  
-  }
-
-  // Handle edit
-  const handleEdit = (account) => {
+  // Handle account selection
+  const handleSelect = (account) => {
+    setSelectedAccount(account);
     setFormData({
-      accountName: account.accountName,
-      accountType: account.accountType,
-      pricelevel: account.pricelevel,
-      openingBalance: account.openingBalance.toString(),
-      openingBalanceType: account.openingBalanceType,
-      address: account.address,
-      phoneNo: account.phoneNumber
-    })
-    setIsEditing(true)
-    setEditingId(account.id)
-    setSubmitSuccess(false)
-    setErrors({})
-  }
+      accountName: account.accountName || "",
+      accountType: account.accountType || "",
+      pricelevel: account.pricelevel?._id || "",
+      openingBalance: account.openingBalance?.toString() || "",
+      openingBalanceType: account.openingBalanceType || "",
+      address: account.address || "",
+      phoneNo: account.phoneNo || "",
+      branch: account.branchId || account.branch || "",
+    });
+    setErrors({});
+  };
 
   // Handle delete
   const handleDelete = async () => {
-    if (selectedHolder) {
-      console.log("seelctectdid", selectedHolder)
-      const result = await accountMasterApi.delete({
-        id: selectedHolder._id,
-        companyId: selectedHolder.companyId,
-        branchId: selectedHolder.branchId
-      })
-      setaccntholdersList(result.data)
-    }
+    if (!selectedAccount) return;
     
-  }
-console.log("acnnntlisttttttttttttttttt",accntholdersList)
-  // Filter accounts
-  const filteredAccounts = accntholdersList.filter((account) => {
-    const matchesSearch =
-      account.accountName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      account.phoneNumber.includes(searchTerm) ||
-      account.address.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesFilter = !filterType || account.accountType === filterType
-    return matchesSearch && matchesFilter
-  })
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete ${selectedAccount.accountName}?`
+    );
+    
+    if (!confirmDelete) return;
 
-  // Cancel edit
-  const cancelEdit = () => {
-    setIsEditing(false)
-    setEditingId(null)
+    try {
+      setAccountsList(prev => prev.filter(acc => acc._id !== selectedAccount._id));
+      handleClear();
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert("Failed to delete account. Please try again.");
+    }
+  };
+
+  // Handle clear
+  const handleClear = () => {
     setFormData({
       accountName: "",
       accountType: "",
@@ -345,433 +158,439 @@ console.log("acnnntlisttttttttttttttttt",accntholdersList)
       openingBalance: "",
       openingBalanceType: "",
       address: "",
-      phoneNo: ""
-    })
-    setErrors({})
-    setSubmitSuccess(false)
-  }
-  const handleSelect = (accnt) => {
-    setselectedHolder(accnt)
-    setFormData({
-      accountName: accnt.accountName,
-      accountType: accnt.accountType,
-      pricelevel: accnt.pricelevel._id,
-      openingBalance: accnt.openingBalance.toString(),
-      openingBalanceType: accnt.openingBalanceType,
-      address: accnt.address,
-      phoneNo: accnt.phoneNo
-    })
-  }
+      phoneNo: "",
+      branch: "",
+    });
+    setSelectedAccount(null);
+    setSubmitSuccess(false);
+    setErrors({});
+  };
 
-  const getInputStyles = (fieldName) =>
-    `w-full px-4 py-3 border rounded-lg transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 ${
-      errors[fieldName]
-        ? "border-red-500 focus:ring-red-500"
-        : "border-gray-300"
-    }`
+  // Filter accounts
+  const filteredAccounts = accountsList.filter((account) => {
+    const matchesSearch =
+      account.accountName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      account.phoneNo?.includes(searchTerm) ||
+      account.address?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = !filterType || account.accountType === filterType;
+    return matchesSearch && matchesFilter;
+  });
+
   return (
-    <div className="min-h-screen bg-blue-50 p-6 w-screen">
-      <div className=" bg-white mx-auto p-3 rounded-md shadow-2xl">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-amber-100 rounded-lg">
-                  <Building className="w-6 h-6 text-amber-600" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    Account Master
-                  </h1>
-                  <p className="text-gray-600">Manage your account holders</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <span className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full font-medium">
-                  {accntholdersList.length} holders
+    <div className="h-screen bg-blue-50 flex flex-col overflow-hidden" style={{ fontSize: '9px' }}>
+      {/* Header - Fixed */}
+      <div className="flex-shrink-0 p-3 bg-white shadow-sm border-b">
+        <div className="flex items-center justify-between">
+        
+         
+        </div>
+      </div>
+
+      {/* Main Content - Fixed Height */}
+      <div className="flex-1 overflow-hidden flex gap-3 p-3">
+        {/* Form Section - Left Side (50%) - Fixed */}
+        <div className="w-1/2 flex flex-col h-full">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 h-full flex flex-col">
+            {/* Success Message */}
+            {submitSuccess && (
+              <div className="mb-2 p-2 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                <CheckCircle2 className="w-3 h-3 text-green-600" />
+                <span className="text-green-800 font-medium" style={{ fontSize: '9px' }}>
+                  Account {selectedAccount ? "updated" : "created"} successfully!
                 </span>
               </div>
+            )}
+
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-sm font-semibold text-gray-800">
+                {selectedAccount ? "Edit Account" : "Add New Account"}
+              </h2>
+              <button
+                onClick={handleClear}
+                type="button"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-md transition"
+                style={{ fontSize: '9px' }}
+              >
+                Clear
+              </button>
+            </div>
+
+            {/* Scrollable Form Content */}
+            <div className="flex-1 overflow-y-auto pr-1">
+              <div className="space-y-2">
+                {/* Branch Selection */}
+                <div className="space-y-1">
+                  <label className="block font-medium text-gray-700" style={{ fontSize: '9px' }}>
+                    Branch <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.branch}
+                    onChange={(e) => handleInputChange("branch", e.target.value)}
+                    className={`w-full px-2 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition ${
+                      errors.branch ? "border-red-500" : "border-gray-300"
+                    }`}
+                    style={{ fontSize: '9px' }}
+                  >
+                    <option value="">Select Branch</option>
+                    {branchOptions.map((branch) => (
+                      <option key={branch._id} value={branch._id}>
+                        {branch.branchName || branch.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.branch && (
+                    <div className="flex items-center gap-1 text-red-600" style={{ fontSize: '9px' }}>
+                      <AlertCircle className="w-3 h-3" />
+                      <span>{errors.branch}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Account Name */}
+                <div className="space-y-1">
+                  <label className="block font-medium text-gray-700" style={{ fontSize: '9px' }}>
+                    Account Name <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-2 top-2 w-3 h-3 text-gray-400" />
+                    <input
+                      type="text"
+                      value={formData.accountName}
+                      onChange={(e) => handleInputChange("accountName", e.target.value)}
+                      placeholder="Enter account name"
+                      className={`w-full pl-7 pr-2 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition ${
+                        errors.accountName ? "border-red-500" : "border-gray-300"
+                      }`}
+                      style={{ fontSize: '9px' }}
+                    />
+                  </div>
+                  {errors.accountName && (
+                    <div className="flex items-center gap-1 text-red-600" style={{ fontSize: '9px' }}>
+                      <AlertCircle className="w-3 h-3" />
+                      <span>{errors.accountName}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Account Type */}
+                <div className="space-y-1">
+                  <label className="block font-medium text-gray-700" style={{ fontSize: '9px' }}>
+                    Account Type <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex gap-3">
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        value="Supplier"
+                        checked={formData.accountType === "Supplier"}
+                        onChange={(e) => handleInputChange("accountType", e.target.value)}
+                        className="mr-1 text-amber-600 focus:ring-amber-500 w-3 h-3"
+                      />
+                      <span className="font-medium" style={{ fontSize: '9px' }}>Supplier</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        value="Customer"
+                        checked={formData.accountType === "Customer"}
+                        onChange={(e) => handleInputChange("accountType", e.target.value)}
+                        className="mr-1 text-amber-600 focus:ring-amber-500 w-3 h-3"
+                      />
+                      <span className="font-medium" style={{ fontSize: '9px' }}>Customer</span>
+                    </label>
+                  </div>
+                  {errors.accountType && (
+                    <div className="flex items-center gap-1 text-red-600" style={{ fontSize: '9px' }}>
+                      <AlertCircle className="w-3 h-3" />
+                      <span>{errors.accountType}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Price Level */}
+                <div className="space-y-1">
+                  <label className="block font-medium text-gray-700" style={{ fontSize: '9px' }}>
+                    Price Level <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.pricelevel}
+                    onChange={(e) => handleInputChange("pricelevel", e.target.value)}
+                    className={`w-full px-2 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition ${
+                      errors.pricelevel ? "border-red-500" : "border-gray-300"
+                    }`}
+                    style={{ fontSize: '9px' }}
+                  >
+                    <option value="">Select Price Level</option>
+                    {pricelevelOptions.map((item) => (
+                      <option key={item._id} value={item._id}>
+                        {item.priceLevelName}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.pricelevel && (
+                    <div className="flex items-center gap-1 text-red-600" style={{ fontSize: '9px' }}>
+                      <AlertCircle className="w-3 h-3" />
+                      <span>{errors.pricelevel}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Opening Balance */}
+                <div className="space-y-1">
+                  <label className="block font-medium text-gray-700" style={{ fontSize: '9px' }}>
+                    Opening Balance
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-2 top-2 w-3 h-3 text-gray-400" />
+                    <input
+                      type="number"
+                      value={formData.openingBalance}
+                      onChange={(e) => handleInputChange("openingBalance", e.target.value)}
+                      placeholder="0.00"
+                      className="w-full pl-7 pr-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                      style={{ fontSize: '9px' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Opening Balance Type */}
+                <div className="space-y-1">
+                  <label className="block font-medium text-gray-700" style={{ fontSize: '9px' }}>
+                    Opening Balance Type
+                  </label>
+                  <select
+                    value={formData.openingBalanceType}
+                    onChange={(e) => handleInputChange("openingBalanceType", e.target.value)}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                    style={{ fontSize: '9px' }}
+                  >
+                    <option value="">Select Type</option>
+                    <option value="Credit">Credit</option>
+                    <option value="Debit">Debit</option>
+                  </select>
+                </div>
+
+                {/* Address */}
+                <div className="space-y-1">
+                  <label className="block font-medium text-gray-700" style={{ fontSize: '9px' }}>
+                    Address
+                  </label>
+                  <div className="relative">
+                    <MapPin className="absolute left-2 top-2 w-3 h-3 text-gray-400" />
+                    <input
+                      type="text"
+                      value={formData.address}
+                      onChange={(e) => handleInputChange("address", e.target.value)}
+                      placeholder="Enter address"
+                      className="w-full pl-7 pr-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                      style={{ fontSize: '9px' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Phone Number */}
+                <div className="space-y-1">
+                  <label className="block font-medium text-gray-700" style={{ fontSize: '9px' }}>
+                    Phone Number
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-2 top-2 w-3 h-3 text-gray-400" />
+                    <input
+                      type="text"
+                      value={formData.phoneNo}
+                      onChange={(e) => handleInputChange("phoneNo", e.target.value)}
+                      placeholder="+91-XXXXXXXXXX"
+                      className="w-full pl-7 pr-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                      style={{ fontSize: '9px' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons - Fixed at bottom */}
+            <div className="flex gap-2 pt-2 mt-2 border-t">
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 rounded-lg transition shadow-md"
+                style={{ fontSize: '9px' }}
+              >
+                {isSubmitting
+                  ? "Saving..."
+                  : selectedAccount
+                  ? "Update"
+                  : "Save"}
+              </button>
+              {selectedAccount && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isSubmitting}
+                  className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 rounded-lg transition shadow-md"
+                  style={{ fontSize: '9px' }}
+                >
+                  Delete
+                </button>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Main Content - Form and Table Side by Side */}
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Form Section - Left Side */}
-          <div className="w-full lg:w-1/3">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6">
-              {/* Success Message */}
-              {submitSuccess && (
-                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  <span className="text-green-800 text-sm font-medium">
-                    Account {isEditing ? "updated" : "created"} successfully!
-                  </span>
+        {/* Table Section - Right Side (50%) - Fixed */}
+        <div className="w-1/2 flex flex-col h-full">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col h-full overflow-hidden">
+            {/* Search and Filter - Fixed */}
+            <div className="p-3 border-b border-gray-200 flex-shrink-0">
+              <div className="flex gap-2">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-2 top-2 w-3 h-3 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search accounts..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-7 pr-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none transition"
+                    style={{ fontSize: '9px' }}
+                  />
                 </div>
-              )}
-              <div className="flex justify-end">
-                <button
-                  onClick={() => {
-                    setFormData({
-                      accountName: "",
-                      accountType: "",
-                      pricelevel: "",
-                      openingBalance: "",
-                      openingBalanceType: "",
-                      address: "",
-                      phoneNo: ""
-                    })
-                    setselectedHolder(null)
-                  }}
-                  className="bg-blue-800 hover:bg-blue-700 text-white px-2 py-0.5 rounded-md cursor-pointer"
-                >
-                  Clear
-                </button>
+                <div className="relative">
+                  <Filter className="absolute left-2 top-2 w-3 h-3 text-gray-400" />
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    className="pl-7 pr-6 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none transition"
+                    style={{ fontSize: '9px' }}
+                  >
+                    <option value="">All Types</option>
+                    <option value="Supplier">Supplier</option>
+                    <option value="Customer">Customer</option>
+                  </select>
+                </div>
               </div>
-
-              {/* <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-green-600" />
-                  {isEditing ? "Edit Account" : "Add New Account"}
-                </h2>
-                {isEditing && (
-                  <button
-                    onClick={cancelEdit}
-                    className="text-gray-500 hover:text-gray-700 text-sm px-3 py-1 rounded-lg border border-gray-300 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div> */}
-
-              <form
-                id="accountForm"
-                onSubmit={handleSubmit}
-                className="space-y-4"
-              >
-                {inputFields.map((field, index) => (
-                  <div key={index} className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      {field.label}
-                      {["accountName", "accountType", "pricelevel"].includes(
-                        field.name
-                      ) && <span className="text-red-500 ml-1">*</span>}
-                    </label>
-
-                    {field.type === "text" && (
-                      <div className="relative">
-                        {field.name === "phoneNo" && (
-                          <Phone className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                        )}
-                        {field.name === "accountName" && (
-                          <User className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                        )}
-                        {field.name === "address" && (
-                          <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                        )}
-                        {field.name === "openingBalance" && (
-                          <DollarSign className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                        )}
-                        <input
-                          type={
-                            field.name === "openingBalance" ? "number" : "text"
-                          }
-                          value={formData[field.name] || ""}
-                          onChange={(e) =>
-                            handleInputChange(field.name, e.target.value)
-                          }
-                          placeholder={field.placeholder || field.label}
-                          className={`${getInputStyles(field.name)} ${
-                            [
-                              "phoneNo",
-                              "accountName",
-                              "address",
-                              "openingBalance"
-                            ].includes(field.name)
-                              ? "pl-10"
-                              : ""
-                          }`}
-                        />
-                      </div>
-                    )}
-
-                    {field.type === "radio" && (
-                      <div className="space-y-2">
-                        <div className="flex gap-4">
-                          <label className="flex items-center cursor-pointer">
-                            <input
-                              type="radio"
-                              value="Supplier"
-                              checked={formData[field.name] === "Supplier"}
-                              onChange={(e) =>
-                                handleInputChange(field.name, e.target.value)
-                              }
-                              className="mr-2 text-amber-600 focus:ring-amber-500"
-                            />
-                            <span className="text-sm font-medium">
-                              Supplier
-                            </span>
-                          </label>
-                          <label className="flex items-center cursor-pointer">
-                            <input
-                              type="radio"
-                              value="Customer"
-                              checked={formData[field.name] === "Customer"}
-                              onChange={(e) =>
-                                handleInputChange(field.name, e.target.value)
-                              }
-                              className="mr-2 text-amber-600 focus:ring-amber-500"
-                            />
-                            <span className="text-sm font-medium">
-                              Customer
-                            </span>
-                          </label>
-                        </div>
-                      </div>
-                    )}
-
-                    {field.type === "select" && (
-                      <select
-                        value={formData[field.name] || ""}
-                        onChange={(e) =>
-                          handleInputChange(field.name, e.target.value)
-                        }
-                        className={getInputStyles(field.name)}
-                      >
-                        <option value="">Select {field.label}</option>
-                        {field.name === "pricelevel" &&
-                          pricelevelOptions.map((item) => (
-                            <option value={item._id}>
-                              {item.priceLevelName}
-                            </option>
-                          ))}
-                        {field.name === "openingBalanceType" && (
-                          <>
-                            <option value="Credit">Credit</option>
-                            <option value="Debit">Debit</option>
-                          </>
-                        )}
-                      </select>
-                    )}
-
-                    {/* Error Display */}
-                    {errors[field.name] && (
-                      <div className="flex items-center gap-2 text-red-600 text-sm">
-                        <AlertCircle className="w-4 h-4" />
-                        <span>{errors[field.name]}</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {/* <div className="pt-4">
-                  <button
-                    type="submit"
-                    className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    {isEditing ? "Update Account" : "Save Account"}
-                  </button>
-                </div> */}
-              </form>
             </div>
-          </div>
 
-          {/* Table Section - Right Side */}
-          <div className="w-full lg:w-2/3">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              {/* Search and Filter */}
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search accounts, phone, or address..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div className="relative">
-                    <Filter className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                    <select
-                      value={filterType}
-                      onChange={(e) => setFilterType(e.target.value)}
-                      className="pl-10 pr-8 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                    >
-                      <option value="">All Types</option>
-                      <option value="Savings">Savings</option>
-                      <option value="Current">Current</option>
-                    </select>
-                  </div>
+            {/* Table - Scrollable */}
+            <div className="flex-1 overflow-y-auto">
+              {filteredAccounts.length === 0 ? (
+                <div className="text-center py-8">
+                  <Building className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500 text-sm mb-1">No accounts found</p>
+                  <p className="text-gray-400" style={{ fontSize: '9px' }}>
+                    {searchTerm || filterType
+                      ? "Try adjusting your search criteria"
+                      : "Add your first account to get started"}
+                  </p>
                 </div>
-              </div>
-
-              {/* Table */}
-              <div className="overflow-x-auto">
-                {filteredAccounts.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Building className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500 text-lg mb-2">
-                      No accounts found
-                    </p>
-                    <p className="text-gray-400 text-sm">
-                      {searchTerm || filterType
-                        ? "Try adjusting your search or filter criteria"
-                        : "Add your first account to get started"}
-                    </p>
-                  </div>
-                ) : (
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-amber-50 border-b border-gray-200">
-                        <th className="text-left px-6 py-4 font-semibold text-gray-700">
-                          Account Name
-                        </th>
-                        <th className="text-left px-6 py-4 font-semibold text-gray-700">
-                          Account Type
-                        </th>
-                        <th className="text-left px-6 py-4 font-semibold text-gray-700">
-                          O.Balance
-                        </th>
-                        <th className="text-left px-6 py-4 font-semibold text-gray-700">
-                          Address
-                        </th>
-                        <th className="text-left px-6 py-4 font-semibold text-gray-700">
-                          Phone
-                        </th>
-                        {/* <th className="text-left px-6 py-4 font-semibold text-gray-700">
-                          Actions
-                        </th> */}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {filteredAccounts.map((account) => (
-                        <tr
-                          onClick={() => handleSelect(account)}
-                          key={account._id}
-                          className="hover:bg-amber-50 transition-colors cursor-pointer"
-                        >
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-amber-100 rounded-lg">
-                                <User className="w-4 h-4 text-amber-600" />
-                              </div>
-                              <div>
-                                <p className="font-medium text-gray-900">
-                                  {account.accountName}
-                                </p>
-                                {/* <p className="text-sm text-gray-500 truncate max-w-[200px]">
-                                  {account.address}
-                                </p> */}
-                              </div>
+              ) : (
+                <table className="w-full">
+                  <thead className="sticky top-0 bg-amber-50 border-b border-gray-200 z-10">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-semibold text-gray-700" style={{ fontSize: '9px' }}>
+                        Account Name
+                      </th>
+                      <th className="text-left px-3 py-2 font-semibold text-gray-700" style={{ fontSize: '9px' }}>
+                        Type
+                      </th>
+                      <th className="text-left px-3 py-2 font-semibold text-gray-700" style={{ fontSize: '9px' }}>
+                        Balance
+                      </th>
+                      <th className="text-left px-3 py-2 font-semibold text-gray-700" style={{ fontSize: '9px' }}>
+                        Phone
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filteredAccounts.map((account) => (
+                      <tr
+                        key={account._id}
+                        onClick={() => handleSelect(account)}
+                        className={`hover:bg-amber-50 cursor-pointer transition-colors ${
+                          selectedAccount?._id === account._id
+                            ? "bg-amber-100"
+                            : ""
+                        }`}
+                      >
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1 bg-amber-100 rounded-lg flex-shrink-0">
+                              <User className="w-3 h-3 text-amber-600" />
                             </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                                account.accountType === "Savings"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-blue-100 text-blue-800"
-                              }`}
-                            >
-                              {account.accountType}
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-900 truncate" style={{ fontSize: '9px' }}>
+                                {account.accountName}
+                              </p>
+                              <p className="text-gray-500 truncate" style={{ fontSize: '8px' }}>
+                                {account.address}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <span
+                            className={`inline-flex px-1.5 py-0.5 rounded-full font-medium ${
+                              account.accountType === "Supplier"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-green-100 text-green-800"
+                            }`}
+                            style={{ fontSize: '9px' }}
+                          >
+                            {account.accountType}
+                          </span>
+                          <p className="text-gray-500 mt-0.5" style={{ fontSize: '8px' }}>
+                            {account.pricelevel?.priceLevelName}
+                          </p>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div>
+                            <span className="font-medium text-gray-900" style={{ fontSize: '9px' }}>
+                              ₹{account.openingBalance?.toLocaleString() || 0}
                             </span>
-                            {/* <p className="text-xs text-gray-500 mt-1">
-                              {account?.pricelevel?.priceLevelName}
-                            </p> */}
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium text-gray-900">
-                                ₹{account.openingBalance.toLocaleString()}
-                              </span>
-                            </div>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-gray-500" style={{ fontSize: '8px' }}>
                               {account.openingBalanceType}
                             </p>
-                          </td>
-                          <td className="px-6 py-4">{account.address}</td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-1">
-                              <Phone className="w-4 h-4 text-gray-400" />
-                              <span className="text-gray-600">
-                                {account.phoneNo}
-                              </span>
-                            </div>
-                          </td>
-                          <td>
-                            {/* <div className="flex items-center gap-2">
-                               <button
-                                onClick={() => handleEdit(account)}
-                                className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                title="Edit account"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(account.id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Delete account"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>  */}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-
-              {/* Footer */}
-              {filteredAccounts.length > 0 && (
-                <div className="px-6 py-4 border-t border-gray-200 bg-amber-50">
-                  <div className="flex items-center justify-between text-sm text-gray-600">
-                    <span>
-                      Showing {filteredAccounts.length} of {accounts.length}{" "}
-                      accounts
-                    </span>
-                    <span>
-                      Total Balance:{" "}
-                      <strong>
-                        ₹
-                        {accounts
-                          .reduce((sum, acc) => sum + acc.openingBalance, 0)
-                          .toLocaleString()}
-                      </strong>
-                    </span>
-                  </div>
-                </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-gray-400" />
+                            <span className="text-gray-600" style={{ fontSize: '9px' }}>
+                              {account.phoneNo}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
 
-            <div className="flex justify-center items-center gap-4 mt-4">
-              <button
-                type="submit"
-                form="accountForm"
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow-md transition duration-200 cursor-pointer"
-              >
-                {selectedHolder ? "Update" : "Save"}
-              </button>
-              <button
-                onClick={() => handleDelete()}
-                className="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg shadow-md transition duration-200 cursor-pointer"
-              >
-                Delete
-              </button>
-              <button className="bg-gray-500 hover:bg-gray-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md transition duration-200 cursor-pointer">
-                Cancel
-              </button>
-            </div>
+            {/* Footer - Fixed */}
+            {filteredAccounts.length > 0 && (
+              <div className="px-3 py-2 border-t border-gray-200 bg-amber-50 flex-shrink-0">
+                <div className="flex items-center justify-between text-gray-600" style={{ fontSize: '9px' }}>
+                  <span>
+                    Showing {filteredAccounts.length} of {accountsList.length} accounts
+                  </span>
+                  <span>
+                    Total Balance:{" "}
+                    <strong className="text-gray-900">
+                      ₹
+                      {accountsList
+                        .reduce((sum, acc) => sum + (acc.openingBalance || 0), 0)
+                        .toLocaleString()}
+                    </strong>
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default AccountMaster
+export default AccountMaster;

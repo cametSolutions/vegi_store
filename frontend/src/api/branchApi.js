@@ -5,3 +5,4 @@ getAll:"getallbranches",//GET route
 update:"update",//PUT route
 delete:"delete",//DELETE route
 })
+export default branchApi

@@ -1,9 +1,9 @@
 import { useNavigate } from "react-router-dom";
-import { LoginForm } from "../components/LoginForm";
-import { useAuth } from "../hooks/queries/auth.queries";
+import { LoginForm } from "../vegi_store/frontend/src/components/LoginForm";
+import { useAuth } from "../vegi_store/frontend/src/hooks/queries/auth.queries";
 import { getLocalStorageItem } from "@/helper/localstorage";
 import { useEffect } from "react";
-const Login = () => {
+ export const Login = () => {
   const { isLoading, login } = useAuth();
   const navigate = useNavigate();
   /// User details from local storage

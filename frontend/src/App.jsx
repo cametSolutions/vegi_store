@@ -8,8 +8,8 @@ import NotFoundPage from "./components/errors/NotFoundPage";
 
 import MastersRoutes from "./routes/MastersRoutes";
 import TransactionRoutes from "./routes/TransactionRoutes";
+import {Login} from "../../Login"
 
-const Login = lazy(() => import("./pages/Login"));
 const Home = lazy(() => import("./pages/home/Home"));
 
 function App() {
@@ -41,7 +41,7 @@ function App() {
           />
 
           {/* Master & Transaction Routes */}
-          {/* {MastersRoutes()} */}
+          {MastersRoutes()}
           {TransactionRoutes()}
 
           <Route path="*" element={<NotFoundPage />} />

@@ -1,149 +1,242 @@
 import AccountMasterModel from "../../model/masters/AccountMasterModel.js";
 
-export const createAccountMaster = async (req, res) => {
+export const getallaccountHolder = async (req, res) => {
   try {
     const {
       companyId,
       branchId,
-      accountName,
-      accountType,
-      address,
-      openingBalance,
-      openingBalanceType,
-      phoneNo,
-      pricelevel,
-    } = req.body;
+      page = 1,
+      limit = 25,
+      searchTerm = "",
+      filterType = "",
+    } = req.query;
 
-    if (!companyId || !branchId) {
-      return res
-        .status(400)
-        .json({ message: "Companyid or branchid is missing" });
+    if (!companyId) {
+      return res.status(400).json({ message: "Company ID is required" });
     }
-    const existingAccountholder = await AccountMasterModel.findOne({
-      companyId,
-      branchId,
-      accountName,
+
+    const query = { companyId };
+
+    if (branchId) {
+      query.branchId = branchId;
+    }
+
+    if (filterType) {
+      query.accountType = filterType;
+    }
+
+    if (searchTerm) {
+      query.$or = [
+        { accountName: { $regex: searchTerm, $options: "i" } },
+        { phoneNo: { $regex: searchTerm, $options: "i" } },
+        { address: { $regex: searchTerm, $options: "i" } },
+      ];
+    }
+
+    const skip = (page - 1) * limit;
+    const total = await AccountMaster.countDocuments(query);
+
+    const accounts = await AccountMaster.find(query)
+      .populate("pricelevel", "priceLevelName")
+      .populate("branchId", "branchName name")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+
+    res.json({
+      data: accounts,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalRecords: total,
+        hasNextPage,
+        nextPage: hasNextPage ? parseInt(page) + 1 : null,
+      },
     });
-    if (existingAccountholder) {
-      return res.status(409).json({
-        message: "This account holder is already registered in the same branch",
-      });
-    }
-    const newAccntholder = new AccountMasterModel({
-      companyId,
-      branchId,
-      accountName,
-      accountType,
-      address,
-      phoneNo,
-      pricelevel,
-      openingBalance,
-      openingBalanceType,
-    });
-    const savedholder = await newAccntholder.save();
-    if (savedholder) {
-      const newholderlist = await AccountMasterModel.find({}).populate({
-        path: "pricelevel",
-        select: "_id priceLevelName",
-      });
-      res.status(201).json({
-        message: "Account holder created succesfully",
-        data: newholderlist,
-      });
-    }
   } catch (error) {
-    console.log("error:", error.message);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("Error fetching accounts:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-export const getallaccountHolder = async (req, res) => {
-  try {
-    const result = await AccountMasterModel.find({}).populate({
-      path: "pricelevel",
-      select: "_id priceLevelName",
-    });
-    return res
-      .status(201)
-      .json({ message: "account holders found", data: result });
-  } catch (error) {
-    console.log("error:", error.message);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-};
-export const deleteAccntmaster = async (req, res) => {
+
+// GET account by ID
+export const getAccountMasterById = async (req, res) => {
   try {
     const { id } = req.params;
-    const { companyId, branchId } = req.query;
-    if (!id) {
-      return res.status(400).json({ message: "Account holder ID is required" });
+
+    const account = await AccountMaster.findById(id)
+      .populate("pricelevel", "priceLevelName")
+      .populate("branchId", "branchName name");
+
+    if (!account) {
+      return res.status(404).json({ message: "Account not found" });
     }
 
-    // Build query object
-    const query = { _id: id };
-    if (companyId) query.companyId = companyId;
-    if (branchId) query.branchId = branchId;
-
-    // Find and delete the account holder
-    const deletedAccount = await AccountMasterModel.findOneAndDelete(query);
-
-    if (!deletedAccount) {
-      return res.status(404).json({
-        message: "No account holder found matching the given criteria",
-      });
-    } else {
-      const updatedaccntholder = await AccountMasterModel.find({
-        companyId,
-        branchId,
-      });
-      return res.status(200).json({
-        message: "Account holder deleted successfully",
-        data: updatedaccntholder,
-      });
-    }
+    res.json({ data: account });
   } catch (error) {
-    console.log("error:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("Error fetching account:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+// CREATE new account
+export const createAccountMaster = async (req, res) => {
+  try {
+    const {
+      accountName,
+      accountType,
+      pricelevel,
+      openingBalance,
+      openingBalanceType,
+      address,
+      phoneNo,
+      companyId,
+      branchId,
+    } = req.body;
+
+    // Validation
+    if (!accountName || !accountType || !pricelevel || !companyId || !branchId) {
+      return res.status(400).json({
+        message: "Required fields: accountName, accountType, pricelevel, companyId, branchId",
+      });
+    }
+
+    // Check if price level exists
+    const priceLevelExists = await PriceLevel.findById(pricelevel);
+    if (!priceLevelExists) {
+      return res.status(404).json({ message: "Price level not found" });
+    }
+
+    // Create account
+    const newAccount = new AccountMaster({
+      accountName: accountName.trim(),
+      accountType,
+      pricelevel,
+      openingBalance: openingBalance || 0,
+      openingBalanceType: openingBalanceType || "",
+      address: address?.trim() || "",
+      phoneNo: phoneNo?.trim() || "",
+      companyId,
+      branchId,
+    });
+
+    await newAccount.save();
+
+    // Populate and return
+    const populatedAccount = await AccountMaster.findById(newAccount._id)
+      .populate("pricelevel", "priceLevelName")
+      .populate("branchId", "branchName name");
+
+    res.status(201).json({
+      message: "Account created successfully",
+      data: populatedAccount,
+    });
+  } catch (error) {
+    console.error("Error creating account:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// UPDATE account
 export const updateAccntMaster = async (req, res) => {
   try {
     const { id } = req.params;
-    const { companyId, branchId } = req.query;
     const updateData = req.body;
-    if (!id) {
-      return res.status(400).json({ message: "Account id is required" });
+
+    if (!updateData.accountName || !updateData.accountType || !updateData.pricelevel) {
+      return res.status(400).json({
+        message: "Required fields: accountName, accountType, pricelevel",
+      });
     }
-    const filter = { _id: id };
-    if (companyId) filter.companyId = companyId;
-    if (branchId) filter.branchId = branchId;
-    const updatedAccnt = await AccountMasterModel.findOneAndUpdate(
-      filter,
+
+    if (updateData.accountName) updateData.accountName = updateData.accountName.trim();
+    if (updateData.address) updateData.address = updateData.address.trim();
+    if (updateData.phoneNo) updateData.phoneNo = updateData.phoneNo.trim();
+
+    const updatedAccount = await AccountMaster.findByIdAndUpdate(
+      id,
       updateData,
       { new: true, runValidators: true }
-    );
-    if (!updatedAccnt) {
-      return res
-        .status(404)
-        .json({ message: "Account holder not found for update" });
-    } else {
-      const updatedholerlist = await AccountMasterModel.find({}).populate({
-        path: "pricelevel",
-        select: "priceLevel",
-      });
+    )
+      .populate("pricelevel", "priceLevelName")
+      .populate("branchId", "branchName name");
 
-      return res.status(200).json({
-        message: "Account holder updated successfully",
-        data: [updatedholerlist],
-      });
+    if (!updatedAccount) {
+      return res.status(404).json({ message: "Account not found" });
     }
+
+    res.json({
+      message: "Account updated successfully",
+      data: updatedAccount,
+    });
   } catch (error) {
-    console.log("error:", error.message);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("Error updating account:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-////
-// controllers/accountMasterController.js
+// DELETE account
+export const deleteAccntmaster = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedAccount = await AccountMaster.findByIdAndDelete(id);
+
+    if (!deletedAccount) {
+      return res.status(404).json({ message: "Account not found" });
+    }
+
+    res.json({
+      message: "Account deleted successfully",
+      data: deletedAccount,
+    });
+  } catch (error) {
+    console.error("Error deleting account:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// GET accounts by branch
+export const getAccountMastersByBranch = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+
+    const accounts = await AccountMaster.find({ branchId })
+      .populate("pricelevel", "priceLevelName")
+      .populate("branchId", "branchName name")
+      .sort({ createdAt: -1 });
+
+    res.json({ data: accounts });
+  } catch (error) {
+    console.error("Error fetching accounts by branch:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// GET accounts by company
+export const getAccountMastersByCompany = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+
+    const accounts = await AccountMaster.find({ companyId })
+      .populate("pricelevel", "priceLevelName")
+      .populate("branchId", "branchName name")
+      .sort({ createdAt: -1 });
+
+    res.json({ data: accounts });
+  } catch (error) {
+    console.error("Error fetching accounts by company:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
+
+
+
 export const searchAccounts = async (req, res) => {
   try {
     const {
