@@ -10,7 +10,7 @@ export const itemMasterMutations = {
       const { company } = response?.data?.item;
 
       queryClient.invalidateQueries({
-        queryKey: ["itemmaster", "list", company],
+        queryKey: ["item", "list", company],
       });
 
       toast.success("Item created successfully!");
@@ -30,11 +30,11 @@ export const itemMasterMutations = {
       const { company } = response?.data?.item;
 
       queryClient.invalidateQueries({
-        queryKey: ["itemmaster", "list", company],
+        queryKey: ["item", "list", company],
       });
 
       queryClient.invalidateQueries({
-        queryKey: ["itemmaster", "detail", variables.id],
+        queryKey: ["item", "detail", variables.id],
       });
 
       toast.success("Item updated successfully!");
@@ -42,7 +42,7 @@ export const itemMasterMutations = {
 
     onError: (error) => {
       console.error("Item update failed:", error);
-      toast.error(error.message || "Error updating item. Please try again.");
+      toast.error(error.response?.data?.message || "Error updating item. Please try again.");
     },
   }),
 
@@ -51,7 +51,7 @@ export const itemMasterMutations = {
 
     onSuccess: (response) => {
       queryClient.invalidateQueries({
-        queryKey: ["itemmaster"],
+        queryKey: ["item"],
       });
 
       toast.success("Item deleted successfully!");

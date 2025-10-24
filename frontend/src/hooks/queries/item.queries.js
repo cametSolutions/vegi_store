@@ -22,6 +22,7 @@ export const itemMasterQueries = {
       },
       enabled: !!companyId,
       staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
     }),
 
   detail: (id) =>

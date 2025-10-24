@@ -1,103 +1,172 @@
 import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
-import PricelevelModel from "../../model/masters/PricelevelModel.js";
-export const createItem = async (req, res) => {
-  try {
-    const { companyId, branchIds, unit, itemName, itemCode } = req.body;
 
-    // 1. Validate required fields
-    if (!companyId || !itemName || !itemCode || !unit) {
+export const create = async (req, res) => {
+  try {
+    const item = await ItemMasterModel.create(req.body);
+    res.status(201).json({
+      success: true,
+      message: "Item created successfully",
+      data: { item },
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[1]; // Gets 'itemName' or 'itemCode'
+
+      // This message is sent to frontend
       return res.status(400).json({
         success: false,
-        message: "companyId, itemName, itemCode, and unit are required.",
+        message: `An item with this ${field} already exists for this company`,
       });
     }
-
-    // 2. Check if item with same code already exists for this company
-    const existingItem = await ItemMasterModel.findOne({
-      companyId,
-      $or: [{ itemCode }, { itemName }],
-    });
-    if (existingItem) {
-      return res.status(409).json({
-        success: false,
-        message: "Item with this code already exists in the company.",
-      });
-    }
-    console.log("copaiddd", companyId);
-    const pricelevels = await PricelevelModel.find({ companyId });
-    console.log("pricelevels", pricelevels);
-    const initialPriceLevels = {};
-    pricelevels.forEach((pl) => {
-      initialPriceLevels[pl.priceLevelName] = 0;
-    });
-
-    // 3. Create new item
-    const newItem = new ItemMasterModel({
-      companyId,
-      branchIds: branchIds || [], // default empty array
-      unit,
-      itemName,
-      itemCode,
-      priceLevels: initialPriceLevels,
-    });
-
-    // 4. Save to database
-    await newItem.save();
-
-    // 5. Respond
-    return res.status(201).json({
-      success: true,
-      message: "Item created successfully.",
-      data: newItem,
-    });
-  } catch (error) {
-    console.error("Error creating item:", error);
-    return res.status(500).json({
+    res.status(400).json({
       success: false,
-      message: "Internal server error",
+      message: error.message,
     });
   }
 };
-export const getallItems = async (req, res) => {
-  try {
-    const { companyId } = req.query;
-    const result = await ItemMasterModel.find({ companyId });
 
-    if (result && result.length) {
-      return res.status(201).json({ message: "items found", data: result });
-    } else {
-      return res
-        .status(404)
-        .json({ message: "items not found ", data: result });
+export const getAll = async (req, res) => {
+  try {
+    const { companyId, page = 1, limit = 20, search = "" } = req.query;
+
+    const query = { company: companyId };
+    if (search) {
+      query.$or = [
+        { itemName: { $regex: search, $options: "i" } },
+        { itemCode: { $regex: search, $options: "i" } },
+      ];
     }
+
+    const items = await ItemMasterModel.find(query)
+      .populate("stock.branch", "branchName")
+      .limit(limit)
+      .skip((page - 1) * limit)
+      .sort({ createdAt: -1 });
+
+    const total = await ItemMasterModel.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: { items, total, page: parseInt(page), limit: parseInt(limit) },
+    });
   } catch (error) {
-    console.log("eror", error.message);
-    return res.status(500).json({ message: "Internal server error" });
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
-//// for searching an item
-
-export const searchItems = async (req, res) => {
-  const {
-    searchTerm,
-    companyId,
-    branchId,
-    limit = 25,
-    exactMatch = false,
-  } = req.query;
-
+export const getById = async (req, res) => {
   try {
-    const items = await ItemMasterModel.searchItems(
-      searchTerm,
-      companyId,
-      branchId,
-      limit,
-      exactMatch === "true" // string to boolean conversion for query param
+    const item = await ItemMasterModel.findById(req.params.id).populate(
+      "stock.branch",
+      "branchName"
+    );
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: "Item not found",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      data: { item },
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const update = async (req, res) => {
+  try {
+    const item = await ItemMasterModel.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: "Item not found",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "Item updated successfully",
+      data: { item },
+    });
+  } catch (error) {
+
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[1]; // Gets 'itemName' or 'itemCode'
+
+      // This message is sent to frontend
+      return res.status(400).json({
+        success: false,
+        message: `An item with this ${field} already exists for this company`,
+      });
+    }
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const deleteItem = async (req, res) => {
+  try {
+    const item = await ItemMasterModel.findByIdAndDelete(req.params.id);
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: "Item not found",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "Item deleted successfully",
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+
+
+export const updateIndexes = async () => {
+  try {
+    // Drop existing indexes
+    await ItemMasterModel.collection.dropIndex('company_1_itemName_1');
+    await ItemMasterModel.collection.dropIndex('company_1_itemCode_1');
+    
+    console.log('Old indexes dropped');
+
+    // Create new case-insensitive indexes
+    await ItemMasterModel.collection.createIndex(
+      { company: 1, itemName: 1 },
+      { 
+        unique: true,
+        collation: { locale: 'en', strength: 2 }
+      }
     );
 
-    res.json({ data: items, message: "items found" });
+    await ItemMasterModel.collection.createIndex(
+      { company: 1, itemCode: 1 },
+      { 
+        unique: true,
+        collation: { locale: 'en', strength: 2 }
+      }
+    );
+
+    console.log('New case-insensitive indexes created');
   } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error('Error updating indexes:', error);
   }
 };

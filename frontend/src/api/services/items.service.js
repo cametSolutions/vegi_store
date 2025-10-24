@@ -31,7 +31,7 @@ export const itemServices = {
 
   getAll: async (companyId, page = 1, limit = 20, search = "") => {
     try {
-      const response = await api.get("/itemmaster/getall", {
+      const response = await api.get("/item/getall", {
         params: { companyId, page, limit, search },
       });
       return response.data;
@@ -45,7 +45,7 @@ export const itemServices = {
 
   create: async (formData) => {
     try {
-      const response = await api.post("/itemmaster/create", formData);
+      const response = await api.post("/item/create", formData);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -57,7 +57,7 @@ export const itemServices = {
 
   getById: async (id) => {
     try {
-      const response = await api.get(`/itemmaster/${id}`);
+      const response = await api.get(`/item/${id}`);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {

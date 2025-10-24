@@ -29,7 +29,7 @@ export const ItemLedgerSchema = new mongoose.Schema(
     unit: {
       type: String,
       required: [true, "Unit is required"],
-      enum: ["kg", "gm", "piece", "bundle", "dozen", "liter"],
+      // enum: ["kg", "gm", "piece", "bundle", "dozen", "liter"],
     },
     transactionId: {
       type: mongoose.Schema.Types.ObjectId,

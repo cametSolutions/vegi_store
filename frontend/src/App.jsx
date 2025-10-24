@@ -41,7 +41,7 @@ function App() {
           />
 
           {/* Master & Transaction Routes */}
-          {/* {MastersRoutes()} */}
+          {MastersRoutes()}
           {TransactionRoutes()}
 
           <Route path="*" element={<NotFoundPage />} />
