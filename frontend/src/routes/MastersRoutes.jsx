@@ -12,6 +12,7 @@ import ProtectedRoute from "../components/Layout/ProtectedRoute";
 // const AccountMaster = lazy(() => import("../pages/Master/AccountMaster"));
 // const ItemMaster = lazy(() => import("../pages/Master/ItemMaster"));
 const ItemMasterPanel = lazy(() => import("../pages/Master/ItemMaster/ItemMasterPanel"));
+const RateSetting = lazy(() => import("../pages/Master/RateSetting/RateSetting"));
 
 export default function MastersRoutes() {
   return (
@@ -24,6 +25,7 @@ export default function MastersRoutes() {
       }
     >
       <Route path="item-master" element={<ItemMasterPanel />} />
+      <Route path="rate-setting" element={<RateSetting />} />
       {/* <Route path="price-level" element={<PriceLevel />} />
       <Route path="company" element={<CompanyList />} />
       <Route path="branch" element={<BranchList />} />

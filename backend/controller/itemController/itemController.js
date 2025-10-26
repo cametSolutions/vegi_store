@@ -139,7 +139,6 @@ export const deleteItem = async (req, res) => {
 };
 
 
-
 export const updateIndexes = async () => {
   try {
     // Drop existing indexes
@@ -170,3 +169,67 @@ export const updateIndexes = async () => {
     console.error('Error updating indexes:', error);
   }
 };
+
+
+export const updateRate = async (req, res) => {
+  try {
+
+    const { itemId } = req.params;
+    const { priceLevelId, rate } = req.body;
+
+    // Validate inputs
+    if (!priceLevelId || rate === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Price level ID and rate are required",
+      });
+    }
+
+    if (rate < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Rate cannot be negative",
+      });
+    }
+
+    // Find the item
+    const item = await ItemMasterModel.findById(itemId);
+    
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: "Item not found",
+      });
+    }
+
+    // Check if price level already exists in the item
+    const existingPriceLevelIndex = item.priceLevels.findIndex(
+      (pl) => pl.priceLevel.toString() === priceLevelId
+    );
+
+    if (existingPriceLevelIndex >= 0) {
+      // Update existing price level
+      item.priceLevels[existingPriceLevelIndex].rate = rate;
+    } else {
+      // Add new price level
+      item.priceLevels.push({
+        priceLevel: priceLevelId,
+        rate: rate,
+      });
+    }
+
+    await item.save();
+
+    res.status(200).json({
+      success: true,
+      data: item,
+      message: "Rate updated successfully",
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+

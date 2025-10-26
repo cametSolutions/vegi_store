@@ -62,4 +62,28 @@ export const itemMasterMutations = {
       toast.error(error.message || "Error deleting item. Please try again.");
     },
   }),
+
+ updateRate: (queryClient) => ({
+  mutationFn: ({ itemId, priceLevelId, rate }) => 
+    itemServices.updateRate(itemId, priceLevelId, rate),
+
+  onSuccess: (response) => {
+    queryClient.invalidateQueries({
+      queryKey: ["item","list",response?.data?.company,""],
+    });
+
+    // Optional: also invalidate specific item query if you have one
+    // queryClient.invalidateQueries({
+    //   queryKey: ["item", response.data._id],
+    // });
+
+    // toast.success("Rate updated successfully!");
+  },
+
+  onError: (error) => {
+    console.error("Rate update failed:", error);
+    toast.error(error.message || "Error updating rate. Please try again.");
+  },
+}),
+
 };

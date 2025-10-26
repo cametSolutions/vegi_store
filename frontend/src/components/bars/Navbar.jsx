@@ -21,7 +21,7 @@ const Navbar = () => {
         { label: "Data Backup", path: "/masters/data-backup" },
       ],
     },
-    { label: "Rate Setting", path: "/rate-setting" },
+    { label: "Rate Setting", path: "/master/rate-setting" },
     { label: "Stock Adjustment", path: "/stock-adjustment" },
     { label: "Item Master", path: "/master/item-master" },
     { label: "Account Master", path: "/masters/accountMaster" },

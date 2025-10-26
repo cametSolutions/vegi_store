@@ -66,4 +66,12 @@ export const itemServices = {
       throw new Error("An unexpected error occurred");
     }
   },
+
+  updateRate: async (itemId, priceLevelId, rate) => {
+    const response = await api.patch(
+      `/item/${itemId}/rate`,
+      { priceLevelId, rate }
+    );
+    return response.data;
+  },
 };
