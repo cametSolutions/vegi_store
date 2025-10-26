@@ -10,7 +10,6 @@ import { getTransactionType } from "../../utils/transactionUtils";
 import { useLocation } from "react-router-dom";
 import { transactionQueries } from "@/hooks/queries/transaction.queries";
 import { useSelector } from "react-redux";
-
 import { useDebounce } from "@/hooks/useDebounce";
 
 const TransactionList = () => {

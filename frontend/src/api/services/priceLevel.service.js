@@ -2,10 +2,6 @@ import { api } from "../client/apiClient";
 import { createResourceApi } from "../client/apiFactory";
 
 export const priceLevelApi = createResourceApi("pricelevel", {
-  // create: "createpricelevel", //POST route
-  // getAll:"getallpricelevel",//GET route
-  update: "update", //PUT route
-  delete: "delete", //DELETE route
 });
 
 export const priceLevelServices = {

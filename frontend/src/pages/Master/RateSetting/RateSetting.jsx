@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "@/hooks/useDebounce";
+import { truncate } from "../../../../../shared/utils/string";
 
 // Constants
 const DEBOUNCE_DELAY = 500;
@@ -479,9 +480,9 @@ const RateSetting = () => {
               <React.Fragment key={item._id}>
                 <div className={`rate-grid-cell rate-grid-item-name ${focusedItem === item._id ? "focused" : ""}`}>
                   <div>
-                    <div className="font-semibold">{item.itemName}</div>
+                    <div className="font-semibold">{truncate(item.itemName,20)}</div>
                     <div className="text-gray-500 text-[10px] mt-1">
-                      {item.itemCode} • {item.unit}
+                      {(item.itemCode)} • {item.unit}
                     </div>
                   </div>
                 </div>
