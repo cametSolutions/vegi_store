@@ -1,7 +1,11 @@
 import express from "express"
-import { createPricelevel } from "../../controller/master/pricelevelController.js"
-import { getallPriceLevel } from "../../controller/pricelevelController/pricelevelController.js"
+import { getallPriceLevel,create,deletePriceLevel,update } from "../../controller/pricelevelController/pricelevelController.js"
 const router=express.Router()
-router.post("/createpricelevel",createPricelevel)
+
+router.post("/",create)
 router.get("/getallpricelevel",getallPriceLevel)
+router.put("/:id",update)
+router.delete("/:id",deletePriceLevel)
+
+
 export default router

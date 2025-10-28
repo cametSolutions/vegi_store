@@ -43,6 +43,14 @@ const PriceLevelSchema = new mongoose.Schema(
 PriceLevelSchema.index({ company: 1, status: 1 });
 PriceLevelSchema.index({ company: 1, 'branches': 1 });
 PriceLevelSchema.index({ priceLevelName: "text", description: "text" });
+PriceLevelSchema.index(
+  { company: 1, priceLevelName: 1 }, 
+  { 
+    unique: true,
+    collation: { locale: 'en', strength: 2 }
+  }
+);
+
 
 // ==================== VIRTUALS ====================
 // Count of allocated branches

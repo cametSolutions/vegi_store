@@ -21,17 +21,26 @@ const DeleteConfirmDialog = ({
 }) => {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className="bg-[#1e1e1e] text-gray-100 border border-gray-700 shadow-2xl rounded-xl">
         <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          <AlertDialogTitle className="text-lg font-semibold text-white">
+            {title}
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-gray-400">
+            {description}
+          </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+        <AlertDialogFooter className="mt-4">
+          <AlertDialogCancel
+            disabled={isLoading}
+            className="bg-gray-700 text-gray-200 hover:bg-gray-600 border-none"
+          >
+            Cancel
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
             disabled={isLoading}
-            className="bg-red-600 hover:bg-red-700"
+            className="bg-red-600 hover:bg-red-700 text-white"
           >
             {isLoading ? "Deleting..." : "Delete"}
           </AlertDialogAction>

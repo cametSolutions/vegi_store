@@ -1,4 +1,5 @@
 import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
+import PriceLevelModel from "../../model/masters/PricelevelModel.js";
 
 export const create = async (req, res) => {
   try {
@@ -100,7 +101,6 @@ export const update = async (req, res) => {
       data: { item },
     });
   } catch (error) {
-
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern)[1]; // Gets 'itemName' or 'itemCode'
 
@@ -138,42 +138,8 @@ export const deleteItem = async (req, res) => {
   }
 };
 
-
-export const updateIndexes = async () => {
-  try {
-    // Drop existing indexes
-    await ItemMasterModel.collection.dropIndex('company_1_itemName_1');
-    await ItemMasterModel.collection.dropIndex('company_1_itemCode_1');
-    
-    console.log('Old indexes dropped');
-
-    // Create new case-insensitive indexes
-    await ItemMasterModel.collection.createIndex(
-      { company: 1, itemName: 1 },
-      { 
-        unique: true,
-        collation: { locale: 'en', strength: 2 }
-      }
-    );
-
-    await ItemMasterModel.collection.createIndex(
-      { company: 1, itemCode: 1 },
-      { 
-        unique: true,
-        collation: { locale: 'en', strength: 2 }
-      }
-    );
-
-    console.log('New case-insensitive indexes created');
-  } catch (error) {
-    console.error('Error updating indexes:', error);
-  }
-};
-
-
 export const updateRate = async (req, res) => {
   try {
-
     const { itemId } = req.params;
     const { priceLevelId, rate } = req.body;
 
@@ -194,7 +160,7 @@ export const updateRate = async (req, res) => {
 
     // Find the item
     const item = await ItemMasterModel.findById(itemId);
-    
+
     if (!item) {
       return res.status(404).json({
         success: false,
@@ -233,3 +199,33 @@ export const updateRate = async (req, res) => {
   }
 };
 
+export const updateIndexes = async () => {
+  try {
+    // Drop existing indexes
+    // await ItemMasterModel.collection.dropIndex("company_1_itemName_1");
+    // await ItemMasterModel.collection.dropIndex("company_1_itemCode_1");
+
+    // console.log("Old indexes dropped");
+
+    // // Create new case-insensitive indexes
+    // await ItemMasterModel.collection.createIndex(
+    //   { company: 1, itemName: 1 },
+    //   {
+    //     unique: true,
+    //     collation: { locale: "en", strength: 2 },
+    //   }
+    // );
+
+    await PriceLevelModel.collection.createIndex(
+      { company: 1, priceLevelName: 1 },
+      {
+        unique: true,
+        collation: { locale: "en", strength: 2 },
+      }
+    );
+
+    console.log("New case-insensitive indexes created");
+  } catch (error) {
+    console.error("Error updating indexes:", error);
+  }
+};

@@ -8,18 +8,44 @@ export const priceLevelServices = {
   // Inherit all base methods
   ...priceLevelApi,
 
+ create: async (formData) => {
+    try {
+      const response = await api.post("/pricelevel", formData);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || error.message);
+    }
+  },
+
+  // Get all price levels for company/branch
   getAll: async (companyId, branchId) => {
     try {
       const response = await api.get("/pricelevel/getallpricelevel", {
         params: { companyId, branchId },
       });
-
       return response.data;
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.message || error.message);
-      }
-      throw new Error("An unexpected error occurred");
+      throw new Error(error.response?.data?.message || error.message);
+    }
+  },
+
+  // Update a price level by its id
+  update: async (id, formData) => {
+    try {
+      const response = await api.put(`/pricelevel/${id}`, formData);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || error.message);
+    }
+  },
+
+  // Delete a price level by its id
+  delete: async (id) => {
+    try {
+      const response = await api.delete(`/pricelevel/${id}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || error.message);
     }
   },
   

@@ -64,7 +64,6 @@ const ItemMasterForm = ({ selectedItem, isEditMode, onSuccess, onCancel }) => {
       // Create mode - reset form and set default branch
       reset();
       if (selectedBranchFromStore) {
-        console.log("call came here 2");
 
         setSelectedBranches([selectedBranchFromStore]);
       } else {

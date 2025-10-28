@@ -9,7 +9,7 @@ export const priceLevelQueries = {
     queryOptions({
       queryKey: [...priceLevelQueries.all(), "getAll", companyId,branchId],
       queryFn: () => priceLevelServices.getAll(companyId,branchId),
-      enabled: !!companyId && !!branchId,
+      enabled: !!companyId ,
       staleTime: 5 * 60 * 1000,
     }),
 };
