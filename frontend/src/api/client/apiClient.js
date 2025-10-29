@@ -9,7 +9,7 @@ const ENV = import.meta.env.VITE_ENV;
 if (ENV === "development") {
   baseUrl = "http://localhost:5000/api";
 } else {
-  baseUrl = "";
+  baseUrl = "https://farm2cart.camet.in/api";
 }
 
 export const api = axios.create({
