@@ -1,4 +1,3 @@
-// ----------------- Imports -----------------
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -7,6 +6,7 @@ import helmet from "helmet";
 import mongoSanitize from "express-mongo-sanitize";
 import hpp from "hpp";
 import rateLimit from "express-rate-limit";
+import path from 'path';
 
 // DB + Middlewares
 import connectDB from "./config/db.js";
@@ -30,7 +30,7 @@ const PORT = process.env.PORT || 5000;
 
 // ----------------- Global Middlewares -----------------
 const corsOptions = {
-  origin: true, // allow frontend origin or all
+  origin: true,
   credentials: true,
 };
 app.use(cors(corsOptions));
@@ -44,11 +44,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// Cookie parser (must be before routes if cookies are used for auth)
+// Cookie parser (must be before routes if using cookies for auth)
 app.use(cookieParser());
 
 // Security
-app.use(helmet()); //// Secure headers
+app.use(helmet()); // Secure headers
 app.use(
   mongoSanitize({
     replaceWith: "_",
@@ -57,10 +57,10 @@ app.use(
     },
   })
 );
-app.use(hpp()); //// Prevent HTTP parameter pollution
+app.use(hpp()); // Prevent HTTP Parameter Pollution
 
 // Body parser
-app.use(express.json({ limit: "10mb" })); //// Parse JSON requests
+app.use(express.json({ limit: "10mb" })); // Parse JSON requests
 
 // Rate limiting (apply only to /api/*)
 const limiter = rateLimit({
@@ -75,9 +75,6 @@ app.use("/api", limiter);
 connectDB().catch((err) => console.error("DB connection failed", err));
 
 // ----------------- Routes -----------------
-app.get("/", (req, res) => {
-  res.send("✅ Server is alive");
-});
 
 app.use("/api/auth", authRoute);
 app.use("/api/company", authMiddleware, companyRoute);
@@ -85,10 +82,36 @@ app.use("/api/branch", authMiddleware, branchRoute);
 app.use("/api/user", authMiddleware, userRoute);
 app.use("/api/pricelevel", authMiddleware, pricelevelRoute);
 app.use("/api/accountmaster", authMiddleware, acccountmasterRoute);
-app.use("/api/transaction/sale", authMiddleware, saleRoutes );
-app.use("/api/transaction/purchase", authMiddleware, saleRoutes );
+app.use("/api/transaction/sale", authMiddleware, saleRoutes);
+app.use("/api/transaction/purchase", authMiddleware, saleRoutes);
 app.use("/api/item", authMiddleware, itemRoute);
-app.use("/api/transaction", authMiddleware,PaymentRoutes);
+app.use("/api/transaction", authMiddleware, PaymentRoutes);
+
+// ----------------- Production Build Serving -----------------
+if (process.env.NODE_ENV === "production") {
+  console.log("Environment:", process.env.NODE_ENV);
+
+  const __dirname = path.resolve();
+  const frontendPath = path.join(__dirname,"..","frontend", "dist");
+
+  console.log("Serving static files from:", frontendPath);
+
+  // Serve static files
+  app.use(express.static(frontendPath));
+
+  console.log("front end path", frontendPath);
+  
+
+  // Handle SPA routing - serve index.html for all non-API routes using named splat wildcard
+  app.get("/*splat", (req, res) => {
+    res.sendFile(path.resolve(frontendPath, "index.html"));
+  });
+} else {
+  // Development route
+  app.get("/", (req, res) => {
+    res.send("✅ Server is alive (Development Mode)");
+  });
+}
 
 // ----------------- Error Handling -----------------
 app.use((err, req, res, next) => {
