@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useCallback, useState } from "react";
-import TransactionActionsComponent from "./Components/cashTransactionAction";
+import TransactionActionsComponent from "./Components/CashTransactionAction";
 import CashTransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
 import BankPaymentDetails from "./Components/BankPaymentReciept";
 import CashTransactionAccountSelector from "./Components/CashTransactionAccountSelector";
