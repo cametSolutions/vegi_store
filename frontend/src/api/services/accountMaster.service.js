@@ -1,28 +1,28 @@
 // services/accountMasterService.js
 import axios from "axios";
-import {  api } from "../client/apiClient.js";
-import { createResourceApi } from "../client/apiFactory.js";
+import { api } from "../client/apiClient.js";
 
-// Base account master API using the generic factory
-export const accountMasterApi = createResourceApi("accountmaster", {
-  create: "createaccountmaster",
-  getAll: "getallaccountmaster",
-  update: "updateaccntmaster",
-  delete: "deleteaccntmaster",
-});
-
-// Account Master specific additional methods
 export const accountMasterService = {
-  // Inherit all base methods
-  ...accountMasterApi,
-
-  // Custom search method specific to account master
-  search: async (searchTerm, companyId, branchId, accountType, limit, filters = {}) => {
+  // Search method remains unchanged
+  search: async (
+    searchTerm,
+    companyId,
+    branchId,
+    accountType,
+    limit = 25,
+    filters = {}
+  ) => {
     try {
       const response = await api.get("/accountmaster/searchAccounts", {
-        params: { searchTerm, companyId, branchId, accountType, limit,...filters },
+        params: {
+          searchTerm,
+          companyId,
+          branchId,
+          accountType,
+          limit,
+          ...filters,
+        },
       });
-
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -32,18 +32,65 @@ export const accountMasterService = {
     }
   },
 
-    list: async ( companyId, branchId, accountType) => {
-    try {
-      const response = await api.get("/accountmaster/list", {
-        params: { searchTerm, companyId, branchId, accountType, limit },
-      });
+list: async (
+  searchTerm = "",
+  companyId,
+  branchId = null,
+  accountType = null,
+  limit = 30,
+  filters = {},
+  skip = 0  // New param for pagination offset
+) => {
+  try {
+    const response = await api.get("/accountmaster/list", {
+      params: { searchTerm, companyId, branchId, accountType, limit, skip, ...filters },
+    });
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || error.message);
+    }
+    throw new Error("An unexpected error occurred");
+  }
+},
 
+
+  // Create new account master
+  create: async (data) => {
+    try {
+      const response = await api.post("/accountmaster/create", data);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         throw new Error(error.response?.data?.message || error.message);
       }
-      throw new Error("An unexpected error occurred");
+      throw new Error("Error creating account");
+    }
+  },
+
+  // Update existing account master by ID
+  update: async (id, data) => {
+    try {
+      const response = await api.put(`/accountmaster/update/${id}`, data);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("Error updating account");
+    }
+  },
+
+  // Delete account master by ID
+  delete: async (id) => {
+    try {
+      const response = await api.delete(`/accountmaster/delete/${id}`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("Error deleting account");
     }
   },
 };

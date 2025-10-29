@@ -69,8 +69,7 @@ const CurrentSelection = ({ selectedCompany, selectedBranch }) => (
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">Company:</span>
         <Badge variant="secondary" className="max-w-[150px] truncate">
-          {truncate(selectedCompany?.company?.companyName, 15) ||
-            "None Selected"}
+          {truncate(selectedCompany?.companyName, 15) || "None Selected"}
         </Badge>
       </div>
       <div className="flex items-center justify-between">
@@ -91,7 +90,7 @@ const CompanyMenuItem = ({ companyAccess, selectedCompany, onSelect }) => (
   >
     <Building2 className="w-4 h-4 mr-2 opacity-50" />
     <span className="truncate">{companyAccess?.company?.companyName}</span>
-    {selectedCompany?._id === companyAccess?._id && (
+    {selectedCompany?._id === companyAccess?.company?._id && (
       <div className="ml-auto w-2 h-2 bg-primary rounded-full" />
     )}
   </DropdownMenuItem>
@@ -115,13 +114,17 @@ const ProfileDropdown = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // Memoized selectors to prevent unnecessary re-renders
+  // Get Redux values (source of truth)
   const selectedCompanyFromStore = useSelector(
     (state) => state.companyBranch?.selectedCompany
   );
   const selectedBranchFromStore = useSelector(
     (state) => state.companyBranch?.selectedBranch
   );
+
+  // Local state synced with Redux
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [selectedBranch, setSelectedBranch] = useState(null);
 
   // Get user data once and memoize
   const userData = useMemo(() => getLocalStorageItem("user"), []);
@@ -140,20 +143,17 @@ const ProfileDropdown = () => {
       userData?.companyId,
       userData?.branchId
     ),
-    enabled: !!userData?._id, // Only fetch if we have a user ID
-    staleTime: 1000 * 60 * 10, // Cache for 10 minutes
-    gcTime: 1000 * 60 * 15, // Keep in cache for 15 minutes (replaces cacheTime)
+    enabled: !!userData?._id,
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 15,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
     refetchInterval: false,
-    retry: 2, // Slightly more retries for network issues
+    retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     throwOnError: false,
   });
-
-  const [selectedCompany, setSelectedCompany] = useState(null);
-  const [selectedBranch, setSelectedBranch] = useState(null);
 
   // Memoized user data processing
   const loggedUser = useMemo(
@@ -170,7 +170,7 @@ const ProfileDropdown = () => {
       initials: name?.substring(0, 2).toUpperCase(),
       displayName: name,
     };
-  }, [loggedUser?.email]);
+  }, [loggedUser?.email, loggedUser?.name]);
 
   // Handle loading states
   useEffect(() => {
@@ -179,26 +179,7 @@ const ProfileDropdown = () => {
     } else {
       dispatch(hideLoader());
     }
-  }, [isLoading, dispatch]);
-
-  ///
-
-  useEffect(() => {
-    if (loggedUser && !isLoading && !isError && !selectedCompanyFromStore) {
-      const { company, branches } = loggedUser.access[0];
-
-      if (company) {
-        dispatch(SetSelectedCompanyInStore(company));
-        setLocalStorageItem("selectedCompany", company);
-      }
-      if (branches && branches.length > 0 && !selectedBranchFromStore) {
-        dispatch(SetSelectedBranchInStore(branches[0]));
-        setLocalStorageItem("selectedBranch", branches[0]);
-        dispatch(setBranchesInStore(branches));
-        setLocalStorageItem("companyBranches", branches);
-      }
-    }
-  }, [loggedUser]);
+  }, [isLoading, authLoading, dispatch]);
 
   // Handle error states
   useEffect(() => {
@@ -208,80 +189,109 @@ const ProfileDropdown = () => {
     }
   }, [isError, error]);
 
-  // Initialize company and branch selection
+  // Initialize Redux store from localStorage ONLY if Redux is empty
   useEffect(() => {
-    if (loggedUser?.access?.length > 0) {
-      const firstCompanyAccess = loggedUser.access[0];
-      setSelectedCompany(firstCompanyAccess);
+    if (loggedUser && !isLoading && !isError) {
+      const storedCompany = getLocalStorageItem("selectedCompany");
+      const storedBranch = getLocalStorageItem("selectedBranch");
+      const storedBranches = getLocalStorageItem("companyBranches");
 
-      if (firstCompanyAccess.branches?.length > 0) {
-        setSelectedBranch(firstCompanyAccess.branches[0]);
+      // Only initialize Redux if it's empty
+      if (!selectedCompanyFromStore && storedCompany) {
+        dispatch(SetSelectedCompanyInStore(storedCompany));
+      }
+
+      if (!selectedBranchFromStore && storedBranch) {
+        dispatch(SetSelectedBranchInStore(storedBranch));
+      }
+
+      if (storedBranches) {
+        dispatch(setBranchesInStore(storedBranches));
+      }
+
+      // If no stored data exists, set defaults from API
+      if (!storedCompany && !selectedCompanyFromStore && loggedUser.access?.[0]) {
+        const { company, branches } = loggedUser.access[0];
+        
+        if (company) {
+          dispatch(SetSelectedCompanyInStore(company));
+          setLocalStorageItem("selectedCompany", company);
+        }
+
+        if (branches && branches.length > 0) {
+          dispatch(SetSelectedBranchInStore(branches[0]));
+          setLocalStorageItem("selectedBranch", branches[0]);
+          dispatch(setBranchesInStore(branches));
+          setLocalStorageItem("companyBranches", branches);
+        }
       }
     }
-  }, [loggedUser?.access]);
+  }, [loggedUser, isLoading, isError, dispatch, selectedCompanyFromStore, selectedBranchFromStore]);
 
-  // Update branch when company changes
+  // Sync local state with Redux (Redux is source of truth)
   useEffect(() => {
-    if (selectedCompany?.branches?.length > 0) {
-      setSelectedBranch(selectedCompany.branches[0]);
-    } else {
-      setSelectedBranch(null);
+    if (selectedCompanyFromStore) {
+      setSelectedCompany(selectedCompanyFromStore);
     }
-  }, [selectedCompany]);
+  }, [selectedCompanyFromStore]);
+
+  useEffect(() => {
+    if (selectedBranchFromStore) {
+      setSelectedBranch(selectedBranchFromStore);
+    }
+  }, [selectedBranchFromStore]);
 
   // Memoized event handlers
   const handleLogOut = useCallback(() => {
     logout();
-  }, []);
+  }, [logout]);
 
   const handleSelectCompany = useCallback(
     (companyAccess) => {
-      setSelectedCompany(companyAccess);
-
       dispatch(showLoader());
 
       const { branches, company } = companyAccess;
-      if (branches && branches.length > 0) {
-        dispatch(setBranchesInStore(branches));
-        setLocalStorageItem("companyBranches", branches);
-      } else {
-        setSelectedBranch(null);
-        dispatch(SetSelectedBranchInStore(null));
-      }
 
+      // Update Redux (source of truth)
       if (company) {
         dispatch(SetSelectedCompanyInStore(company));
         setLocalStorageItem("selectedCompany", company);
-      } else {
-        dispatch(SetSelectedCompanyInStore(null));
       }
 
-      dispatch(SetSelectedBranchInStore(branches[0] || null));
-      setLocalStorageItem("selectedBranch", branches[0] || null);
+      if (branches && branches.length > 0) {
+        dispatch(setBranchesInStore(branches));
+        setLocalStorageItem("companyBranches", branches);
+        dispatch(SetSelectedBranchInStore(branches[0]));
+        setLocalStorageItem("selectedBranch", branches[0]);
+      } else {
+        dispatch(SetSelectedBranchInStore(null));
+        setLocalStorageItem("selectedBranch", null);
+      }
+
       navigate("/");
 
-      // ✅ mimic delay before hiding loader
       setTimeout(() => {
         dispatch(hideLoader());
       }, 1000);
     },
-    [dispatch, setSelectedCompany]
+    [dispatch, navigate]
   );
 
   const handleSelectBranch = useCallback(
     (branch) => {
       dispatch(showLoader());
-      setSelectedBranch(branch);
+      
+      // Update Redux (source of truth)
       dispatch(SetSelectedBranchInStore(branch));
       setLocalStorageItem("selectedBranch", branch);
+      
       navigate("/");
 
-      // ✅ mimic delay before hiding loader
       setTimeout(() => {
         dispatch(hideLoader());
       }, 1000);
     },
-    [dispatch, setSelectedBranch]
+    [dispatch, navigate]
   );
 
   const handleNavigate = useCallback(
@@ -327,7 +337,7 @@ const ProfileDropdown = () => {
           onClick={handleRetry}
           className="text-destructive hover:text-destructive-foreground"
         >
-          <User className="w-4 h-4 " />
+          <User className="w-4 h-4" />
           Retry
         </Button>
       </div>
@@ -411,15 +421,19 @@ const ProfileDropdown = () => {
               Switch Branch
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="w-56">
-              {selectedCompany?.branches?.length > 0 ? (
-                selectedCompany.branches.map((branch) => (
-                  <BranchMenuItem
-                    key={branch._id}
-                    branch={branch}
-                    selectedBranch={selectedBranch}
-                    onSelect={handleSelectBranch}
-                  />
-                ))
+              {loggedUser?.access?.find(
+                (access) => access.company._id === selectedCompany?._id
+              )?.branches?.length > 0 ? (
+                loggedUser.access
+                  .find((access) => access.company._id === selectedCompany?._id)
+                  .branches.map((branch) => (
+                    <BranchMenuItem
+                      key={branch._id}
+                      branch={branch}
+                      selectedBranch={selectedBranch}
+                      onSelect={handleSelectBranch}
+                    />
+                  ))
               ) : (
                 <DropdownMenuItem disabled>
                   No branches available for this company

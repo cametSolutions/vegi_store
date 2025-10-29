@@ -109,7 +109,6 @@ export const createTransaction = async (req, res) => {
       );
     }
 
-    console.log("receiptResult", receiptResult);
 
     // Commit transaction
     await session.commitTransaction();

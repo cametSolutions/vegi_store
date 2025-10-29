@@ -17,7 +17,7 @@ const ItemMasterSchema = new mongoose.Schema(
       type: String,
       required: [true, "Item code is required"],
       trim: true,
-      uppercase: true,
+     
     },
     category: {
       type: String,
@@ -30,10 +30,10 @@ const ItemMasterSchema = new mongoose.Schema(
     unit: {
       type: String,
       required: [true, "Unit is required"],
-      enum: {
-        values: ["kg", "gm", "piece", "bundle", "dozen", "liter"],
-        message: "Invalid unit type",
-      },
+      // enum: {
+      //   values: ["kg", "gm", "piece", "bundle", "dozen", "liter"],
+      //   message: "Invalid unit type",
+      // },
     },
 
     // 🆕 Price levels (Retail, Wholesale, Catering, etc.)
@@ -68,8 +68,7 @@ const ItemMasterSchema = new mongoose.Schema(
           },
           currentStock: {
             type: Number,
-            default: 0,
-            min: [0, "Stock cannot be negative"],
+            default: 0,     
           },
         },
       ],
@@ -101,6 +100,27 @@ ItemMasterSchema.index({ category: 1, status: 1 });
 ItemMasterSchema.index({ "stock.branch": 1 });
 ItemMasterSchema.index({ company: 1, "stock.branch": 1 });
 ItemMasterSchema.index({ itemName: "text", itemCode: "text" });
+// Compound unique index: itemName must be unique per company
+// Case-insensitive unique index: itemName must be unique per company (case-insensitive)
+ItemMasterSchema.index(
+  { company: 1, itemName: 1 }, 
+  { 
+    unique: true,
+    collation: { locale: 'en', strength: 2 }
+  }
+);
+
+// Case-insensitive unique index: itemCode must be unique per company (case-insensitive)
+ItemMasterSchema.index(
+  { company: 1, itemCode: 1 }, 
+  { 
+    unique: true,
+    collation: { locale: 'en', strength: 2 }
+  }
+);
+
+
+
 
 // ==================== VIRTUALS ====================
 

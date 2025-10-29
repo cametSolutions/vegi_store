@@ -35,7 +35,7 @@ export const createEmptyTransaction = () => ({
      chequeNumber: '',
     bank: '',
     description: '',
-    paymentMode: 'cheque',
+    paymentMode: 'cash',
     transactionDate: new Date().toISOString().split("T")[0],
     transactionType: 'receipt',
 });

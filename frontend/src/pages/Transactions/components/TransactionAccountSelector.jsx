@@ -68,6 +68,7 @@ const TransactionAccountSelector = ({
   // COMPUTED VALUES
   // ============================================================================
   const partyLabel = getPartyLabel(transactionType);
+
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY);
   const isSearchEnabled = !!(
     company &&
@@ -179,12 +180,7 @@ const TransactionAccountSelector = ({
    * Auto-populate Cash account when "cash" is selected
    */
   useEffect(() => {
-    if (
-      accountType === "cash" &&
-      cashAccountResponse &&
-      !account &&
-      company
-    ) {
+    if (accountType === "cash" && cashAccountResponse && !account && company) {
       const truncatedName = truncate(
         cashAccountResponse?.accountName,
         TRUNCATE_LENGTH
@@ -263,17 +259,10 @@ const TransactionAccountSelector = ({
       let selectedPriceLevel = priceLevel;
       let selectedPriceLevelName = priceLevelName;
 
-    
-      console.log("account.priceLevel", account.priceLevel);
-      
-
       if (account.priceLevel) {
         const matchingLevel = priceLevels.find(
           (level) => level._id === account.priceLevel
         );
-
-        console.log("matchingLevel", matchingLevel);
-        
 
         if (matchingLevel) {
           selectedPriceLevel = matchingLevel._id;

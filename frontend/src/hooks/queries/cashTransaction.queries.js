@@ -9,9 +9,8 @@ export const cashTransactionQueries = {
     searchTerm = "",
     companyId,
     branchId,
-   
     limit = 25,
-      sortBy,
+    sortBy,
     sortOrder,
     options = {}
   ) =>
@@ -22,7 +21,6 @@ export const cashTransactionQueries = {
         searchTerm,
         companyId,
         branchId,
-     
       ],
       queryFn: ({ pageParam }) =>
         cashTransactionServices.getAll(
@@ -32,13 +30,24 @@ export const cashTransactionQueries = {
           searchTerm,
           companyId,
           branchId,
-           sortBy,
+          sortBy,
           sortOrder
         ),
       initialPageParam: 1,
-      getNextPageParam: (lastPage) => lastPage.nextPage,
-      refetchOnWindowFocus: false, // Set default here
-      staleTime: 30000, // Optional: 30 seconds
-      ...options, // Allow overrides
+      getNextPageParam: (lastPage) => {
+        // Your API returns pagination with nextPage
+        if (!lastPage?.pagination) {
+          return undefined;
+        }
+        
+        const { hasMore, nextPage } = lastPage.pagination;
+        
+        // If hasMore is true and nextPage exists, return it
+        // Otherwise return undefined to stop fetching
+        return hasMore && nextPage ? nextPage : undefined;
+      },
+      refetchOnWindowFocus: false,
+      staleTime: 30000,
+      ...options,
     }),
 };

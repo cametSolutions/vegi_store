@@ -1,6 +1,6 @@
 import { Search, X } from "lucide-react";
 
-const ListSearch = ({ searchTerm, onSearchChange, placeholder }) => {
+const ListSearch = ({ searchTerm, onSearchChange, placeholder, textSize = 9 }) => {
   return (
     <div className="relative">
       {/* Search Icon (Left) */}
@@ -10,7 +10,7 @@ const ListSearch = ({ searchTerm, onSearchChange, placeholder }) => {
       <input
         type="text"
         placeholder={placeholder}
-        className="w-full pl-10 pr-8 py-2 text-[9px] border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className={`w-full pl-10 pr-8 py-2 text-[${textSize}px] border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
       />
@@ -30,4 +30,3 @@ const ListSearch = ({ searchTerm, onSearchChange, placeholder }) => {
 };
 
 export default ListSearch;
-

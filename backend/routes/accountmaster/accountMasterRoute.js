@@ -1,16 +1,16 @@
 import express from "express";
 
 import {
-  getallaccountHolder,
-  deleteAccntmaster,
-  updateAccntMaster,
-  searchAccounts,
-  createAccountMaster,
+createAccountMaster,
+searchAccounts,
+deleteAccountMaster,
+updateAccountMaster,
+getAccountsList
 } from "../../controller/accountMasterController/accountMasterController.js";
 const router = express.Router();
-router.post("/createaccountmaster", createAccountMaster);
-router.get("/getallaccountmaster", getallaccountHolder);
-router.delete("/deleteaccntmaster/:id", deleteAccntmaster);
-router.put("/updateaccntmaster/:id", updateAccntMaster);
+router.post("/create", createAccountMaster);
 router.get("/searchAccounts", searchAccounts);
+router.put("/update/:id", updateAccountMaster);
+router.get("/list", getAccountsList);
+router.delete("/delete/:id", deleteAccountMaster);
 export default router;

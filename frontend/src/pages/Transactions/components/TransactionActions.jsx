@@ -54,15 +54,6 @@ const TransactionActions = ({
           {isEditMode ? "Update" : "Save"}
         </button>
 
-        {/* Secondary Action - Medium Blue */}
-        {/* <button
-          onClick={onView}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-2.5 rounded font-bold flex items-center justify-center gap-1 transition-colors text-[9px]"
-        >
-          <Eye className="w-3 h-3" />
-          View
-        </button> */}
-
         {/* Destructive - Red (Exception) */}
         <button
           // onClick={onDelete}
@@ -80,15 +71,6 @@ const TransactionActions = ({
           <X className="w-3 h-3" />
           Cancel
         </button>
-
-        {/* Tertiary - Lightest Blue */}
-        {/* <button
-          onClick={onPrint}
-          className="bg-violet-500 hover:bg-violet-500 text-white px-2 py-2.5 rounded font-bold flex items-center justify-center gap-1 transition-colors text-[9px]"
-        >
-          <FileText className="w-3 h-3" />
-          Print
-        </button> */}
       </div>
     </div>
   );

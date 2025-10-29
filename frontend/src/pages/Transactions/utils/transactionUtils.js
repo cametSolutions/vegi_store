@@ -36,6 +36,8 @@ export const products = [
 export const getTransactionType = (location) => {
   const pathName = location?.pathname || "";
   return pathName?.split("/")[2];
+
+  
 };
 
 export const getPartyLabel = (transactionType) =>

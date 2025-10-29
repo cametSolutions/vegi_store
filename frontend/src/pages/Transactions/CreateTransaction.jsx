@@ -6,12 +6,11 @@ import TransactionSummaryComponent from "./components/TransactionSummary";
 import TransactionActionsComponent from "./components/TransactionActions";
 import TransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
 import CustomMoonLoader from "../../components/loaders/CustomMoonLoader"; // Import the loader
-import { products, getTransactionType } from "./utils/transactionUtils";
+import {  getTransactionType } from "./utils/transactionUtils";
 import { useTransaction } from "./hooks/useTransaction";
 import { useTransactionActions } from "./hooks/useTransactionActions";
 import { useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
-import CashTransactionAction from "../CashTransaction/Components/cashTransactionAction";
 
 // Memoized components
 const TransactionHeader = React.memo(TransactionHeaderComponent);
@@ -43,21 +42,22 @@ const CreateTransaction = () => {
     resetTransactionData,
   } = useTransaction();
 
+
+  //// get current transaction type from the url////
   const currentTransactionType = useMemo(
     () => getTransactionType(location),
     [location]
   );
 
+////  for adding transaction type to the transaction data when the component loads or when the transaction type changes////
   useEffect(() => {
-    console.log("Transaction type changed, resetting data");
     resetTransactionData();
-    updateTransactionField("currentTransactionType", currentTransactionType);
+    updateTransactionField("transactionType", currentTransactionType);
   }, [currentTransactionType, updateTransactionField]);
 
   // Reset transaction data when navigating away from this page
   useEffect(() => {
     return () => {
-      console.log("Cleaning up - resetting transaction data");
       resetTransactionData();
     };
   }, [resetTransactionData]);
@@ -69,11 +69,11 @@ const CreateTransaction = () => {
     (state) => state.companyBranch?.selectedBranch
   );
 
-  ///handle itemClick from the items table and pass it to item adding form for edit////
 
-  console.log("transactionData", transactionData);
+  console.log("transactionData",transactionData );
+  
 
-  // Memoized callbacks to prevent child re-renders
+
 
   return (
     <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
@@ -138,6 +138,7 @@ const CreateTransaction = () => {
               totalDue={transactionData.totalDue}
               onDiscountChange={handleDiscountChange}
               onPaidAmountChange={handlePaidAmountChange}
+              transactionType={transactionData.transactionType}
             />
 
             <TransactionActions

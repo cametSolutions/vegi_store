@@ -10,18 +10,16 @@ const TransactionSummary = ({
   balanceAmount,
   onDiscountChange,
   onPaidAmountChange,
-  totalDue
+  totalDue,
+  transactionType,
 }) => {
   // Local state for immediate UI updates
   const [localDiscount, setLocalDiscount] = useState(discount.toString());
   const [localPaidAmount, setLocalPaidAmount] = useState(paidAmount.toString());
 
-
   // Debounced values that will trigger parent updates
   const debouncedDiscount = useDebounce(localDiscount, 400);
   const debouncedPaidAmount = useDebounce(localPaidAmount, 400);
-
- 
 
   // Effect to call parent handlers when debounced values change
   useEffect(() => {
@@ -44,14 +42,22 @@ const TransactionSummary = ({
   //// currently we do not allow  to pay more than net amount
   useEffect(() => {
     if (localPaidAmount > totalDue) {
-      console.log("totalDue",totalDue);
-      console.log("localPaidAmount",localPaidAmount);
-      
+      console.log("totalDue", totalDue);
+      console.log("localPaidAmount", localPaidAmount);
+
       setLocalPaidAmount(totalDue.toString());
     }
   }, [localPaidAmount, totalDue]);
 
+  const isPaymentDisabled = useMemo(() => {
+    const enabledTypes = ["sale"];
 
+    if (enabledTypes.includes(transactionType.toLowerCase())) {
+      return totalDue <= 0;
+    } else {
+      return true;
+    }
+  }, [totalDue, transactionType]);
 
   return (
     <div className="bg-white shadow-sm p-1">
@@ -94,13 +100,15 @@ const TransactionSummary = ({
         <div className="flex items-center justify-between">
           <span className="text-slate-600">Paid:</span>
           <NumericFormat
-          disabled={totalDue <= 0}
+            disabled={isPaymentDisabled}
             allowNegative={false}
             value={localPaidAmount}
             onValueChange={(values) => {
               setLocalPaidAmount(values.value);
             }}
-            className={` ${totalDue <= 0 && "bg-slate-200"}  w-26 px-1 py-0.5 border border-slate-300 rounded-xs  text-xs`}
+            className={` ${
+              totalDue <= 0 && "bg-slate-200"
+            }  w-26 px-1 py-0.5 border border-slate-300 rounded-xs  text-xs`}
             placeholder="0"
             thousandSeparator=","
             decimalScale={2}

@@ -15,10 +15,10 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import InfiniteScroll from "react-infinite-scroll-component";
 const TransactionList = () => {
   const location = useLocation();
-   const currentTransactionType = useMemo(
-      () => getTransactionType(location),
-      [location]
-    );
+  const currentTransactionType = useMemo(
+    () => getTransactionType(location),
+    [location]
+  );
   const companyId = useSelector(
     (state) => state.companyBranch?.selectedCompany?._id
   );
@@ -42,7 +42,7 @@ const TransactionList = () => {
 
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY);
 
-  const { 
+  const {
     data,
     error,
     fetchNextPage,
@@ -57,8 +57,8 @@ const TransactionList = () => {
       debouncedSearchTerm,
       companyId,
       branchId,
-      25,
-        "transactionDate", /// sort by date
+      12,
+      "transactionDate", /// sort by date
       "desc", // sortOrder  for MongoDB
       { refetchOnWindowFocus: false, retry: 2 }
     )
@@ -69,12 +69,12 @@ const TransactionList = () => {
   }, [data]);
 
   return (
-    <div className="w-full h-[calc(100vh-110px)] bg-white rounded-xs shadow-sm border flex flex-col">
+    <div className="w-full h-[calc(100vh-103px)] bg-white rounded-xs shadow-sm border flex flex-col">
       {/* Header Section */}
       <div className="px-1 py-2 border-b  flex-shrink-0">
         <ListHeader
           title="Recent Transactions"
-       recordCount={data?.pages[0]?.pagination?.total || 0}  // Access total from pagination
+          recordCount={data?.pages[0]?.pagination?.total || 0} // Access total from pagination
         />
         <ListSearch
           searchTerm={searchTerm}
@@ -84,26 +84,25 @@ const TransactionList = () => {
       </div>
 
       <div className="flex-1 overflow-hidden">
-          <CashTRansactioListTable
-            data={allTransactions}
-              getStatusColor={getStatusColor}
-              getTypeColor={getTypeColor}
-              isFetching={isFetching}
-              status={status}
-              refetch={refetch}
-          />
-       
-   
+        <CashTRansactioListTable
+          data={allTransactions}
+          getStatusColor={getStatusColor}
+          getTypeColor={getTypeColor}
+          isFetching={isFetching}
+          status={status}
+          refetch={refetch}
+          fetchNextPage={fetchNextPage}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+    
+        />
       </div>
 
       {/* Footer Section */}
       <div className="flex-shrink-0 border-t">
-        <ListFooter
-          totalAmount={totalAmount}
-          
-        />
+        <ListFooter totalAmount={totalAmount} />
       </div>
-   </div>
+    </div>
   );
 };
 

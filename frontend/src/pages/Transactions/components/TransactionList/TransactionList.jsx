@@ -10,7 +10,6 @@ import { getTransactionType } from "../../utils/transactionUtils";
 import { useLocation } from "react-router-dom";
 import { transactionQueries } from "@/hooks/queries/transaction.queries";
 import { useSelector } from "react-redux";
-
 import { useDebounce } from "@/hooks/useDebounce";
 
 const TransactionList = () => {
@@ -30,10 +29,6 @@ const TransactionList = () => {
   const DEBOUNCE_DELAY = 500;
 
   const {
-    sortField,
-    sortDirection,
-    sortedData,
-    handleSort,
     searchTerm,
     totals: { totalAmount, totalOutstanding, totalPaid },
     getStatusColor,
@@ -58,7 +53,7 @@ const TransactionList = () => {
       debouncedSearchTerm,
       companyId,
       branchId,
-      25,
+      12,
       "transactionDate", /// sort by date
       "desc", // sortOrder  for MongoDB
       { refetchOnWindowFocus: false, retry: 2 }

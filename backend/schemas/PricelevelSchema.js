@@ -1,17 +1,3 @@
-// import mongoose from "mongoose";
-// const PriceLevelSchema = new mongoose.Schema(
-//     {
-//         priceLevelName: { type: String, required: [true, "pricelevel name is required"] },
-//         selected: [],
-//         companyId: {
-//             type: mongoose.Schema.Types.ObjectId,
-//             ref: "Company"
-//         }
-
-//     }, {
-//     timestamps: true
-// })
-// export default PriceLevelSchema
 
 import mongoose from "mongoose";
 
@@ -57,6 +43,14 @@ const PriceLevelSchema = new mongoose.Schema(
 PriceLevelSchema.index({ company: 1, status: 1 });
 PriceLevelSchema.index({ company: 1, 'branches': 1 });
 PriceLevelSchema.index({ priceLevelName: "text", description: "text" });
+PriceLevelSchema.index(
+  { company: 1, priceLevelName: 1 }, 
+  { 
+    unique: true,
+    collation: { locale: 'en', strength: 2 }
+  }
+);
+
 
 // ==================== VIRTUALS ====================
 // Count of allocated branches

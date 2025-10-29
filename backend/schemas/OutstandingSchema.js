@@ -35,17 +35,26 @@ const OutstandingSchema = new mongoose.Schema(
     transactionModel: {
       type: String,
       required: [true, "Transaction model is required"],
-      enum: ["Sale", "Purchase", "CreditNote", "DebitNote"],
+      enum: ["Sale", "Purchase", "CreditNote", "DebitNote", "OpeningBalance"],
     },
     sourceTransaction: {
       type: mongoose.Schema.Types.ObjectId,
       refPath: "transactionModel",
-      required: [true, "Source transaction is required"],
+      required: function () {
+        // Required only if transactionModel is NOT 'OpeningBalance'
+        return this.transactionModel !== "OpeningBalance";
+      },
     },
     transactionType: {
       type: String,
       enum: {
-        values: ["sale", "purchase", "credit_note", "debit_note"],
+        values: [
+          "sale",
+          "purchase",
+          "credit_note",
+          "debit_note",
+          "opening_balance",
+        ],
         message: "Invalid transaction type",
       },
       required: [true, "Transaction type is required"],
@@ -378,7 +387,6 @@ OutstandingSchema.statics.getTotalOutstanding = async function (
   return result.length > 0 ? result[0].totalOutstanding : 0;
 };
 
-
 // ==================== PRE MIDDLEWARE ====================
 // Update status based on amounts and due date before saving
 OutstandingSchema.pre("save", function (next) {
@@ -406,10 +414,12 @@ OutstandingSchema.pre("save", function (next) {
     this.status = "overdue";
   }
 
+  /// if outstandingType is cr closingBalanceAmount should be negative
+  if (this.outstandingType === "cr") {
+    this.closingBalanceAmount = -this.closingBalanceAmount;
+  }
+
   next();
 });
-
-
-
 
 export default OutstandingSchema;

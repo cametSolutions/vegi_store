@@ -1,6 +1,7 @@
 import { api } from "./apiClient";
 
 export const createResourceApi = (resourcePath, customEndpoints = {}) => {
+  
   const buildUrl = (endpoint, id = null, params = {}) => {
     let url = `/${resourcePath}`;
     if (endpoint) url += `/${endpoint}`;

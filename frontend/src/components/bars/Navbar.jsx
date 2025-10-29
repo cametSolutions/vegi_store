@@ -16,20 +16,30 @@ const Navbar = () => {
       path: "/price-level",
       hasDropdown: true,
       dropdownItems: [
-        { label: "Price Level", path: "/masters/price-level" },
-        { label: "Unit Master", path: "/masters/unit-master" },
-        { label: "Data Backup", path: "/masters/data-backup" },
+        { label: "Item Master", path: "/master/item-master" },
+        { label: "Account Master", path: "/master/account-master" },
+
+        { label: "Price Level", path: "/master/price-level" },
+        // { label: "Unit Master", path: "/masters/unit-master" },
+        // { label: "Data Backup", path: "/masters/data-backup" },
       ],
     },
-    { label: "Rate Setting", path: "/rate-setting" },
-    { label: "Stock Adjustment", path: "/stock-adjustment" },
-    { label: "Item Master", path: "/master/item-master" },
-    { label: "Account Master", path: "/masters/accountMaster" },
-    { label: "Purchase Return", path: "/purchase-return" },
-    { label: "Purchase", path: "/purchase" },
-    { label: "Payment", path: "/transactions/payment/create" },
-    { label: "receipt", path: "/transactions/receipt/create" },
+    {
+      label: "Extras",
+      path: "/price-level",
+      hasDropdown: true,
+      dropdownItems: [
+        { label: "Rate Setting", path: "/master/rate-setting" },
+        { label: "Stock Adjustment", path: "/stock-adjustment" },
+      ],
+    },
+
     { label: "Sales", path: "/transactions/sale/create" },
+    { label: "Purchase", path: "/transactions/purchase/create" },
+    { label: "Receipt", path: "/transactions/receipt/create" },
+    { label: "Payment", path: "/transactions/payment/create" },
+    { label: "Purchase Return", path: "/purchase-return" },
+    { label: "Sales Return", path: "/Sales-return" },
   ];
 
   const navigate = useNavigate();

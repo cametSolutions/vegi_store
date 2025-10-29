@@ -129,10 +129,8 @@ AccountMonthlyBalanceSchema.statics.getOpeningBalance = async function (
     return 0;
   }
 
-  // Return signed opening balance
-  return accountMaster.openingBalanceType === "dr"
-    ? accountMaster.openingBalance
-    : -accountMaster.openingBalance;
+  // Return opening balance
+  return accountMaster.openingBalance || 0;
 };
 
 // Method to calculate and update closing balance
