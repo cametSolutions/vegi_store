@@ -106,10 +106,10 @@ AccountMasterSchema.index({ email: 1 });
 AccountMasterSchema.index({ accountName: "text" });
 // Case-insensitive unique index: itemCode must be unique per company (case-insensitive)
 AccountMasterSchema.index(
-  { company: 1, accountName: 1 }, 
-  { 
+  { company: 1, accountName: 1 },
+  {
     unique: true,
-    collation: { locale: 'en', strength: 2 }
+    collation: { locale: "en", strength: 2 },
   }
 );
 
@@ -147,6 +147,55 @@ AccountMasterSchema.methods.canMakePurchase = function (amount = 0) {
   }
   return { allowed: true };
 };
+
+//// method for creating opening balance outstanding
+
+AccountMasterSchema.methods.createOrUpdateOpeningOutstanding = async function (session,req) {
+  const OutstandingModel = mongoose.model("Outstanding");
+
+  const openingBalance = this.openingBalance || 0;
+  if (openingBalance === 0) {
+    return;
+  }
+
+  const outstandingType = this.openingBalanceType === "cr" ? "cr" : "dr";
+
+  const existingOutstanding = await OutstandingModel.findOne({
+    account: this._id,
+    transactionType: "opening_balance",
+  }).session(session);
+
+  const outstandingData = {
+    company: this.company,
+    branch: this.branches.length > 0 ? this.branches[0] : null,
+    account: this._id,
+    accountName: this.accountName,
+    accountType: this.accountType,
+    transactionModel: "OpeningBalance",
+    sourceTransaction: null,
+    transactionType: "opening_balance",
+    transactionNumber: `OB-${this._id.toString().slice(-6)}-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`,
+    transactionDate: new Date(),
+    outstandingType,
+    totalAmount: Math.abs(openingBalance),
+    paidAmount: 0,
+    closingBalanceAmount: Math.abs(openingBalance),
+    dueDate: new Date(),
+    status: "pending",
+    notes: `Opening balance as on ${new Date().toISOString().slice(0, 10)}`,
+    createdBy: req.user._id,
+    sourceTransaction: null
+  };
+
+  if (existingOutstanding) {
+    Object.assign(existingOutstanding, outstandingData);
+    await existingOutstanding.save({ session });
+  } else {
+    const newOutstanding = new OutstandingModel(outstandingData);
+    await newOutstanding.save({ session });
+  }
+};
+
 
 // ==================== STATIC METHODS ====================
 // Get accounts by type with pagination
@@ -196,7 +245,7 @@ AccountMasterSchema.statics.searchAccounts = async function (
   const matchConditions = {
     company: companyObjId,
     accountType,
-    branch: branchObjId,
+    branches: branchObjId,
     $or: [{ accountName: searchRegex }, { accountCode: searchRegex }],
   };
 

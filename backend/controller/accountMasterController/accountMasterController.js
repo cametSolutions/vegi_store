@@ -1,17 +1,27 @@
 import AccountMasterModel from "../../model/masters/AccountMasterModel.js";
+import mongoose from "mongoose";
 
 export const createAccountMaster = async (req, res) => {
-  // throw new Error("Not implemented");
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const data = req.body;
+
     const account = new AccountMasterModel(data);
-    await account.save();
+    await account.save({ session });
+
+    await account.createOrUpdateOpeningOutstanding(session,req);
+
+    await session.commitTransaction();
+    session.endSession();
+
     res.status(201).json(account);
   } catch (err) {
-     if (err.code === 11000) {
-      const field = Object.keys(err.keyPattern)[1]; // Gets 'itemName' or 'itemCode'
+    await session.abortTransaction();
+    session.endSession();
 
-      // This message is sent to frontend
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern)[1];
       return res.status(400).json({
         success: false,
         message: `An account with this ${field} already exists for this company`,
@@ -20,6 +30,48 @@ export const createAccountMaster = async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 };
+
+export const updateAccountMaster = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const accountId = req.params.id;
+    const data = req.body;
+
+    const account = await AccountMasterModel.findByIdAndUpdate(accountId, data, {
+      new: true,
+      session,
+    });
+    if (!account) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ message: "Account not found" });
+    }
+
+    /// we omitted it because we are not updating opening outstanding ,we had restricted it
+    // await account.createOrUpdateOpeningOutstanding(session);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.json(account);
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern)[1];
+      return res.status(400).json({
+        success: false,
+        message: `An account with this ${field} already exists for this company`,
+      });
+    }
+    res.status(400).json({ message: err.message });
+  }
+};
+
+
+// (Optional) For delete, consider deleting opening outstanding if needed
 
 export const deleteAccountMaster = async (req, res) => {
   try {
@@ -29,28 +81,6 @@ export const deleteAccountMaster = async (req, res) => {
     res.json({ message: "Deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
-  }
-};
-export const updateAccountMaster = async (req, res) => {
-  try {
-    const accountId = req.params.id;
-    const data = req.body;
-    const account = await AccountMasterModel.findByIdAndUpdate(accountId, data, {
-      new: true,
-    });
-    if (!account) return res.status(404).json({ message: "Account not found" });
-    res.json(account);
-  } catch (err) {
-     if (err.code === 11000) {
-      const field = Object.keys(err.keyPattern)[1]; // Gets 'itemName' or 'itemCode'
-
-      // This message is sent to frontend
-      return res.status(400).json({
-        success: false,
-        message: `An account with this ${field} already exists for this company`,
-      });
-    }
-    res.status(400).json({ message: err.message });
   }
 };
 
@@ -166,5 +196,3 @@ export const getAccountsList = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
-

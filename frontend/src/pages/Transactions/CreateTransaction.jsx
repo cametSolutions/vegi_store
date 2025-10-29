@@ -69,10 +69,11 @@ const CreateTransaction = () => {
     (state) => state.companyBranch?.selectedBranch
   );
 
-  ///handle itemClick from the items table and pass it to item adding form for edit////
+
+  console.log("transactionData",transactionData );
+  
 
 
-  // Memoized callbacks to prevent child re-renders
 
   return (
     <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">

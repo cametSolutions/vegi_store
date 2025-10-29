@@ -66,7 +66,7 @@ const AccountMasterForm = ({
         ...editData,
         openingBalance: Math.abs(editData.openingBalance),
         branches: editData.branches || [],
-        priceLevel: editData.priceLevel?._id || null,
+        priceLevel: editData.priceLevel || null,
       });
       setSelectedBranches(editData.branches || []);
     } else {
@@ -118,7 +118,6 @@ const AccountMasterForm = ({
               setSelectedBranches([]);
             }
           },
-
         }
       );
     } else {
@@ -131,7 +130,6 @@ const AccountMasterForm = ({
             setSelectedBranches([]);
           }
         },
-  
       });
     }
   };
@@ -216,8 +214,10 @@ const AccountMasterForm = ({
             <input
               {...register("openingBalance", { valueAsNumber: true, min: 0 })}
               type="number"
-              className="w-full border border-gray-300 rounded-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              disabled={mutation.isLoading}
+              className={`  ${
+                editingId && "bg-slate-200"
+              }   w-full border border-gray-300 rounded-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400`}
+              disabled={mutation.isLoading || editingId}
             />
             {errors.openingBalance && (
               <p className="text-red-600 mt-1">
@@ -231,8 +231,10 @@ const AccountMasterForm = ({
             </label>
             <select
               {...register("openingBalanceType")}
-              className="w-full border border-gray-300 rounded-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              disabled={mutation.isLoading}
+              className={` ${
+                editingId && "bg-slate-200"
+              }  w-full border border-gray-300 rounded-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400`}
+              disabled={mutation.isLoading || editingId}
             >
               <option value="dr">Dr</option>
               <option value="cr">Cr</option>

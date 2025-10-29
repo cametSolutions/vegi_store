@@ -154,7 +154,7 @@ const AccountMasterList = ({ onEdit }) => {
               }
               endMessage={
                 allAccounts.length > 0 && (
-                  <div className="text-center py-4 text-xs text-gray-400 ">
+                  <div className="text-center text-xs py-4  text-gray-400 ">
                     No more accounts
                   </div>
                 )
