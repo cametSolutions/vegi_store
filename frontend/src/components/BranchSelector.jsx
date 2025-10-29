@@ -20,7 +20,7 @@ const BranchSelector = ({
 
 
   return (
-    <div>
+    <div className="mt-4">
       <Label>Available Branches *</Label>
       <div className="space-y-2 mt-2 border rounded p-3">
         {branches.map((branch) => (

@@ -1,3 +1,4 @@
+import AccountMasterModel from "../../model/masters/AccountMasterModel.js";
 import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
 import PriceLevelModel from "../../model/masters/PricelevelModel.js";
 
@@ -216,8 +217,8 @@ export const updateIndexes = async () => {
     //   }
     // );
 
-    await PriceLevelModel.collection.createIndex(
-      { company: 1, priceLevelName: 1 },
+    await AccountMasterModel.collection.createIndex(
+      { company: 1, accountName: 1 },
       {
         unique: true,
         collation: { locale: "en", strength: 2 },

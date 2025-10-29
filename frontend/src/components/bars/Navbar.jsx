@@ -17,7 +17,7 @@ const Navbar = () => {
       hasDropdown: true,
       dropdownItems: [
         { label: "Item Master", path: "/master/item-master" },
-        { label: "Account Master", path: "/masters/accountMaster" },
+        { label: "Account Master", path: "/master/account-master" },
 
         { label: "Price Level", path: "/master/price-level" },
         // { label: "Unit Master", path: "/masters/unit-master" },

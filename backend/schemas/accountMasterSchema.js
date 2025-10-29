@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 
 const AccountMasterSchema = new mongoose.Schema(
@@ -8,10 +7,19 @@ const AccountMasterSchema = new mongoose.Schema(
       ref: "Company",
       required: [true, "Company is required"],
     },
-    branch: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Branch",
-      required: [true, "Branch is required"],
+    branches: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Branch",
+        },
+      ],
+      validate: {
+        validator: function (v) {
+          return v && v.length > 0;
+        },
+        message: "At least one branch is required",
+      },
     },
 
     accountName: {
@@ -24,14 +32,14 @@ const AccountMasterSchema = new mongoose.Schema(
       type: String,
       required: [true, "Account type is required"],
       enum: {
-        values: ["customer","cash", "bank", "other"],
+        values: ["customer", "cash", "bank", "other", "supplier"],
         message: "Account type must be either customer or other",
       },
     },
 
     address: {
       type: String,
-      required: [true, "Address is required"],
+
       trim: true,
     },
     openingBalance: {
@@ -73,7 +81,6 @@ const AccountMasterSchema = new mongoose.Schema(
     priceLevel: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "PriceLevel",
-      required: [true, "Price level is required"],
     },
     status: {
       type: String,
@@ -97,6 +104,14 @@ AccountMasterSchema.index({ company: 1, accountType: 1, status: 1 });
 AccountMasterSchema.index({ phoneNo: 1 });
 AccountMasterSchema.index({ email: 1 });
 AccountMasterSchema.index({ accountName: "text" });
+// Case-insensitive unique index: itemCode must be unique per company (case-insensitive)
+AccountMasterSchema.index(
+  { company: 1, accountName: 1 }, 
+  { 
+    unique: true,
+    collation: { locale: 'en', strength: 2 }
+  }
+);
 
 // ==================== INSTANCE METHODS ====================
 
@@ -323,16 +338,13 @@ AccountMasterSchema.statics.getCustomerSummary = function (companyId) {
   ]);
 };
 
-// Validation to ensure opening balance type is set when balance exists
+// Pre-save hook to handle negative openingBalance for "cr"
 AccountMasterSchema.pre("save", function (next) {
-  if (this.openingBalance > 0 && !this.openingBalanceType) {
-    return next(
-      new Error(
-        "Opening balance type is required when opening balance is greater than 0"
-      )
-    );
+  if (this.openingBalance && this.openingBalanceType === "cr") {
+    this.openingBalance = -Math.abs(this.openingBalance);
+  } else {
+    this.openingBalance = Math.abs(this.openingBalance);
   }
   next();
 });
-
 export default AccountMasterSchema;

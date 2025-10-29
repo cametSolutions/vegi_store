@@ -48,8 +48,8 @@ const ItemMasterForm = ({ selectedItem, isEditMode, onSuccess, onCancel }) => {
   const createMutation = useMutation(itemMasterMutations.create(queryClient));
   const updateMutation = useMutation(itemMasterMutations.update(queryClient));
 
-  // Check if either mutation is loading
-  const isLoading = createMutation.isPending || updateMutation.isPending;
+    // Check if either mutation is loading
+    const isLoading = createMutation.isPending || updateMutation.isPending;
 
   // Effect for edit mode - populate form with selected item data
   useEffect(() => {
