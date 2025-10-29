@@ -38,11 +38,11 @@ export const updateStock = async (items, stockDirection, branchId, session) => {
         newStock = stockEntry.currentStock - quantityChange;
 
         // Validate stock availability
-        if (newStock < 0) {
-          throw new Error(
-            `Insufficient stock for ${item.itemName}. Available: ${stockEntry.currentStock}, Required: ${quantityChange}`
-          );
-        }
+        // if (newStock < 0) {
+        //   throw new Error(
+        //     `Insufficient stock for ${item.itemName}. Available: ${stockEntry.currentStock}, Required: ${quantityChange}`
+        //   );
+        // }
       } else if (stockDirection === "in") {
         newStock = stockEntry.currentStock + quantityChange;
       } else {

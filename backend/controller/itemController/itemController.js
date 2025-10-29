@@ -85,9 +85,17 @@ export const getById = async (req, res) => {
 
 export const update = async (req, res) => {
   try {
+    // Clone req.body to avoid mutating it directly
+    const updateData = { ...req.body };
+
+    // Remove priceLevel field if it exists in the update data
+    if ("priceLevels" in updateData) {
+      delete updateData.priceLevels;
+    }
+
     const item = await ItemMasterModel.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     );
     if (!item) {
@@ -105,7 +113,6 @@ export const update = async (req, res) => {
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern)[1]; // Gets 'itemName' or 'itemCode'
 
-      // This message is sent to frontend
       return res.status(400).json({
         success: false,
         message: `An item with this ${field} already exists for this company`,
@@ -117,6 +124,7 @@ export const update = async (req, res) => {
     });
   }
 };
+
 
 export const deleteItem = async (req, res) => {
   try {
@@ -228,5 +236,33 @@ export const updateIndexes = async () => {
     console.log("New case-insensitive indexes created");
   } catch (error) {
     console.error("Error updating indexes:", error);
+  }
+};
+
+//// for searching an item
+export const searchItems = async (req, res) => {
+
+  console.log("call came here");
+  
+  const {
+    searchTerm,
+    companyId,
+    branchId,
+    limit = 25,
+    exactMatch = false,
+  } = req.query;
+
+  try {
+    const items = await ItemMasterModel.searchItems(
+      searchTerm,
+      companyId,
+      branchId,
+      limit,
+      exactMatch === "true" // string to boolean conversion for query param
+    );
+
+    res.json({ data: items, message: "items found" });
+  } catch (error) {
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };

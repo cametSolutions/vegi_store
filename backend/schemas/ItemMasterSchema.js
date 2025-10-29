@@ -68,8 +68,7 @@ const ItemMasterSchema = new mongoose.Schema(
           },
           currentStock: {
             type: Number,
-            default: 0,
-            min: [0, "Stock cannot be negative"],
+            default: 0,     
           },
         },
       ],

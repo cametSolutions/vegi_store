@@ -31,6 +31,7 @@ import { truncate } from "../../../../../shared/utils/string";
 const DEBOUNCE_DELAY = 500;
 const AUTO_SAVE_DELAY = 1500;
 const SUCCESS_DISPLAY_DURATION = 2000;
+const MIN_COLUMNS = 10;
 
 // Reusable Components
 const PageHeader = ({ searchTerm, onSearchChange, disabled }) => (
@@ -113,9 +114,25 @@ const RateSetting = () => {
 
   const updateRateMutation = useMutation(itemMasterMutations.updateRate(queryClient));
 
-  // Memoized data
+  // Memoized data with dummy columns
   const allItems = useMemo(() => data?.pages?.flatMap((page) => page.data.items) || [], [data]);
-  const priceLevels = useMemo(() => priceLevelsResponse?.data || [], [priceLevelsResponse]);
+  const realPriceLevels = useMemo(() => priceLevelsResponse?.data || [], [priceLevelsResponse]);
+  
+  const priceLevels = useMemo(() => {
+    const levels = [...realPriceLevels];
+    const dummyCount = Math.max(0, MIN_COLUMNS - realPriceLevels.length);
+    
+    for (let i = 0; i < dummyCount; i++) {
+      levels.push({
+        _id: `dummy-${i}`,
+        priceLevelName: `Price Level ${realPriceLevels.length + i + 1}`,
+        isDummy: true
+      });
+    }
+    
+    return levels;
+  }, [realPriceLevels]);
+
   const gridTemplateColumns = `256px repeat(${priceLevels.length}, 192px)`;
 
   // Helper functions
@@ -359,7 +376,7 @@ const RateSetting = () => {
   }
 
   // Empty State - No Price Levels
-  if (priceLevels.length === 0) {
+  if (realPriceLevels.length === 0) {
     return (
       <div className="flex flex-col h-[calc(100vh-var(--header-height))] bg-white">
         <PageHeader searchTerm="" onSearchChange={() => {}} disabled />
@@ -398,6 +415,10 @@ const RateSetting = () => {
           border-bottom: 1px solid #e5e7eb;
         }
 
+        .rate-grid-cell.dummy {
+          background-color: #f9fafb;
+        }
+
         .rate-grid-header {
           position: sticky;
           top: 0;
@@ -413,6 +434,11 @@ const RateSetting = () => {
           padding: 12px;
           border-right: 1px solid #64748b;
           border-bottom: 1px solid #64748b;
+        }
+
+        .rate-grid-header.dummy {
+          background-color: #cbd5e1;
+          color: #64748b;
         }
 
         .rate-grid-item-name {
@@ -440,7 +466,7 @@ const RateSetting = () => {
           background-color: #dbeafe;
         }
 
-        .rate-grid-cell:hover {
+        .rate-grid-cell:hover:not(.dummy) {
           background-color: #f9fafb;
         }
 
@@ -458,7 +484,10 @@ const RateSetting = () => {
         {/* Header Row */}
         <div className="rate-grid-header rate-grid-item-name header">Item Name</div>
         {priceLevels.map((priceLevel) => (
-          <div key={priceLevel._id} className="rate-grid-header">
+          <div 
+            key={priceLevel._id} 
+            className={`rate-grid-header ${priceLevel.isDummy ? 'dummy' : ''}`}
+          >
             {priceLevel.priceLevelName}
           </div>
         ))}
@@ -488,6 +517,23 @@ const RateSetting = () => {
                 </div>
 
                 {priceLevels.map((priceLevel) => {
+                  if (priceLevel.isDummy) {
+                    return (
+                      <div key={priceLevel._id} className="rate-grid-cell dummy">
+                        <div className="flex gap-1 items-center w-full">
+                          <div className="relative flex-1">
+                            <Input
+                              type="number"
+                              disabled
+                              className="text-xs h-8 rounded bg-gray-100 cursor-not-allowed"
+                              placeholder="--"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   const status = getCellStatus(item._id, priceLevel._id);
                   const cellStyle = getCellStyle(status);
                   const icon = getCellIcon(status);

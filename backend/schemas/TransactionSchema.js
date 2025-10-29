@@ -30,7 +30,6 @@ const ItemSchema = new mongoose.Schema(
     unit: {
       type: String,
       required: [true, "Unit is required"],
-      enum: ["kg", "gm", "piece", "bundle", "dozen", "liter"],
     },
     quantity: {
       type: Number,
@@ -119,7 +118,6 @@ const TransactionSchema = new mongoose.Schema(
     openingBalance: {
       type: Number,
       default: 0,
-      min: [0, "Opening balance cannot be negative"],
     },
     priceLevel: {
       type: mongoose.Schema.Types.ObjectId,
