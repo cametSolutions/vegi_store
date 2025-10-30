@@ -82,6 +82,8 @@ const TransactionAccountSelector = ({
   // API QUERIES
   // ============================================================================
   // Query for customer search
+  const crTransactionTypes = ["purchase", "credit_note"];
+  const accountTypeForSearch = crTransactionTypes.includes(transactionType) ? "supplier" : "customer";
   const {
     data: apiResponse,
     isLoading,
@@ -91,7 +93,7 @@ const TransactionAccountSelector = ({
       debouncedSearchTerm,
       company,
       branch,
-      "customer",
+      accountTypeForSearch,
       RESULT_LIMIT,
       {
         withOutstanding: true, // or false, or omit

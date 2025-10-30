@@ -65,7 +65,7 @@ export const calculateItemAmount = (qty, rate) => qty * rate;
 
 // ==================== TRANSACTION CREATION ====================
 export const createEmptyTransaction = () => ({
-  transactionType: "sale",
+  transactionType: "",
   transactionDate: new Date().toISOString().split("T")[0],
   // transactionNumber: "",
   account: "",

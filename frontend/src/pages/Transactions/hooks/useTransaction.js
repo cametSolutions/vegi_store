@@ -12,8 +12,6 @@ export const useTransaction = (initialData = null) => {
     initialData || createEmptyTransaction()
   );
 
-
-
   const [newItem, setNewItem] = useState({
     code: "",
     name: "",
@@ -129,10 +127,14 @@ export const useTransaction = (initialData = null) => {
     [updateTransactionField]
   );
 
-  const resetTransactionData = useCallback(() => {
-    console.log("resetting transaction data");
-    setTransactionData(createEmptyTransaction());
-  }, []);
+const resetTransactionData = useCallback((transactionType) => {
+  console.log("resetting transaction data");
+  setTransactionData({
+    ...createEmptyTransaction(),
+    transactionType, // ✅ update transactionType dynamically
+  });
+}, []);
+
 
   /// ===================== UPDATE TOTALS AUTOMATICALLY =====================
   useEffect(() => {
@@ -158,6 +160,5 @@ export const useTransaction = (initialData = null) => {
     clickedItemInTable,
     handleItemClickInItemsTable,
     resetTransactionData,
-    
   };
 };

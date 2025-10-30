@@ -70,9 +70,12 @@ export const processTransaction = async (transactionData, userId, session) => {
         session,
       });
     } else if (
-      createdTransaction.balanceAmount > 0 &&
+      // createdTransaction.balanceAmount > 0 &&
       createdTransaction.accountType === "customer"
     ) {
+
+      console.log("creating outstanding");
+      
       outstanding = await createOutstanding(
         {
           company: createdTransaction.company,

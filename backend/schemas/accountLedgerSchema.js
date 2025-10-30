@@ -109,6 +109,9 @@ AccountLedgerSchema.statics.getLastBalance = async function (
 
   if (!accountMaster) throw new Error("Account not found");
 
+  console.log();
+  
+
   // Return opening balance or 0 if account not found
   return accountMaster?.openingBalance || 0;
 };

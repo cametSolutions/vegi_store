@@ -66,7 +66,6 @@ const TransactionList = () => {
     return data.pages.flatMap((page) => page.data);
   }, [data]);
 
-  console.log("allTransactions", allTransactions);
 
   return (
     <div className="w-full h-[calc(100vh-110px)] bg-white rounded-xs shadow-sm border flex flex-col">

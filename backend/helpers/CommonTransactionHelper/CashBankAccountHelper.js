@@ -15,7 +15,7 @@ export const getCashAccount = async (companyId, branchId, session) => {
 
   const cashAccount = await AccountMaster.findOne({
     company: companyId,
-    branch: branchId,
+    branches: branchId,
     accountType: "cash",
     accountName: { $regex: /^cash$/i }, // Case-insensitive "Cash"
     status: "active",
@@ -53,7 +53,7 @@ export const getBankAccount = async (companyId, branchId, session) => {
   // Find any active bank account for this branch
  const  bankAccount = await AccountMaster.findOne({
     company: companyId,
-    branch: branchId,
+    branches: branchId,
     accountType: "bank",
     accountName: { $regex: /bank/i }, // Contains "bank" (case-insensitive)
     status: "active",
@@ -134,7 +134,7 @@ export const getAllCashBankAccounts = async (
     // Find all cash accounts
     AccountMaster.find({
       company: companyId,
-      branch: branchId,
+      branches: branchId,
       accountType: "cash",
       accountName: { $regex: /^cash$/i },
       status: "active",
@@ -143,7 +143,7 @@ export const getAllCashBankAccounts = async (
     // Find all bank accounts
     AccountMaster.find({
       company: companyId,
-      branch: branchId,
+      branches: branchId,
       accountType: "bank",
       accountName: { $regex: /bank/i },
       status: "active",

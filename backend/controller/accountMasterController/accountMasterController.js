@@ -10,7 +10,7 @@ export const createAccountMaster = async (req, res) => {
     const account = new AccountMasterModel(data);
     await account.save({ session });
 
-    await account.createOrUpdateOpeningOutstanding(session,req);
+    await account.createOrUpdateOpeningOutstanding(session, req);
 
     await session.commitTransaction();
     session.endSession();
@@ -36,12 +36,20 @@ export const updateAccountMaster = async (req, res) => {
   session.startTransaction();
   try {
     const accountId = req.params.id;
-    const data = req.body;
+    const data = { ...req.body };
 
-    const account = await AccountMasterModel.findByIdAndUpdate(accountId, data, {
-      new: true,
-      session,
-    });
+    if (data.openingBalanceType === "cr") {
+      data.openingBalance = data.openingBalance * -1;
+    }
+
+    const account = await AccountMasterModel.findByIdAndUpdate(
+      accountId,
+      data,
+      {
+        new: true,
+        session,
+      }
+    );
     if (!account) {
       await session.abortTransaction();
       session.endSession();
@@ -69,7 +77,6 @@ export const updateAccountMaster = async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 };
-
 
 // (Optional) For delete, consider deleting opening outstanding if needed
 

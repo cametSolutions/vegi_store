@@ -8,6 +8,8 @@ const TransactionActions = ({
   onLoadingChange,
   isEditMode = false,
   resetTransactionData,
+  updateTransactionData,
+  transactionType,
   // onView,
   // onDelete,
   // onCancel,
@@ -37,7 +39,7 @@ const TransactionActions = ({
       return false;
     }
     await handleSave(); // save using your hook
-    if (resetTransactionData) resetTransactionData(); // 👈 reset after success
+    if (resetTransactionData) resetTransactionData(transactionData?.transactionType); // 👈 reset after success
   };
 
   console.log("transaction actions component renders");
