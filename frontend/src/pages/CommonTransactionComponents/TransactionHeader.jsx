@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Calendar } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { capitalizeFirstLetter } from "../../../../shared/utils/string";
+import { transactionTypes } from "../CashTransaction/Utils/CashTransactionUtils";
 
 const TransactionHeader = ({
   currentTransactionType,
@@ -25,6 +26,12 @@ const TransactionHeader = ({
       updateTransactionField("transactionDate", formattedDate);
     }
   };
+
+  useEffect(() => {
+    console.log("currentTransactionType changed:", currentTransactionType);
+    
+    updateTransactionField("transactionType", currentTransactionType);
+  }, [currentTransactionType, updateTransactionField]);
 
   return (
     <div className="bg-white shadow-sm border-b px-4 py-2">

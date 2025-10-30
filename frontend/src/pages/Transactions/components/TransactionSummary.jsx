@@ -41,7 +41,7 @@ const TransactionSummary = ({
 
   //// currently we do not allow  to pay more than net amount
   useEffect(() => {
-    if (localPaidAmount > totalDue) {
+    if (localPaidAmount >0 && localPaidAmount > totalDue) {
       console.log("totalDue", totalDue);
       console.log("localPaidAmount", localPaidAmount);
 

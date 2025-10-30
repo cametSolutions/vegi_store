@@ -166,7 +166,6 @@ const TransactionSchema = new mongoose.Schema(
     totalDue: {
       type: Number,
       default: 0,
-      min: [0, "Total due cannot be negative"],
     },
     paidAmount: {
       type: Number,
@@ -176,7 +175,6 @@ const TransactionSchema = new mongoose.Schema(
     balanceAmount: {
       type: Number,
       default: 0,
-      min: [0, "Balance amount cannot be negative"],
     },
 
     // ==================== PAYMENT & STATUS ====================

@@ -119,7 +119,7 @@ AccountMonthlyBalanceSchema.statics.getOpeningBalance = async function (
     .model("AccountMaster")
     .findOne({
       _id: accountId,
-      branch: branchId,
+      branches: branchId,
       company: companyId,
     })
     .select("openingBalance openingBalanceType")

@@ -22,10 +22,13 @@ export const useTransactionActions = (transactionData, isEditMode = false) => {
     try {
       console.log("Saving transaction:", transactionData);
 
+      if (transactionData.transactionType == "") {
+        toast.error("Having some issue with transaction type");
+        return false;
+      }
+
       const convertedTransactionData =
         convertStringNumbersToNumbers(transactionData);
-
-      
 
       // Choose mutation based on mode
       if (isEditMode) {
