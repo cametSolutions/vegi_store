@@ -64,7 +64,7 @@ const BankPaymentDetails = ({
   ];
 
   return (
-    <div className="w-full bg-white shadow-sm border border-gray-200">
+    <div className="w-full bg-white  border-t border-gray-200">
       <div className="p-3 space-y-2">
         {/* Cheque Number and Bank */}
         <div className="grid grid-cols-2 gap-2">

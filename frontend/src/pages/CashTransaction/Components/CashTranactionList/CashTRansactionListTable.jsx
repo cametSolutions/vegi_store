@@ -50,6 +50,7 @@ const CashTransactionListTable = ({
   if (status === "error") {
     return (
       <div className="w-full h-full border shadow bg-white flex items-center justify-center">
+        
         <div className="text-center">
           <p className="text-gray-500 text-xs font-semibold">
             !Oops..Error loading transactions
@@ -69,6 +70,7 @@ const CashTransactionListTable = ({
   if (!data || data.length === 0) {
     return (
       <div className="w-full h-full border shadow bg-white flex items-center justify-center">
+        
         <p className="text-gray-500 text-sm">No transactions found</p>
       </div>
     );

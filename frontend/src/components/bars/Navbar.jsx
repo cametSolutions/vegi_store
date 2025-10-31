@@ -11,35 +11,40 @@ import { Link, useNavigate } from "react-router-dom";
 
 const Navbar = () => {
   const menuItems = [
-    {
-      label: "Master",
-      path: "/price-level",
-      hasDropdown: true,
-      dropdownItems: [
-        { label: "Item Master", path: "/master/item-master" },
-        { label: "Account Master", path: "/master/account-master" },
+    // {
+    //   label: "Master",
+    //   path: "/price-level",
+    //   hasDropdown: true,
+    //   dropdownItems: [
+    //     { label: "Item Master", path: "/master/item-master" },
+    //     { label: "Account Master", path: "/master/account-master" },
 
-        { label: "Price Level", path: "/master/price-level" },
-        // { label: "Unit Master", path: "/masters/unit-master" },
-        // { label: "Data Backup", path: "/masters/data-backup" },
-      ],
-    },
-    {
+    //     // { label: "Unit Master", path: "/masters/unit-master" },
+    //     // { label: "Data Backup", path: "/masters/data-backup" },
+    //   ],
+    // },
+
+    { label: "Account Master", path: "/master/account-master" },
+     { label: "Item Master", path: "/master/item-master" },
+        { label: "Rate Setting", path: "/master/rate-setting" },
+
+        { label: "Purchase", path: "/transactions/purchase/create" },
+        { label: "Purchase Return", path: "/purchase-return" },
+    { label: "Sales", path: "/transactions/sale/create" },
+    { label: "Sales Return", path: "/Sales-return" },
+    { label: "Receipt", path: "/transactions/receipt/create" },
+    { label: "Payment", path: "/transactions/payment/create" },
+    { label: "Reports", path: "/transactions/payment/create" },
+        {
       label: "Extras",
       path: "/price-level",
       hasDropdown: true,
       dropdownItems: [
-        { label: "Rate Setting", path: "/master/rate-setting" },
         { label: "Stock Adjustment", path: "/stock-adjustment" },
+        { label: "Price Level", path: "/master/price-level" },
+
       ],
     },
-
-    { label: "Sales", path: "/transactions/sale/create" },
-    { label: "Purchase", path: "/transactions/purchase/create" },
-    { label: "Receipt", path: "/transactions/receipt/create" },
-    { label: "Payment", path: "/transactions/payment/create" },
-    { label: "Purchase Return", path: "/purchase-return" },
-    { label: "Sales Return", path: "/Sales-return" },
   ];
 
   const navigate = useNavigate();

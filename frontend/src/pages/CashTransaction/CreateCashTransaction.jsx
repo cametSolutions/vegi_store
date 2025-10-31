@@ -23,7 +23,6 @@ const CreateCashTransaction = () => {
     resetCashTransactionData,
     updateCashtransactionData,
     updateTransactionField,
-
     setCashtransactionData,
   } = useCashTransaction();
 
@@ -54,11 +53,11 @@ const CreateCashTransaction = () => {
   console.log("Cash transaction data:", CashtransactionData);
   return (
     <div>
-      <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
+      <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br bg-white overflow-hidden">
         {/* Header */}
 
         {isLoading && (
-          <div className="absolute inset-0 bg-white/60  z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-white/60 z-50 flex items-center justify-center">
             <CustomMoonLoader />
           </div>
         )}
@@ -69,9 +68,9 @@ const CreateCashTransaction = () => {
           updateTransactionField={updateTransactionField}
         />
 
-        <div className="flex flex-col  p-1 gap-2">
+        <div className="flex flex-col h-[calc(100%-40px)] p-1 gap-2">
           {/* Receipt Details - Top */}
-          <div className=" bg-white rounded-lg shadow-sm ">
+          <div className="bg-white rounded-lg shadow-sm">
             <TransactionAccountSelector
               transactionType={CashtransactionData?.transactionType}
               accountName={CashtransactionData?.accountName}
@@ -90,7 +89,7 @@ const CreateCashTransaction = () => {
           </div>
 
           {/* Bank Payment Details - Middle */}
-          <div className="flex-1 bg-white rounded-lg shadow-sm ">
+          <div className="flex-1 bg-white  overflow-auto">
             <TransactionBankPaymentDetails
               chequeNumber={CashtransactionData?.chequeNumber}
               bank={CashtransactionData?.bank}
@@ -104,7 +103,7 @@ const CreateCashTransaction = () => {
           </div>
 
           {/* Transaction Actions - Bottom */}
-          <div className=" flex-1 w-full">
+          <div className="w-full mt-auto ">
             <CashTransactionAction
               CashtransactionData={CashtransactionData}
               onLoadingChange={setIsLoading}
