@@ -21,16 +21,6 @@ export const useCashTransactionActions = (CashtransactionData, isEditMode = fals
     try {
       console.log("Saving transaction:", CashtransactionData);
       const convertedData= convertStringNumbersToNumbers(CashtransactionData);
-      // Validation
-      // if (!cashtransactionData.partyName.trim()) {
-      //   alert("Please enter party name");
-      //   return false;
-      // }
-
-      // if (cashtransactionData.items.length === 0) {
-      //   alert("Please add at least one item");
-      //   return false;
-      // }
 
       // Choose mutation based on mode
       if (isEditMode) {
