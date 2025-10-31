@@ -89,8 +89,14 @@ export const settleOutstandingFIFO = async ({
     account: accountId,
     outstandingType,
     status: { $ne: "paid" },
-    closingBalanceAmount: { $gt: 0 }
+    // closingBalanceAmount: { $gt: 0 }
   };
+
+  if(normalizedType === "receipt") {
+    query.closingBalanceAmount = { $gt: 0 };
+  }else if(normalizedType === "payment") {
+    query.closingBalanceAmount = { $lt: 0 };
+  }
 
   const unpaidOutstandings = await OutstandingModel.find(query)
     .sort({ dueDate: 1, transactionDate: 1 })
@@ -130,17 +136,31 @@ export const settleOutstandingFIFO = async ({
       break;
     }
 
-    const toSettle = Math.min(outstanding.closingBalanceAmount, remainingAmount);
-    const previousBalance = outstanding.closingBalanceAmount;
+    // Determine amount to settle based on outstanding type
+  const toSettle = normalizedType === "payment"
+    // For payments, closingBalanceAmount is negative, so use absolute value for correct settlement calculation
+    ? Math.min(Math.abs(outstanding.closingBalanceAmount), remainingAmount)
+    // For receipts, closingBalanceAmount is positive and settled normally
+    : Math.min(outstanding.closingBalanceAmount, remainingAmount);
 
-    console.log(`\n🔧 Settling outstanding ${outstanding.transactionNumber}:`, {
-      closingBalance: outstanding.closingBalanceAmount,
-      remainingAmount,
-      toSettle
-    });
+  const previousBalance = outstanding.closingBalanceAmount;
 
-    outstanding.paidAmount += toSettle;
-    outstanding.closingBalanceAmount -= toSettle;
+  console.log(`\n🔧 Settling outstanding ${outstanding.transactionNumber}:`, {
+    closingBalance: outstanding.closingBalanceAmount,
+    remainingAmount,
+    toSettle
+  });
+
+  // Update paidAmount and closingBalanceAmount based on type
+  // For payments, add to closingBalanceAmount (negative), reducing its magnitude
+  // For receipts, subtract from closingBalanceAmount (positive)
+  outstanding.paidAmount += toSettle;
+  if (normalizedType === "payment") {
+    outstanding.closingBalanceAmount += toSettle;  // reduce negative balance
+  } else {
+    outstanding.closingBalanceAmount -= toSettle;  // reduce positive balance
+  }
+
 
     if (outstanding.closingBalanceAmount === 0) {
       outstanding.status = "paid";
@@ -182,12 +202,12 @@ export const settleOutstandingFIFO = async ({
       
       outstanding: outstanding._id,
       outstandingNumber: outstanding.transactionNumber,
-      outstandingDate: outstanding.transactionDate,
+      outstandingDate: outstanding.transactionDate, 
       outstandingType: outstanding.outstandingType,
       
-      previousOutstandingAmount: previousBalance,
+      previousOutstandingAmount: Math.abs(previousBalance || 0),
       settledAmount: toSettle,
-      remainingOutstandingAmount: outstanding.closingBalanceAmount,
+      remainingOutstandingAmount: Math.abs(outstanding.closingBalanceAmount || 0),
       
       settlementDate: transactionDate || new Date(),
       settlementStatus: "active",

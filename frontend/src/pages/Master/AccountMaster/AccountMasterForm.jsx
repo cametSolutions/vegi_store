@@ -356,7 +356,7 @@ const AccountMasterForm = ({
           </select>
         </div>
 
-        <div className="flex space-x-4 mt-6">
+        <div className="flex space-x-4 mt-6 ">
           <button
             disabled={mutation.isLoading}
             type="submit"

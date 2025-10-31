@@ -26,7 +26,7 @@ const OutstandingSchema = new mongoose.Schema(
     accountType: {
       type: String,
       enum: {
-        values: ["customer", "supplier"],
+        values: ["customer", "supplier","bank","cash"],
         message: "Account type must be either customer or supplier",
       },
       required: [true, "Account type is required"],
@@ -89,7 +89,6 @@ const OutstandingSchema = new mongoose.Schema(
     closingBalanceAmount: {
       type: Number,
       required: [true, "Balance amount is required"],
-      min: [0, "Balance amount cannot be negative"],
     },
     dueDate: {
       type: Date,

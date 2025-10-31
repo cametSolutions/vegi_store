@@ -244,10 +244,14 @@ AccountMasterSchema.statics.searchAccounts = async function (
 
   const matchConditions = {
     company: companyObjId,
-    accountType,
+
     branches: branchObjId,
     $or: [{ accountName: searchRegex }, { accountCode: searchRegex }],
   };
+
+  if(accountType){
+    matchConditions.accountType = accountType;
+  }
 
   //// here we are going to find the outstanding details of party also
   const pipeline = [{ $match: matchConditions }];

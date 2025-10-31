@@ -103,11 +103,11 @@ export const searchAccounts = async (req, res) => {
       withOutstanding, // boolean: true/false
     } = req.query;
 
-    if (!searchTerm || !companyId || !branchId || !accountType) {
+    if (!searchTerm || !companyId || !branchId ) {
       return res.status(400).json({
         success: false,
         message:
-          "searchTerm, companyId, branchId, and accountType are required",
+          "searchTerm, companyId, branchId are required",
       });
     }
 
