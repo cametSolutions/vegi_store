@@ -107,7 +107,9 @@ const TransactionAccountSelector = ({
 
   // Query for "Cash" account when "cash" is selected
   const { data: cashAccountResponse } = useQuery({
-    ...accountMasterQueries.search("Cash", company, branch, "cash", 1),
+    ...accountMasterQueries.search("Cash", company, branch, "cash", 1,{
+        withOutstanding: true, // or false, or omit
+      }),
     enabled: !!(company && accountType === "cash" && !account),
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
