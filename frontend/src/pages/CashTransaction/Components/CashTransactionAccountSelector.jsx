@@ -63,7 +63,7 @@ const CashTransactionAccountSelector = ({
       debouncedSearchTerm,
       company,
       branch,
-      "customer",
+      "",
       RESULT_LIMIT,
       {
         withOutstanding: true,
@@ -90,7 +90,13 @@ const CashTransactionAccountSelector = ({
   useEffect(() => {
     const prevBalance = parseFloat(previousBalanceAmount) || 0;
     const amountValue = parseFloat(amount) || 0;
-    const closing = prevBalance - amountValue;
+ //// if it is payment amountValue will be  considered as negative for calculating closing
+    let  closing;
+    if (transactionType==="payment"){
+           closing = prevBalance + amountValue;
+    }else{
+         closing = prevBalance - amountValue;
+    }
     if (closing !== closingBalanceAmount) {
       updateTransactionField("closingBalanceAmount", closing);
     }

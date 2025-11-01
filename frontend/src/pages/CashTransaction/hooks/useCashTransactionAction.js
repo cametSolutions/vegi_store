@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cashtransactionMutations } from "../../../hooks/mutations/cashTransaction.mutation";
 import { useSelector } from "react-redux";
 import { convertStringNumbersToNumbers } from "../Utils/CashTransactionUtils";
+import { toast } from "sonner";
 
 export const useCashTransactionActions = (CashtransactionData, isEditMode = false) => {
   const queryClient = useQueryClient();
@@ -19,7 +20,7 @@ export const useCashTransactionActions = (CashtransactionData, isEditMode = fals
 
   const handleSave = useCallback(async () => {
     try {
-      console.log("Saving transaction:", CashtransactionData);
+   
       const convertedData= convertStringNumbersToNumbers(CashtransactionData);
 
       // Choose mutation based on mode

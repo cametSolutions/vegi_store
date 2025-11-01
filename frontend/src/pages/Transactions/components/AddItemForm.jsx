@@ -16,6 +16,7 @@ const AddItemForm = ({
   updateTransactionField,
   addItem,
   clickedItemInTable,
+  transactionType
 }) => {
   const [localItem, setLocalItem] = useState({
     item: null,
@@ -76,8 +77,9 @@ const AddItemForm = ({
 
         // Find the appropriate rate based on priceLevel
         let rate = "";
-        if (foundProduct.priceLevels && foundProduct.priceLevels.length > 0) {
-          if (priceLevel) {
+        if (foundProduct.priceLevels && foundProduct.priceLevels.length > 0 ) {
+
+          if (priceLevel && transactionType==="sale") {
             const priceLevelData = foundProduct.priceLevels.find(
               (pl) =>
                 pl.priceLevel._id === priceLevel ||
@@ -88,6 +90,9 @@ const AddItemForm = ({
             rate = 0;
           }
         }
+
+        console.log("rate", rate);
+        
 
         // Find current stock for the branch
         let currentStock = "";
@@ -143,7 +148,7 @@ const AddItemForm = ({
     if (!foundProduct || !foundProduct.priceLevels) return;
 
     let newRate = "";
-    if (priceLevel) {
+    if (priceLevel && transactionType==="sale") {
       const priceLevelData = foundProduct.priceLevels.find(
         (pl) =>
           pl.priceLevel._id === priceLevel ||

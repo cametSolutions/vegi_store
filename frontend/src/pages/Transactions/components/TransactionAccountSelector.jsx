@@ -133,6 +133,7 @@ const TransactionAccountSelector = ({
   const accounts = apiResponse?.data || [];
   const totalCount = apiResponse?.totalCount || 0;
   const hasMore = apiResponse?.hasMore || false;
+  const isPriceLevelNeeded=transactionType === "sale" 
 
   // Extract price levels from API response and filter by branch
   const allPriceLevels = priceLevelsResponse?.data || [];
@@ -263,7 +264,7 @@ const TransactionAccountSelector = ({
       let selectedPriceLevel = priceLevel;
       let selectedPriceLevelName = priceLevelName;
 
-      if (account.priceLevel) {
+      if (account.priceLevel && isPriceLevelNeeded) {
         const matchingLevel = priceLevels.find(
           (level) => level._id === account.priceLevel
         );
@@ -573,8 +574,9 @@ const TransactionAccountSelector = ({
         </label>
         <select
           value={priceLevel || ""}
+          disabled={!isPriceLevelNeeded}
           onChange={handlePriceLevelChange}
-          className={`w-full px-2 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500
+          className={` ${!isPriceLevelNeeded ? "bg-slate-200" : ""}  w-full px-2 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500
           
           `}
         >
