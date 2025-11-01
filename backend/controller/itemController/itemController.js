@@ -1,6 +1,7 @@
+import { isMasterReferenced } from "../../helpers/MasterHelpers/masterHelper.js";
 import AccountMasterModel from "../../model/masters/AccountMasterModel.js";
 import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
-import PriceLevelModel from "../../model/masters/PricelevelModel.js";
+import {SalesModel,PurchaseModel} from "../../model/TransactionModel.js";
 
 export const create = async (req, res) => {
   try {
@@ -128,13 +129,31 @@ export const update = async (req, res) => {
 
 export const deleteItem = async (req, res) => {
   try {
-    const item = await ItemMasterModel.findByIdAndDelete(req.params.id);
+    const itemId = req.params.id;
+
+    // Define which collections and fields to check for references
+    const referencesToCheck = [
+      { model: SalesModel, field: "items.item" },
+      { model: PurchaseModel, field: "items.item" },
+      // Add other transaction models and fields here
+    ];
+
+    const inUse = await isMasterReferenced(referencesToCheck, itemId);
+    if (inUse) {
+      return res.status(400).json({
+        success: false,
+        message: "Item is used in transactions and cannot be deleted.",
+      });
+    }
+
+    const item = await ItemMasterModel.findByIdAndDelete(itemId);
     if (!item) {
       return res.status(404).json({
         success: false,
         message: "Item not found",
       });
     }
+
     res.status(200).json({
       success: true,
       message: "Item deleted successfully",
