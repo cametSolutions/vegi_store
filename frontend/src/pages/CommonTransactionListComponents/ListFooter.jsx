@@ -14,11 +14,11 @@ const ListFooter = ({ totalAmount}) => {
   return (
     <div className="px-4 py-3 border-t bg-gray-50">
       <div className="flex items-center justify-between text-[9px] text-gray-600 flex-wrap gap-2">
-        <FooterSummary
+        {/* <FooterSummary
           totalAmount={totalAmount}
           // totalPaid={totalPaid}
           // totalOutstanding={totalOutstanding}
-        />
+        /> */}
         <div className="text-[9px] text-gray-500">
           Last updated: {new Date().toLocaleTimeString()}
         </div>
