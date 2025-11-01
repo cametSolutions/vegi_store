@@ -86,7 +86,7 @@ const CashTransactionListTable = ({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`${column.width} text-white border-b px-3 py-2 text-[9px] font-medium uppercase`}
+                  className={`${column.width} text-white border-b px-3 pr-0 py-2 text-[9.5px] font-medium uppercase`}
                 >
                   <div
                     className={`flex items-center ${
@@ -124,7 +124,7 @@ const CashTransactionListTable = ({
           }
           endMessage={
             data.length > 10 && (
-              <div className="text-center py-4 font-semibold  text-gray-400 text-[9px]">
+              <div className="text-center py-4 font-semibold  text-gray-400 text-[10px]">
                 No more transactions to load
               </div>
             )
@@ -138,32 +138,32 @@ const CashTransactionListTable = ({
                   className="bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
                 >
                   <td
-                    className={`${columns[0].width} px-3 py-2 text-[8.5px] font-medium text-gray-600`}
+                    className={`${columns[0].width} px-3 py-2 text-[9px] font-medium text-gray-600`}
                   >
                     {transaction.billNo}
                   </td>
                   <td
-                    className={`${columns[1].width} px-3 py-2 text-[8.5px] text-gray-600 text-center`}
+                    className={`${columns[1].width} px-3 py-2 text-[9px] text-gray-600 text-center`}
                   >
                     {formatDate(transaction.transactionDate)}
                   </td>
                   <td
-                    className={`${columns[2].width} px-3 py-2 text-[8.5px] font-medium text-gray-900 truncate text-center`}
+                    className={`${columns[2].width} px-3 py-2 text-[9px] font-medium text-gray-900 truncate text-center`}
                   >
                     {transaction.accountName}
                   </td>
                   <td
-                    className={`${columns[3].width} px-3 py-2 text-[8.5px] text-gray-900 text-right font-mono`}
+                    className={`${columns[3].width} px-3 py-2 text-[9px] text-gray-900 text-right font-mono`}
                   >
                     ₹{formatINR(transaction.previousBalanceAmount)}
                   </td>
                   <td
-                    className={`${columns[4].width} px-3 py-2 text-[8.5px] text-gray-900 text-right font-mono`}
+                    className={`${columns[4].width} px-3 py-2 text-[9px] text-gray-900 text-right font-mono`}
                   >
                     ₹{formatINR(transaction.amount)}
                   </td>
                   <td
-                    className={`${columns[5].width} px-3 py-2 text-right text-[8.5px] font-mono`}
+                    className={`${columns[5].width} px-3 py-2 text-right text-[9px] font-mono`}
                   >
                     <span
                       className={`${

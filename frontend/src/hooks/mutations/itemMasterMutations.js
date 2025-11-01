@@ -59,7 +59,7 @@ export const itemMasterMutations = {
 
     onError: (error) => {
       console.error("Item deletion failed:", error);
-      toast.error(error.message || "Error deleting item. Please try again.");
+      toast.error(error.response.data.message || "Error deleting item. Please try again.");
     },
   }),
 

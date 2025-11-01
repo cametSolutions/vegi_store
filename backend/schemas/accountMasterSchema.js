@@ -103,6 +103,7 @@ AccountMasterSchema.index({ company: 1, branch: 1 });
 AccountMasterSchema.index({ company: 1, accountType: 1, status: 1 });
 AccountMasterSchema.index({ phoneNo: 1 });
 AccountMasterSchema.index({ email: 1 });
+AccountMasterSchema.index({ priceLevel: 1 });
 AccountMasterSchema.index({ accountName: "text" });
 // Case-insensitive unique index: itemCode must be unique per company (case-insensitive)
 AccountMasterSchema.index(
