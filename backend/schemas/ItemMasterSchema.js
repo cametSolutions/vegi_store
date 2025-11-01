@@ -95,7 +95,6 @@ const ItemMasterSchema = new mongoose.Schema(
 
 // ==================== INDEXES ====================
 ItemMasterSchema.index({ company: 1, status: 1 });
-ItemMasterSchema.index({ itemCode: 1 }, { unique: true });
 ItemMasterSchema.index({ category: 1, status: 1 });
 ItemMasterSchema.index({ "stock.branch": 1 });
 ItemMasterSchema.index({ company: 1, "stock.branch": 1 });

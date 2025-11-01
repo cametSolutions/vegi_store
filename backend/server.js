@@ -22,6 +22,7 @@ import acccountmasterRoute from "./routes/accountmaster/accountMasterRoute.js";
 import itemRoute from "./routes/itemmaster/itemRoute.js";
 import PaymentRoutes from "./routes/FundTransactionRoutes/PaymentRoutes.js";
 import saleRoutes from "./routes/transactions/saleRoutes.js";
+import devRoutes from "./routes/devRoutes/devRoutes.js";
 
 // ----------------- App Init -----------------
 dotenv.config();
@@ -86,6 +87,7 @@ app.use("/api/transaction/sale", authMiddleware, saleRoutes);
 app.use("/api/transaction/purchase", authMiddleware, saleRoutes);
 app.use("/api/item", authMiddleware, itemRoute);
 app.use("/api/transaction", authMiddleware, PaymentRoutes);
+app.use("/api/dev", authMiddleware, devRoutes);
 
 // ----------------- Production Build Serving -----------------
 if (process.env.NODE_ENV === "production") {
