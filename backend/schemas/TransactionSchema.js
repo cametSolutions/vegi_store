@@ -355,6 +355,7 @@ TransactionSchema.index({
 TransactionSchema.index({ company: 1, paymentStatus: 1 });
 TransactionSchema.index({ transactionDate: -1 });
 TransactionSchema.index({ "items.item": 1 });
+TransactionSchema.index({ priceLevel: 1 });
 TransactionSchema.index({ "items.itemCode": 1 });
 
 export default TransactionSchema;
