@@ -16,7 +16,7 @@ list: (searchTerm = "", companyId, branchId = null, accountType = null, limit = 
   search: (searchTerm, companyId,branchId,accountType,limit=25,filters={}, options = {},) => queryOptions({
     queryKey: [...accountMasterQueries.all(), 'search', searchTerm, companyId,branchId,accountType, limit,filters],
     queryFn: () => accountMasterService.search(searchTerm, companyId,branchId,accountType, limit,filters  ),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 10 * 1000,
     ...options
   }),
 

@@ -86,6 +86,7 @@ export const createEmptyTransaction = () => ({
   totalDue: 0, // netAmount + openingBalance
   paidAmount: 0, // amount paid by customer
   balanceAmount: 0, // totalDue - paidAmount
+  previousBalanceAmount: 0, // for receipt creation
 
   reference: "",
   notes: "",
