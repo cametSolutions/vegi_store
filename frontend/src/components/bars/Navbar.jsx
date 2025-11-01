@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import ProfileDropdown from "../dropDowns/ProfileDropdown";
 import { Link, useNavigate } from "react-router-dom";
+import logoImage from "../../../public/images/logoImage.png";
 
 const Navbar = () => {
   const menuItems = [
@@ -97,8 +98,9 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
-            <Leaf className="text-emerald-500" size={24} />
-            <span className="text-lg font-bold">VeggieShop</span>
+            {/* <Leaf className="text-emerald-500" size={24} /> */}
+            <img src={logoImage} alt="Logo" className="w-12 h-12" />
+            {/* <span className="text-lg font-bold">VeggieShop</span> */}
           </Link>
 
           {/* Navigation Links */}

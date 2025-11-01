@@ -61,7 +61,7 @@ const TransactionSummary = ({
 
   return (
     <div className="bg-white shadow-sm p-1">
-      <div className="grid grid-cols-5 gap-4 text-xs">
+      <div className="grid grid-cols-5 gap-4 text-sm">
         {/* Total */}
         <div className="flex items-center justify-between">
           <span className="text-slate-600">Total:</span>
@@ -69,15 +69,15 @@ const TransactionSummary = ({
         </div>
 
         {/* Discount */}
-        <div className="flex items-center justify-between">
-          <span className="text-slate-600">Discount:</span>
+        <div className="flex items-center justify-between gap-2 ">
+          <span className="text-slate-600">Disc:</span>
           <NumericFormat
             allowNegative={false}
             value={localDiscount}
             onValueChange={(values) => {
               setLocalDiscount(values.value);
             }}
-            className="w-22 px-1 py-0.5 border border-slate-300 rounded-xs text-xs "
+            className="w-22 px-1 py-0.5 border border-slate-300 rounded-xs text-xs  "
             placeholder="0"
             thousandSeparator=","
             decimalScale={2}
@@ -85,7 +85,7 @@ const TransactionSummary = ({
         </div>
 
         {/* Net */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 ">
           <span className="text-slate-600">Net:</span>
           <NumericFormat
             value={netAmount}
@@ -97,7 +97,7 @@ const TransactionSummary = ({
         </div>
 
         {/* Paid */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <span className="text-slate-600">Paid:</span>
           <NumericFormat
             disabled={isPaymentDisabled}
@@ -116,7 +116,7 @@ const TransactionSummary = ({
         </div>
 
         {/* Balance */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <span className="text-slate-600">Balance:</span>
           <NumericFormat
             value={balanceAmount.toFixed(2)}
