@@ -20,15 +20,19 @@ export const useTransactionActions = (transactionData, isEditMode = false) => {
 
   const handleSave = useCallback(async () => {
     try {
-      console.log("Saving transaction:", transactionData);
+
 
       if (transactionData.transactionType == "") {
         toast.error("Having some issue with transaction type");
         return false;
       }
 
+
       const convertedTransactionData =
         convertStringNumbersToNumbers(transactionData);
+
+      /// while creating the transaction ,if use added the paid amount we are creating receipt automatically ,so for receipt we need to attach previousBalanceAmount
+
 
       // Choose mutation based on mode
       if (isEditMode) {

@@ -100,8 +100,8 @@ const TransactionAccountSelector = ({
       }
     ),
     enabled: isSearchEnabled,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     placeholderData: { success: false, count: 0, data: [] },
   });
 
@@ -279,6 +279,7 @@ const TransactionAccountSelector = ({
         accountName: account?.accountName,
         account: account?._id,
         openingBalance: account?.outstandingNet || 0,
+        previousBalanceAmount: account?.outstandingDr || 0,
         netAmount: 0,
         email: account?.email,
         phone: account?.phoneNo,
