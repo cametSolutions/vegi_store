@@ -93,7 +93,7 @@ const TransactionSchema = new mongoose.Schema(
     },
     transactionNumber: {
       type: String,
-      unique: true,
+ 
       required: [true, "Transaction number is required"],
       default: function () {
         const prefix = this.transactionType?.toUpperCase().slice(0, 3) || "TXN";

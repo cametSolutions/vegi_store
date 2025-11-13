@@ -20,7 +20,7 @@ export const FundTransactionSchema = new mongoose.Schema(
     },
     transactionNumber: {
       type: String,
-      unique: true,
+
       required: true,
       default: function () {
         // 'this' will have __t field which is the discriminator value

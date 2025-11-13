@@ -89,7 +89,7 @@ export const settleOutstandingFIFO = async ({
     account: accountId,
     outstandingType,
     status: { $ne: "paid" },
-    closingBalanceAmount: { $gt: 0 }
+    // closingBalanceAmount: { $gt: 0 }
   };
 
   const unpaidOutstandings = await OutstandingModel.find(query)
