@@ -141,7 +141,7 @@ export const createFundTransaction = async (data, session = null) => {
 
     // Step 10: Create party account ledger
     const partyLedgerSide =
-      transactionType.toLowerCase() === "receipt" ? "debit" : "credit";
+      transactionType.toLowerCase() === "receipt" ? "credit" : "debit";
 
     const partyLedger = await createAccountLedger(
       {

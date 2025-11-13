@@ -63,7 +63,7 @@ const CashTransactionAccountSelector = ({
       debouncedSearchTerm,
       company,
       branch,
-      "customer",
+      "",
       RESULT_LIMIT,
       {
         withOutstanding: true,
@@ -90,7 +90,13 @@ const CashTransactionAccountSelector = ({
   useEffect(() => {
     const prevBalance = parseFloat(previousBalanceAmount) || 0;
     const amountValue = parseFloat(amount) || 0;
-    const closing = prevBalance - amountValue;
+ //// if it is payment amountValue will be  considered as negative for calculating closing
+    let  closing;
+    if (transactionType==="payment"){
+           closing = prevBalance + amountValue;
+    }else{
+         closing = prevBalance - amountValue;
+    }
     if (closing !== closingBalanceAmount) {
       updateTransactionField("closingBalanceAmount", closing);
     }
@@ -258,7 +264,7 @@ const CashTransactionAccountSelector = ({
   const renderDropdownContent = () => {
     if (isLoading) {
       return (
-        <div className="px-3 py-2 text-[9px] text-slate-500 text-center">
+        <div className="px-3 py-2 text-[11px] text-slate-500 text-center">
           Searching...
         </div>
       );
@@ -266,7 +272,7 @@ const CashTransactionAccountSelector = ({
 
     if (accounts.length === 0) {
       return (
-        <div className="text-[9px] text-slate-500 text-center">
+        <div className="text-[11px] text-slate-500 text-center">
           <p className="p-2">No accounts found</p>
           <button
             onClick={() => setShowDropdown(false)}
@@ -293,7 +299,7 @@ const CashTransactionAccountSelector = ({
           <div
             key={account._id}
             onClick={() => handleSelectAccount(account)}
-            className="px-3 py-2 text-[9px] hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-b-0"
+            className="px-3 py-2 text-[11px] hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-b-0"
           >
             <div className="font-medium text-slate-700">
               {truncate(account.accountName, TRUNCATE_LENGTH)}
@@ -319,7 +325,7 @@ const CashTransactionAccountSelector = ({
       <div className="p-2 space-y-2">
         {/* From Account with Search */}
         <div className="flex items-center gap-2">
-          <label className="w-28 text-gray-700 text-[9px] font-medium">
+          <label className="w-28 text-gray-700 text-[11px] font-medium">
             From Account
           </label>
           <div className="flex-1 relative">
@@ -331,7 +337,7 @@ const CashTransactionAccountSelector = ({
               onChange={handleInputChange}
               onFocus={handleInputFocus}
               placeholder="Search account name"
-              className="w-full px-2 py-1.5 pr-7 border border-gray-300  text-[9px] bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-2 py-1.5 pr-7 border border-gray-300  text-[11px] bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
               autoComplete="off"
             />
             {renderInputIcon()}
@@ -357,14 +363,14 @@ const CashTransactionAccountSelector = ({
 
         {/* Customer Name Display */}
         <div className="flex items-center gap-2">
-          <label className="w-28 text-gray-700 text-[9px] font-medium">
+          <label className="w-28 text-gray-700 text-[11px] font-medium">
             Customer Name
           </label>
           <input
             type="text"
             value={accountName}
             readOnly
-            className="flex-1 px-2 py-1.5 border border-gray-300  text-[9px] bg-slate-200 text-gray-900 focus:outline-none"
+            className="flex-1 px-2 py-1.5 border border-gray-300  text-[11px] bg-slate-200 text-gray-900 focus:outline-none"
           />
         </div>
 
@@ -372,7 +378,7 @@ const CashTransactionAccountSelector = ({
         <div className="flex items-end gap-2">
           <div className="flex-1 grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-gray-700 text-[9px] font-medium mb-1">
+              <label className="block text-gray-700 text-[11px] font-medium mb-1">
                 Previous Balance Amount
               </label>
               <NumericFormat
@@ -381,11 +387,11 @@ const CashTransactionAccountSelector = ({
                 thousandSeparator=","
                 value={previousBalanceAmount}
                 disabled
-                className="w-full px-2 py-1.5 border border-gray-300  text-[9px] bg-slate-200 text-gray-900 focus:outline-none"
+                className="w-full px-2 py-1.5 border border-gray-300  text-[11px] bg-slate-200 text-gray-900 focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-gray-700 text-[9px] font-medium mb-1">
+              <label className="block text-gray-700 text-[11px] font-medium mb-1">
                 Amount
               </label>
               <NumericFormat
@@ -396,12 +402,12 @@ const CashTransactionAccountSelector = ({
                 onValueChange={(values) => {
                   updateTransactionField("amount", values.floatValue || 0);
                 }}
-                className="w-full px-2 py-1.5 border border-gray-300  text-[9px] bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-2 py-1.5 border border-gray-300  text-[11px] bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-gray-700 text-[9px] font-medium mb-1">
+              <label className="block text-gray-700 text-[11px] font-medium mb-1">
                 Closing Balance Amount
               </label>
               <NumericFormat
@@ -410,7 +416,7 @@ const CashTransactionAccountSelector = ({
                 thousandSeparator=","
                 value={closingBalanceAmount}
                 disabled
-                className="w-full px-2 py-1.5 border border-gray-300  text-[9px] bg-slate-200 text-gray-900 focus:outline-none"
+                className="w-full px-2 py-1.5 border border-gray-300  text-[11px] bg-slate-200 text-gray-900 focus:outline-none"
               />
             </div>
           </div>
@@ -418,7 +424,7 @@ const CashTransactionAccountSelector = ({
 
         {/* Narration */}
         <div className="flex gap-2">
-          <label className="w-28 text-gray-700 text-[9px] font-medium pt-1">
+          <label className="w-28 text-gray-700 text-[11px] font-medium pt-1">
             Narration
           </label>
           <textarea
@@ -429,7 +435,7 @@ const CashTransactionAccountSelector = ({
             }
             rows="1"
             placeholder="Enter narration..."
-            className="flex-1 px-2 py-1.5 border border-gray-300  text-[9px] bg-white text-gray-900 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 px-2 py-1.5 border border-gray-300  text-[11px] bg-white text-gray-900 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
       </div>

@@ -1,6 +1,7 @@
 import React,{ useEffect } from "react";
 import { Save, Eye, Trash2, X, FileText } from "lucide-react";
 import { useCashTransactionActions } from "../hooks/useCashTransactionAction";
+import { toast } from "sonner";
 
 const CashTransactionAction = ({
   CashtransactionData,
@@ -21,14 +22,16 @@ const CashTransactionAction = ({
     }
   }, [isLoading, onLoadingChange]);
  const handleSaveClick = async () => {
-    // Validation
-    if (!CashtransactionData.accountName?.trim() && !CashtransactionData?.account) {
-      toast.error("Add a customer");
-      return false;
-    }
 
-    if (CashtransactionData?.items?.length === 0) {
-      toast.error("Please add at least one item");
+     const { paymentMode,chequeNumber,accountName,account } = CashtransactionData;
+        if(paymentMode==="cheque" && chequeNumber.trim()===""){
+          toast.error("Enter cheque number");
+          return
+        }
+        
+    // Validation
+    if (!accountName?.trim() && !account) {
+      toast.error("Add a customer");
       return false;
     }
     await handleSave(); // save using your hook

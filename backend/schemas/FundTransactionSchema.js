@@ -95,7 +95,7 @@ export const FundTransactionSchema = new mongoose.Schema(
 );
 
 // Indexes
-FundTransactionSchema.index({ transactionNumber: 1 });
+FundTransactionSchema.index({ company: 1, transactionNumber: 1 });
 FundTransactionSchema.index({ date: -1 });
 FundTransactionSchema.index({ account: 1, transactionType: 1 });
 FundTransactionSchema.index({ company: 1, branch: 1 });

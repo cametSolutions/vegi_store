@@ -42,7 +42,7 @@ const TransactionHeader = ({
         <div className="text-xs text-slate-500 flex items-center gap-4">
           {/* Date Section */}
           <div className="flex items-center gap-2">
-            <label className="flex items-center text-[9px] font-medium text-slate-700">
+            <label className="flex items-center text-[11px] font-medium text-slate-700">
               <Calendar className="inline w-3 h-3 mr-1" />
               Date
             </label>

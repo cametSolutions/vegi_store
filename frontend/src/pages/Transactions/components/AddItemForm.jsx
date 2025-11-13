@@ -16,6 +16,7 @@ const AddItemForm = ({
   updateTransactionField,
   addItem,
   clickedItemInTable,
+  transactionType
 }) => {
   const [localItem, setLocalItem] = useState({
     item: null,
@@ -76,8 +77,9 @@ const AddItemForm = ({
 
         // Find the appropriate rate based on priceLevel
         let rate = "";
-        if (foundProduct.priceLevels && foundProduct.priceLevels.length > 0) {
-          if (priceLevel) {
+        if (foundProduct.priceLevels && foundProduct.priceLevels.length > 0 ) {
+
+          if (priceLevel && transactionType==="sale") {
             const priceLevelData = foundProduct.priceLevels.find(
               (pl) =>
                 pl.priceLevel._id === priceLevel ||
@@ -88,6 +90,9 @@ const AddItemForm = ({
             rate = 0;
           }
         }
+
+        console.log("rate", rate);
+        
 
         // Find current stock for the branch
         let currentStock = "";
@@ -143,7 +148,7 @@ const AddItemForm = ({
     if (!foundProduct || !foundProduct.priceLevels) return;
 
     let newRate = "";
-    if (priceLevel) {
+    if (priceLevel && transactionType==="sale") {
       const priceLevelData = foundProduct.priceLevels.find(
         (pl) =>
           pl.priceLevel._id === priceLevel ||
@@ -286,7 +291,7 @@ const AddItemForm = ({
       <div className="grid grid-cols-6 gap-2 items-end">
         {/* CODE INPUT */}
         <div className="relative">
-          <label className="block text-[9px] font-medium text-slate-700 mb-1">
+          <label className="block text-[11px] font-medium text-slate-700 mb-1">
             Code
           </label>
           <div className="relative">
@@ -296,7 +301,7 @@ const AddItemForm = ({
               value={searchTerm}
               onChange={handleCodeChange}
               onKeyDown={handleCodeKeyDown}
-              className="w-full px-1.5 py-1 pr-6 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
+              className="w-full px-1.5 py-1 pr-6 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500"
               placeholder="V001"
             />
             {isFetching && (
@@ -307,10 +312,10 @@ const AddItemForm = ({
           {/* Dropdown for "Not Found" */}
           {showDropdown && !isFetching && (
             <div className="absolute z-50 mt-1 w-full bg-white border border-slate-300 rounded-xs shadow-lg">
-              <div className="px-2 py-1.5 text-[9px] text-red-600 border-b border-slate-200">
+              <div className="px-2 py-1.5 text-[11px] text-red-600 border-b border-slate-200">
                 Product not found
               </div>
-              <div className="px-2 py-1.5 text-[9px] text-slate-600">
+              <div className="px-2 py-1.5 text-[11px] text-slate-600">
                 <span className="font-medium">"{searchTerm}"</span> does not
                 exist in inventory
               </div>
@@ -320,7 +325,7 @@ const AddItemForm = ({
 
         {/* NAME */}
         <div>
-          <label className="block text-[9px] font-medium text-slate-700 mb-1">
+          <label className="block text-[11px] font-medium text-slate-700 mb-1">
             Name
           </label>
           <input
@@ -328,14 +333,14 @@ const AddItemForm = ({
             type="text"
             disabled
             value={localItem.itemName}
-            className="w-full px-1.5 py-1 border border-slate-300 bg-slate-200  text-[9px] focus:ring-1 focus:ring-blue-500"
+            className="w-full px-1.5 py-1 border border-slate-300 bg-slate-200  text-[11px] focus:ring-1 focus:ring-blue-500"
             placeholder="Name"
           />
         </div>
 
         {/* UNIT */}
         <div>
-          <label className="block text-[9px] font-medium text-slate-700 mb-1">
+          <label className="block text-[11px] font-medium text-slate-700 mb-1">
             Unit
           </label>
           <select
@@ -345,7 +350,7 @@ const AddItemForm = ({
               setLocalItem({ ...localItem, unit: e.target.value })
             }
             onKeyDown={handleUnitKeyDown}
-            className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
+            className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500"
           >
             {units.map((unit) => (
               <option key={unit?.value} value={unit?.value}>
@@ -357,7 +362,7 @@ const AddItemForm = ({
 
         {/* QUANTITY INPUT - Allows empty values, no default zero */}
         <div>
-          <label className="block text-[9px] font-medium text-slate-700 mb-1">
+          <label className="block text-[11px] font-medium text-slate-700 mb-1">
             Qty
           </label>
           <NumericFormat
@@ -374,14 +379,14 @@ const AddItemForm = ({
                 quantity: value,
               });
             }}
-            className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
+            className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500"
             placeholder="0"
           />
         </div>
 
         {/* RATE INPUT - Allows empty values and editing */}
         <div>
-          <label className="block text-[9px] font-medium text-slate-700 mb-1">
+          <label className="block text-[11px] font-medium text-slate-700 mb-1">
             Rate
           </label>
           <NumericFormat
@@ -398,7 +403,7 @@ const AddItemForm = ({
                 rate: value,
               });
             }}
-            className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[9px] focus:ring-1 focus:ring-blue-500"
+            className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500"
             placeholder="₹0.00"
           />
         </div>

@@ -1,5 +1,9 @@
 import AccountMasterModel from "../../model/masters/AccountMasterModel.js";
+import OutstandingModel from "../../model/OutstandingModel.js";
+import {PaymentModel,ReceiptModel} from "../../model/FundTransactionMode.js";
+import {PurchaseModel,SalesModel} from "../../model/TransactionModel.js";
 import mongoose from "mongoose";
+import { isMasterReferenced } from "../../helpers/MasterHelpers/masterHelper.js";
 
 export const createAccountMaster = async (req, res) => {
   const session = await mongoose.startSession();
@@ -78,15 +82,49 @@ export const updateAccountMaster = async (req, res) => {
   }
 };
 
-// (Optional) For delete, consider deleting opening outstanding if needed
-
 export const deleteAccountMaster = async (req, res) => {
+  const session = await mongoose.startSession();
   try {
+    session.startTransaction();
     const accountId = req.params.id;
-    const result = await AccountMasterModel.findByIdAndDelete(accountId);
-    if (!result) return res.status(404).json({ message: "Account not found" });
+
+    // Collections and fields to check
+    const referencesToCheck = [
+      { model: ReceiptModel, field: "account" },
+      { model: PaymentModel, field: "account" },
+      { model: PurchaseModel, field: "account" },
+      { model: SalesModel, field: "account" },
+      // More if needed
+    ];
+
+    const inUse = await isMasterReferenced(referencesToCheck, accountId);
+    if (inUse) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({
+        message: "Account is used in transactions and cannot be deleted.",
+      });
+    }
+
+    const result = await AccountMasterModel.findByIdAndDelete(accountId, { session });
+    if (!result) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ message: "Account not found" });
+    }
+
+    // Delete opening outstanding
+    await OutstandingModel.findOneAndDelete(
+      { account: accountId, transactionType: "opening_balance" },
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
     res.json({ message: "Deleted successfully" });
   } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
     res.status(500).json({ message: err.message });
   }
 };
@@ -103,11 +141,11 @@ export const searchAccounts = async (req, res) => {
       withOutstanding, // boolean: true/false
     } = req.query;
 
-    if (!searchTerm || !companyId || !branchId || !accountType) {
+    if (!searchTerm || !companyId || !branchId ) {
       return res.status(400).json({
         success: false,
         message:
-          "searchTerm, companyId, branchId, and accountType are required",
+          "searchTerm, companyId, branchId are required",
       });
     }
 

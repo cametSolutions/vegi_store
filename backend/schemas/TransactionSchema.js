@@ -93,7 +93,6 @@ const TransactionSchema = new mongoose.Schema(
     },
     transactionNumber: {
       type: String,
- 
       required: [true, "Transaction number is required"],
       default: function () {
         const prefix = this.transactionType?.toUpperCase().slice(0, 3) || "TXN";
@@ -344,7 +343,7 @@ TransactionSchema.index({
   transactionType: 1,
   transactionDate: -1,
 });
-TransactionSchema.index({ transactionNumber: 1 }, { unique: true });
+TransactionSchema.index({company: 1, transactionNumber: 1 }, { unique: true });
 TransactionSchema.index({ account: 1, transactionDate: -1 });
 TransactionSchema.index({
   company: 1,
@@ -355,6 +354,7 @@ TransactionSchema.index({
 TransactionSchema.index({ company: 1, paymentStatus: 1 });
 TransactionSchema.index({ transactionDate: -1 });
 TransactionSchema.index({ "items.item": 1 });
+TransactionSchema.index({ priceLevel: 1 });
 TransactionSchema.index({ "items.itemCode": 1 });
 
 export default TransactionSchema;

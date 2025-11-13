@@ -118,6 +118,8 @@ const CreateTransaction = () => {
               updateTransactionField={updateTransactionField}
               addItem={addItem}
               clickedItemInTable={clickedItemInTable}
+              transactionType={transactionData?.transactionType}
+              
             />
           </div>
 

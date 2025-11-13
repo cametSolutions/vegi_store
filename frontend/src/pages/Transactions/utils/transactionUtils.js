@@ -86,6 +86,7 @@ export const createEmptyTransaction = () => ({
   totalDue: 0, // netAmount + openingBalance
   paidAmount: 0, // amount paid by customer
   balanceAmount: 0, // totalDue - paidAmount
+  previousBalanceAmount: 0, // for receipt creation
 
   reference: "",
   notes: "",
@@ -124,10 +125,22 @@ export const calculateTransactionTotals = (transaction) => {
   const netAmount =
     parseFloat(totalAmountAfterTax) - parseFloat(discountAmount);
 
+    console.log( parseFloat(netAmount));
+    console.log( parseFloat(transaction?.openingBalance || 0));
+    
+
   /// total due
+  /// if transaction type is purchase or credit note the net amount is considered as -ve value
+  /// so we need to reflect that in showing total due
+
+  const multiplier =
+    transaction.transactionType === "sale" ||
+    transaction.transactionType === "debit_note"
+      ? 1
+      : -1;
 
   const totalDue =
-    parseFloat(netAmount) + parseFloat(transaction?.openingBalance || 0);
+    parseFloat(netAmount*multiplier) + parseFloat(transaction?.openingBalance || 0);
 
   // 6️⃣ Balance Amount (NOT closing balance - just balance)
   const balanceAmount =

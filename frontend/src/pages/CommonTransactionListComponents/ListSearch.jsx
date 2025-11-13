@@ -1,6 +1,6 @@
 import { Search, X } from "lucide-react";
 
-const ListSearch = ({ searchTerm, onSearchChange, placeholder, textSize = 9 }) => {
+const ListSearch = ({ searchTerm, onSearchChange, placeholder, textSize = 11 }) => {
   return (
     <div className="relative">
       {/* Search Icon (Left) */}

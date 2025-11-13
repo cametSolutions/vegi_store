@@ -103,6 +103,7 @@ AccountMasterSchema.index({ company: 1, branch: 1 });
 AccountMasterSchema.index({ company: 1, accountType: 1, status: 1 });
 AccountMasterSchema.index({ phoneNo: 1 });
 AccountMasterSchema.index({ email: 1 });
+AccountMasterSchema.index({ priceLevel: 1 });
 AccountMasterSchema.index({ accountName: "text" });
 // Case-insensitive unique index: itemCode must be unique per company (case-insensitive)
 AccountMasterSchema.index(
@@ -244,10 +245,14 @@ AccountMasterSchema.statics.searchAccounts = async function (
 
   const matchConditions = {
     company: companyObjId,
-    accountType,
+
     branches: branchObjId,
     $or: [{ accountName: searchRegex }, { accountCode: searchRegex }],
   };
+
+  if(accountType){
+    matchConditions.accountType = accountType;
+  }
 
   //// here we are going to find the outstanding details of party also
   const pipeline = [{ $match: matchConditions }];

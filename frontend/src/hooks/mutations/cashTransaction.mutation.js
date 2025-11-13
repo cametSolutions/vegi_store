@@ -10,12 +10,11 @@ create: (queryClient) => ({
 
   onSuccess: (response, variables) => {
     // The response structure based on your logs shows the transaction is directly in response
-    const transaction = response?.data || response;
+    const transaction = response?.data.transaction 
     
-    const company = transaction?.company?._id || transaction?.company;
-    const branch = transaction?.branch?._id || transaction?.branch;
-    const transactionType = transaction?.__t?.toLowerCase() || variables.transactionType;
-
+    const company =  transaction?.company;
+    const branch =  transaction?.branch;
+    const transactionType = transaction?.transactionType ;
 
     // Invalidate the transaction list query
     queryClient.invalidateQueries({

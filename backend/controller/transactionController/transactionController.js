@@ -84,10 +84,15 @@ export const createTransaction = async (req, res) => {
           ? "receipt"
           : "payment";
 
-      console.log(
-        "Model",
-        transactionTypeToModelName[transactionData.transactionType]
-      );
+
+
+      const {previousBalanceAmount,netAmount,paidAmount} = transactionData;
+
+      console.log("transactionData",transactionData);
+      
+      const totalAmountForReceipt= netAmount+previousBalanceAmount;
+      const closingBalanceAmountForReceipt= totalAmountForReceipt-paidAmount;
+      
 
       receiptResult = await createFundTransaction(
         {
@@ -95,12 +100,14 @@ export const createTransaction = async (req, res) => {
           account: transactionData.account,
           accountName: transactionData.accountName,
           amount: paidAmount,
+          previousBalanceAmount: totalAmountForReceipt,
+          closingBalanceAmount: closingBalanceAmountForReceipt,
           company: transactionData.company,
           branch: transactionData.branch,
           paymentMode: "cash",
           reference: result.transaction._id,
           referenceModel:
-            transactionTypeToModelName[transactionData.transactionType],
+            transactionTypeToModelName[transactionData.transactionType] ||"Sale",
           referenceType: transactionData.transactionType,
           date: transactionData.date || new Date(),
           user: req.user,

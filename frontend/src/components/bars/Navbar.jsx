@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Leaf, ChevronDown } from "lucide-react";
+import { Leaf, ChevronDown, LogOutIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,38 +8,45 @@ import {
 } from "@/components/ui/dropdown-menu";
 import ProfileDropdown from "../dropDowns/ProfileDropdown";
 import { Link, useNavigate } from "react-router-dom";
+import logoName from "../../../public/images/Logo/logoName.png";
+import logIcon from "../../../public/images/Logo/logoIcon.png";
 
 const Navbar = () => {
   const menuItems = [
-    {
-      label: "Master",
-      path: "/price-level",
-      hasDropdown: true,
-      dropdownItems: [
-        { label: "Item Master", path: "/master/item-master" },
-        { label: "Account Master", path: "/master/account-master" },
+    // {
+    //   label: "Master",
+    //   path: "/price-level",
+    //   hasDropdown: true,
+    //   dropdownItems: [
+    //     { label: "Item Master", path: "/master/item-master" },
+    //     { label: "Account Master", path: "/master/account-master" },
 
-        { label: "Price Level", path: "/master/price-level" },
-        // { label: "Unit Master", path: "/masters/unit-master" },
-        // { label: "Data Backup", path: "/masters/data-backup" },
-      ],
-    },
-    {
+    //     // { label: "Unit Master", path: "/masters/unit-master" },
+    //     // { label: "Data Backup", path: "/masters/data-backup" },
+    //   ],
+    // },
+
+    { label: "Account Master", path: "/master/account-master" },
+     { label: "Item Master", path: "/master/item-master" },
+        { label: "Rate Setting", path: "/master/rate-setting" },
+
+        { label: "Purchase", path: "/transactions/purchase/create" },
+        { label: "Purchase Return", path: "/purchase-return" },
+    { label: "Sales", path: "/transactions/sale/create" },
+    { label: "Sales Return", path: "/Sales-return" },
+    { label: "Receipt", path: "/transactions/receipt/create" },
+    { label: "Payment", path: "/transactions/payment/create" },
+    { label: "Reports", path: "/transactions/payment/create" },
+        {
       label: "Extras",
       path: "/price-level",
       hasDropdown: true,
       dropdownItems: [
-        { label: "Rate Setting", path: "/master/rate-setting" },
         { label: "Stock Adjustment", path: "/stock-adjustment" },
+        { label: "Price Level", path: "/master/price-level" },
+
       ],
     },
-
-    { label: "Sales", path: "/transactions/sale/create" },
-    { label: "Purchase", path: "/transactions/purchase/create" },
-    { label: "Receipt", path: "/transactions/receipt/create" },
-    { label: "Payment", path: "/transactions/payment/create" },
-    { label: "Purchase Return", path: "/purchase-return" },
-    { label: "Sales Return", path: "/Sales-return" },
   ];
 
   const navigate = useNavigate();
@@ -91,9 +98,9 @@ const Navbar = () => {
       <div className=" mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
-            <Leaf className="text-emerald-500" size={24} />
-            <span className="text-lg font-bold">VeggieShop</span>
+          <Link to="/" className="flex items-center  flex-shrink-0">
+          <img src={logIcon} alt="Logo" className="h-10 w-10" />
+          <img src={logoName} alt="Logo" className="h-32 w-32 mt-2 ml-[-10px]" />
           </Link>
 
           {/* Navigation Links */}

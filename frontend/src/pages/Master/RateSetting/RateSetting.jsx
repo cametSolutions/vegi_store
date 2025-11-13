@@ -95,9 +95,8 @@ const RateSetting = () => {
     refetch: refetchPriceLevels,
   } = useQuery({
     ...priceLevelQueries.getAll(selectedCompanyFromStore?._id, selectedBranchFromStore?._id),
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   const {

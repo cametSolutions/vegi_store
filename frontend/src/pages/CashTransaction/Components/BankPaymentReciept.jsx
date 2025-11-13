@@ -64,12 +64,12 @@ const BankPaymentDetails = ({
   ];
 
   return (
-    <div className="w-full bg-white shadow-sm border border-gray-200">
+    <div className="w-full bg-white  border-t border-gray-200">
       <div className="p-3 space-y-2">
         {/* Cheque Number and Bank */}
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-gray-700 text-[9px] font-medium mb-1">
+            <label className="block text-gray-700 text-[11px] font-medium mb-1">
               Cheque No.
             </label>
             <input
@@ -79,7 +79,7 @@ const BankPaymentDetails = ({
               onChange={(e) => updateTransactionField("chequeNumber", e.target.value)}
               placeholder="Enter cheque number"
               readOnly={isChequeFieldsDisabled}
-              className={`w-full px-2 py-1.5 border text-[9px] text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent ${
+              className={`w-full px-2 py-1.5 border text-[11px] text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent ${
                 isChequeFieldsDisabled
                   ? 'bg-slate-200 cursor-not-allowed border-gray-300'
                   : 'bg-white border-gray-300'
@@ -87,7 +87,7 @@ const BankPaymentDetails = ({
             />
           </div>
           <div>
-            <label className="block text-gray-700 text-[9px] font-medium mb-1">
+            <label className="block text-gray-700 text-[11px] font-medium mb-1">
               Bank
             </label>
             <input
@@ -97,7 +97,7 @@ const BankPaymentDetails = ({
               onChange={(e) => updateTransactionField("bank", e.target.value)}
               placeholder="Enter bank name"
               readOnly={isChequeFieldsDisabled}
-              className={`w-full px-2 py-1.5 border text-[9px] text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent ${
+              className={`w-full px-2 py-1.5 border text-[11px] text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent ${
                 isChequeFieldsDisabled
                   ? 'bg-slate-200 cursor-not-allowed border-gray-300'
                   : 'bg-white border-gray-300'
@@ -108,7 +108,7 @@ const BankPaymentDetails = ({
 
         {/* Description */}
         <div>
-          <label className="block text-gray-700 text-[9px] font-medium mb-1">
+          <label className="block text-gray-700 text-[11px] font-medium mb-1">
             Description
           </label>
           <textarea
@@ -117,13 +117,13 @@ const BankPaymentDetails = ({
             onChange={(e) => updateTransactionField("description", e.target.value)}
             rows="1"
             placeholder="Enter description..."
-            className="w-full px-2 py-1.5 border border-gray-300 text-[9px] bg-white text-gray-900 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-2 py-1.5 border border-gray-300 text-[11px] bg-white text-gray-900 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
 
         {/* Payment Method */}
         <div>
-          <label className="block text-gray-700 text-[9px] font-medium mb-1">
+          <label className="block text-gray-700 text-[11px] font-medium mb-1">
             Payment Mode
           </label>
           <div className="grid grid-cols-4 gap-1.5 mt-5">
@@ -149,7 +149,7 @@ const BankPaymentDetails = ({
                     className="sr-only  "
                   />
                   <Icon className={`w-3.5 h-3.5 ${isSelected ? method.textColor : 'text-gray-500'}`} />
-                  <span className="text-[9px]  font-bold">
+                  <span className="text-[11px]  font-bold">
                     {method.label}
                   </span>
                 </label>
