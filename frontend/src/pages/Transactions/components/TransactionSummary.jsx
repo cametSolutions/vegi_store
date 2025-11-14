@@ -52,7 +52,7 @@ const TransactionSummary = ({
   const isPaymentDisabled = useMemo(() => {
     const enabledTypes = ["sale"];
 
-    if (enabledTypes.includes(transactionType.toLowerCase())) {
+    if (enabledTypes.includes(transactionType?.toLowerCase())) {
       return totalDue <= 0;
     } else {
       return true;

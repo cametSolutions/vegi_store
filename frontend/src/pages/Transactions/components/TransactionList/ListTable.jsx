@@ -3,14 +3,16 @@ import { formatINR } from "../../../../../../shared/utils/currency";
 import { LoaderCircle } from "lucide-react";
 import InfiniteScroll from "react-infinite-scroll-component";
 
-const ListTable = ({ 
-  data, 
-  isFetching, 
-  status, 
+const ListTable = ({
+  data,
+  isFetching,
+  status,
   refetch,
   fetchNextPage,
   hasNextPage,
-  isFetchingNextPage
+  isFetchingNextPage,
+  onEditTransaction, // Accept the prop
+  editTransactionId,
 }) => {
   const columns = [
     { key: "id", label: "Bill No", width: "w-[12%]" },
@@ -22,9 +24,15 @@ const ListTable = ({
     { key: "balance", label: "Balance", align: "right", width: "w-[14%]" },
   ];
 
+  console.log("editTransactionId", editTransactionId);
+
+  // Double click handler
+  const handleDoubleClick = (transaction) => {
+    onEditTransaction(transaction);
+  };
+
   return (
     <div className="w-full border shadow bg-white overflow-hidden">
-      {/* Fixed Header Table */}
       <div className="bg-slate-500 pr-3">
         <table className="w-full border-collapse table-fixed">
           <thead>
@@ -32,7 +40,9 @@ const ListTable = ({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`${column.width} text-white border-b px-3 py-2 text-${
+                  className={`${
+                    column.width
+                  } text-white border-b px-3 py-2 text-${
                     column.align || "center"
                   } text-[11px] font-medium uppercase ${
                     column.sortable !== false
@@ -58,9 +68,8 @@ const ListTable = ({
         </table>
       </div>
 
-      {/* Scrollable Body Table */}
-      <div 
-        id="scrollableDiv" 
+      <div
+        id="scrollableDiv"
         className="h-[calc(100vh-260px)] overflow-y-auto overflow-x-hidden"
       >
         <InfiniteScroll
@@ -73,10 +82,9 @@ const ListTable = ({
               <p className="mt-2 text-xs">Loading more...</p>
             </div>
           }
-
-              endMessage={
+          endMessage={
             data.length > 10 && (
-              <div className="text-center py-4 font-semibold  text-gray-400 text-[11px]">
+              <div className="text-center py-4 font-semibold text-gray-400 text-[11px]">
                 No more transactions to load
               </div>
             )
@@ -95,7 +103,10 @@ const ListTable = ({
                 </tr>
               ) : status === "error" ? (
                 <tr>
-                  <td colSpan={columns.length} className="text-center py-20 h-[calc(100vh-260px)]">
+                  <td
+                    colSpan={columns.length}
+                    className="text-center py-20 h-[calc(100vh-260px)]"
+                  >
                     <p className="text-gray-500 text-xs font-semibold">
                       !Oops..Error loading transactions
                     </p>
@@ -109,35 +120,59 @@ const ListTable = ({
                 </tr>
               ) : !data || data.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length} className="text-center py-20 h-[calc(100vh-260px)]">
-                    <p className="text-gray-500 text-sm">No transactions found</p>
+                  <td
+                    colSpan={columns.length}
+                    className="text-center py-20 h-[calc(100vh-260px)]"
+                  >
+                    <p className="text-gray-500 text-sm">
+                      No transactions found
+                    </p>
                   </td>
                 </tr>
               ) : (
                 data.map((transaction) => (
                   <tr
                     key={transaction._id}
-                    className="bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                    className={`${
+                      editTransactionId === transaction._id
+                        ? "bg-[#add4f3]  "
+                        : " bg-slate-200 hover:bg-slate-200 "
+                    }  transition-colors cursor-pointer`}
+                    onDoubleClick={() => handleDoubleClick(transaction)}
                   >
-                    <td className={`${columns[0].width} px-3 py-2 text-[9.5px] font-medium text-gray-600`}>
+                    <td
+                      className={`${columns[0].width} px-3 py-2 text-[9.5px] font-medium text-gray-600`}
+                    >
                       {transaction?.transactionNumber}
                     </td>
-                    <td className={`${columns[1].width} px-3 py-2 text-[9.5px] text-gray-600 text-center`}>
+                    <td
+                      className={`${columns[1].width} px-3 py-2 text-[9.5px] text-gray-600 text-center`}
+                    >
                       {formatDate(transaction?.transactionDate)}
                     </td>
-                    <td className={`${columns[2].width} px-3 py-2 text-[9.5px] font-medium text-gray-900 truncate`}>
+                    <td
+                      className={`${columns[2].width} px-3 py-2 text-[9.5px] font-medium text-gray-900 truncate`}
+                    >
                       {transaction?.account?.accountName}
                     </td>
-                    <td className={`${columns[3].width} px-3 py-2 text-[9.5px] text-gray-900 text-center font-mono`}>
+                    <td
+                      className={`${columns[3].width} px-3 py-2 text-[9.5px] text-gray-900 text-center font-mono`}
+                    >
                       ₹{formatINR(transaction?.totalAmountAfterTax)}
                     </td>
-                    <td className={`${columns[4].width} px-3 py-2 text-[9.5px] text-gray-900 text-center font-mono`}>
+                    <td
+                      className={`${columns[4].width} px-3 py-2 text-[9.5px] text-gray-900 text-center font-mono`}
+                    >
                       ₹{formatINR(transaction?.discountAmount)}
                     </td>
-                    <td className={`${columns[5].width} px-3 py-2 text-[9.5px] text-gray-900 text-center font-mono`}>
+                    <td
+                      className={`${columns[5].width} px-3 py-2 text-[9.5px] text-gray-900 text-center font-mono`}
+                    >
                       ₹{formatINR(transaction?.paidAmount)}
                     </td>
-                    <td className={`${columns[6].width} px-3 py-2 text-right text-[9.5px] font-mono`}>
+                    <td
+                      className={`${columns[6].width} px-3 py-2 text-right text-[9.5px] font-mono`}
+                    >
                       <span
                         className={`${
                           transaction?.balanceAmount > 0
@@ -160,5 +195,3 @@ const ListTable = ({
 };
 
 export default ListTable;
-
-

@@ -1,4 +1,4 @@
-import { infiniteQueryOptions } from "@tanstack/react-query";
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { transactionServices } from "../../api/services/transaction.service";
 
 export const transactionQueries = {
@@ -40,5 +40,29 @@ export const transactionQueries = {
       refetchOnWindowFocus: false, // Set default here
       staleTime: 30000, // Optional: 30 seconds
       ...options, // Allow overrides
+    }),
+
+  getTransactionById: (companyId, branchId, transactionId, transactionType) =>
+    queryOptions({
+      queryKey: [
+        ...transactionQueries.all(),
+        "getById",
+        companyId,
+        branchId,
+        transactionId,
+        transactionType,
+      ],
+      queryFn: () =>
+        transactionServices.getById(
+          companyId,
+          branchId,
+          transactionId,
+          transactionType
+        ),
+      enabled:
+        !!companyId && !!branchId && !!transactionId && !!transactionType,
+      staleTime: 60 * 1000,
+      refetchOnWindowFocus: false,
+      
     }),
 };

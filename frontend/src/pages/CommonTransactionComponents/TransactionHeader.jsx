@@ -4,11 +4,14 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { capitalizeFirstLetter } from "../../../../shared/utils/string";
 import { transactionTypes } from "../CashTransaction/Utils/CashTransactionUtils";
+import TransactionNumberBadge from "./TransactionNumberBadge";
 
 const TransactionHeader = ({
   currentTransactionType,
   date,
   updateTransactionField,
+  isEditMode = false,
+  transactionNumber,
 }) => {
   console.log("transaction header component renders");
 
@@ -28,16 +31,22 @@ const TransactionHeader = ({
   };
 
   useEffect(() => {
-    console.log("currentTransactionType changed:", currentTransactionType);
-    
+    // console.log("currentTransactionType changed:", currentTransactionType);
+
     updateTransactionField("transactionType", currentTransactionType);
   }, [currentTransactionType, updateTransactionField]);
 
   return (
     <div className="bg-white shadow-sm border-b px-4 py-2">
       <div className="flex items-center justify-between">
-        <h1 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+        <h1 className="text-sm font-bold text-slate-800 flex items-center gap-2 ">
+          {isEditMode ? "Edit" : "New"}{" "}
           {capitalizeFirstLetter(currentTransactionType)}
+          {isEditMode  && (
+            <span className="ml-2">
+              <TransactionNumberBadge transactionNumber={transactionNumber} />
+            </span>
+          )}
         </h1>
         <div className="text-xs text-slate-500 flex items-center gap-4">
           {/* Date Section */}
@@ -53,7 +62,6 @@ const TransactionHeader = ({
               className="px-2 py-1 border border-slate-300 rounded text-[9px] focus:ring-1 focus:ring-blue-500 w-[100px]"
               calendarClassName="text-xs"
               popperPlacement="bottom-end"
-      
               portalId="root"
             />
           </div>

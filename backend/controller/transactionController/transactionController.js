@@ -84,15 +84,12 @@ export const createTransaction = async (req, res) => {
           ? "receipt"
           : "payment";
 
+      const { previousBalanceAmount, netAmount, paidAmount } = transactionData;
 
+      console.log("transactionData", transactionData);
 
-      const {previousBalanceAmount,netAmount,paidAmount} = transactionData;
-
-      console.log("transactionData",transactionData);
-      
-      const totalAmountForReceipt= netAmount+previousBalanceAmount;
-      const closingBalanceAmountForReceipt= totalAmountForReceipt-paidAmount;
-      
+      const totalAmountForReceipt = netAmount + previousBalanceAmount;
+      const closingBalanceAmountForReceipt = totalAmountForReceipt - paidAmount;
 
       receiptResult = await createFundTransaction(
         {
@@ -107,7 +104,8 @@ export const createTransaction = async (req, res) => {
           paymentMode: "cash",
           reference: result.transaction._id,
           referenceModel:
-            transactionTypeToModelName[transactionData.transactionType] ||"Sale",
+            transactionTypeToModelName[transactionData.transactionType] ||
+            "Sale",
           referenceType: transactionData.transactionType,
           date: transactionData.date || new Date(),
           user: req.user,
@@ -115,7 +113,6 @@ export const createTransaction = async (req, res) => {
         session
       );
     }
-
 
     // Commit transaction
     await session.commitTransaction();
@@ -235,6 +232,39 @@ export const getTransactions = async (req, res) => {
     res.status(500).json({
       message: "Error fetching transactions",
       error: error.message,
+    });
+  }
+};
+
+/**
+ * get transaction details (handles sales, purchase, credit_note, debit_note)
+ */
+
+export const getTransactionDetail = async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+    const { companyId, branchId, transactionType } = req.query;
+    const TransactionModel = getTransactionModel(transactionType);
+
+    const transaction = await TransactionModel.findOne({
+      _id: transactionId,
+      company: companyId,
+      branch: branchId,
+    });
+
+    if (!transaction) {
+      return res.status(404).json({
+        message: "Transaction not found",
+      });
+    }
+
+    return res.status(200).json(transaction);
+  } catch (error) {
+    console.error("Error fetching transaction:", error);
+
+    return res.status(500).json({
+      message: "Failed to fetch transaction",
+      error: error?.message || "Internal server error",
     });
   }
 };

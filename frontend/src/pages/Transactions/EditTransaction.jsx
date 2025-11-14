@@ -11,6 +11,9 @@ import { useTransaction } from "./hooks/useTransaction";
 import { useTransactionActions } from "./hooks/useTransactionActions";
 import { useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { useQuery } from "@tanstack/react-query";
+import { transactionQueries } from "@/hooks/queries/transaction.queries";
+import { toast } from "sonner";
 
 // Memoized components
 const TransactionHeader = React.memo(TransactionHeaderComponent);
@@ -24,7 +27,7 @@ const ItemsTable = React.memo(ItemsTableComponent);
 const TransactionSummary = React.memo(TransactionSummaryComponent);
 const TransactionActions = React.memo(TransactionActionsComponent);
 
-const EditTransaction = () => {
+const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -50,14 +53,19 @@ const EditTransaction = () => {
 
   ////  for adding transaction type to the transaction data when the component loads or when the transaction type changes////
   useEffect(() => {
-    resetTransactionData();
-    updateTransactionField("transactionType", currentTransactionType);
+    resetTransactionData(currentTransactionType);
+    //// add to global state that edit mode is true and the transaction id
+    updateTransactionData({
+      isEditMode: true,
+      editTransactionId: editTransactionData._id,
+      transactionType: currentTransactionType,
+    });
   }, [currentTransactionType, updateTransactionField]);
 
   // Reset transaction data when navigating away from this page
   useEffect(() => {
     return () => {
-      resetTransactionData();
+      resetTransactionData(currentTransactionType);
     };
   }, [resetTransactionData]);
 
@@ -68,22 +76,59 @@ const EditTransaction = () => {
     (state) => state.companyBranch?.selectedBranch
   );
 
+  //// fetch the details of the tns for which we need the edit to be done///
+  const {
+    data: transactionResponse,
+    isLoading: transactionLoading,
+    isError: transactionError,
+  } = useQuery({
+    ...transactionQueries.getTransactionById(
+      selectedCompanyFromStore._id,
+      selectedBranchFromStore._id,
+      editTransactionData._id,
+      currentTransactionType
+    ),
+  });
+
+  /// update the transaction data when the transaction response changes
+  useEffect(() => {
+    if (transactionResponse) {
+      updateTransactionData(transactionResponse);
+    }
+  }, [transactionResponse, updateTransactionData]);
+
+  // Handle error state with useEffect
+  useEffect(() => {
+    if (transactionError) {
+      toast.error("An error occurred while loading transaction details");
+      handleCancel();
+    }
+  }, [transactionError]);
+
+  const handleCancel = () => {
+    resetTransactionData(currentTransactionType);
+    handleCancelEdit();
+  };
+
   console.log("transactionData", transactionData);
 
   return (
     <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
       {/* Loader Overlay */}
-      {isLoading && (
-        <div className="absolute inset-0 bg-white/60  z-50 flex items-center justify-center">
-          <CustomMoonLoader />
-        </div>
-      )}
+      {isLoading ||
+        (transactionLoading && (
+          <div className="absolute inset-0 bg-white/60  z-50 flex items-center justify-center">
+            <CustomMoonLoader />
+          </div>
+        ))}
 
       {/* Header */}
       <TransactionHeader
         currentTransactionType={currentTransactionType}
         date={transactionData.transactionDate}
         updateTransactionField={updateTransactionField}
+        isEditMode={transactionData.isEditMode}
+        transactionNumber={editTransactionData.transactionNumber}
       />
 
       {/* Main Content */}
@@ -141,11 +186,11 @@ const EditTransaction = () => {
               transactionData={transactionData}
               onLoadingChange={setIsLoading}
               resetTransactionData={resetTransactionData}
+              onCancel={handleCancel}
+              isEditMode={true}
               // onView={useTransactionActions?.handleView}
               // onDelete={useTransactionActions?.handleDelete}
-              // onCancel={useTransactionActions?.handleCancel}
               // onPrint={useTransactionActions?.handlePrint}
-              isEditMode={false}
             />
           </div>
         </div>

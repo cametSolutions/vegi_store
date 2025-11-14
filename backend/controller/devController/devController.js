@@ -125,4 +125,4 @@ export const deleteData = async (req, res) => {
 };
 
 
-await fixAllTransactionIndexes();
+

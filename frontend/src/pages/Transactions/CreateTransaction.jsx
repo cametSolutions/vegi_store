@@ -6,7 +6,7 @@ import TransactionSummaryComponent from "./components/TransactionSummary";
 import TransactionActionsComponent from "./components/TransactionActions";
 import TransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
 import CustomMoonLoader from "../../components/loaders/CustomMoonLoader"; // Import the loader
-import {  getTransactionType } from "./utils/transactionUtils";
+import { getTransactionType } from "./utils/transactionUtils";
 import { useTransaction } from "./hooks/useTransaction";
 import { useTransactionActions } from "./hooks/useTransactionActions";
 import { useLocation } from "react-router-dom";
@@ -42,23 +42,22 @@ const CreateTransaction = () => {
     resetTransactionData,
   } = useTransaction();
 
-
   //// get current transaction type from the url////
   const currentTransactionType = useMemo(
     () => getTransactionType(location),
     [location]
   );
 
-////  for adding transaction type to the transaction data when the component loads or when the transaction type changes////
+  ////  for adding transaction type to the transaction data when the component loads or when the transaction type changes////
   useEffect(() => {
-    resetTransactionData();
+    resetTransactionData(currentTransactionType);
     updateTransactionField("transactionType", currentTransactionType);
   }, [currentTransactionType, updateTransactionField]);
 
   // Reset transaction data when navigating away from this page
   useEffect(() => {
     return () => {
-      resetTransactionData();
+      resetTransactionData(currentTransactionType);
     };
   }, [resetTransactionData]);
 
@@ -69,11 +68,7 @@ const CreateTransaction = () => {
     (state) => state.companyBranch?.selectedBranch
   );
 
-
-  console.log("transactionData",transactionData );
-  
-
-
+  console.log("transactionData", transactionData);
 
   return (
     <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
@@ -89,6 +84,7 @@ const CreateTransaction = () => {
         currentTransactionType={currentTransactionType}
         date={transactionData.transactionDate}
         updateTransactionField={updateTransactionField}
+        
       />
 
       {/* Main Content */}
@@ -119,7 +115,6 @@ const CreateTransaction = () => {
               addItem={addItem}
               clickedItemInTable={clickedItemInTable}
               transactionType={transactionData?.transactionType}
-              
             />
           </div>
 
@@ -150,7 +145,9 @@ const CreateTransaction = () => {
               resetTransactionData={resetTransactionData}
               // onView={useTransactionActions?.handleView}
               // onDelete={useTransactionActions?.handleDelete}
-              // onCancel={useTransactionActions?.handleCancel}
+              onCancel={() => {
+                resetTransactionData(transactionData?.transactionType);
+              }}
               // onPrint={useTransactionActions?.handlePrint}
               isEditMode={false}
             />

@@ -126,14 +126,13 @@ export const useTransaction = (initialData = null) => {
     [updateTransactionField]
   );
 
-const resetTransactionData = useCallback((transactionType) => {
-  console.log("resetting transaction data");
-  setTransactionData({
-    ...createEmptyTransaction(),
-    transactionType, // ✅ update transactionType dynamically
-  });
-}, []);
-
+  const resetTransactionData = useCallback((transactionType) => {
+    console.log("resetting transaction data");
+    setTransactionData({
+      ...createEmptyTransaction(),
+      transactionType, // ✅ update transactionType dynamically
+    });
+  }, []);
 
   /// ===================== UPDATE TOTALS AUTOMATICALLY =====================
   useEffect(() => {

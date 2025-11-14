@@ -11,8 +11,10 @@ import { useLocation } from "react-router-dom";
 import { transactionQueries } from "@/hooks/queries/transaction.queries";
 import { useSelector } from "react-redux";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useTransaction } from "../../hooks/useTransaction";
 
-const TransactionList = () => {
+const TransactionList = ({ onEditTransaction,selectedTransaction }) => {
+  // Accept the prop
   const location = useLocation();
   const currentTransactionType = useMemo(
     () => getTransactionType(location),
@@ -36,6 +38,9 @@ const TransactionList = () => {
     handleSearchChange,
   } = useTransactionListActions();
 
+  /// this is form state like data in the form not form api response
+  
+
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY);
 
   const {
@@ -54,18 +59,18 @@ const TransactionList = () => {
       companyId,
       branchId,
       12,
-      "transactionDate", /// sort by date
-      "desc", // sortOrder  for MongoDB
+      "transactionDate",
+      "desc",
       { refetchOnWindowFocus: false, retry: 2 }
     )
   );
 
-  // Just flatten pages - MongoDB already sorted them correctly
   const allTransactions = useMemo(() => {
     if (!data?.pages) return [];
     return data.pages.flatMap((page) => page.data);
   }, [data]);
 
+  
 
   return (
     <div className="w-full h-[calc(100vh-110px)] bg-white rounded-xs shadow-sm border flex flex-col">
@@ -92,6 +97,8 @@ const TransactionList = () => {
           fetchNextPage={fetchNextPage}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
+          onEditTransaction={onEditTransaction} // Pass to ListTable
+          editTransactionId={selectedTransaction?._id}
         />
       </div>
 
