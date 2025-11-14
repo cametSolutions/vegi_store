@@ -24,7 +24,6 @@ const ListTable = ({
     { key: "balance", label: "Balance", align: "right", width: "w-[14%]" },
   ];
 
-  console.log("editTransactionId", editTransactionId);
 
   // Double click handler
   const handleDoubleClick = (transaction) => {

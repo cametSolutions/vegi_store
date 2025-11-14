@@ -10,10 +10,12 @@ import { getTransactionType } from "./utils/transactionUtils";
 import { useTransaction } from "./hooks/useTransaction";
 import { useTransactionActions } from "./hooks/useTransactionActions";
 import { useLocation } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useQuery } from "@tanstack/react-query";
 import { transactionQueries } from "@/hooks/queries/transaction.queries";
 import { toast } from "sonner";
+import { addTransactionDataToStore, removeTransactionDataFromStore } from "@/store/slices/transactionSlice";
+
 
 // Memoized components
 const TransactionHeader = React.memo(TransactionHeaderComponent);
@@ -26,6 +28,7 @@ const AddItemForm = React.memo(AddItemFormComponent);
 const ItemsTable = React.memo(ItemsTableComponent);
 const TransactionSummary = React.memo(TransactionSummaryComponent);
 const TransactionActions = React.memo(TransactionActionsComponent);
+
 
 const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
   const location = useLocation();
@@ -44,6 +47,7 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
     handleItemClickInItemsTable,
     resetTransactionData,
   } = useTransaction();
+  const dispatch=useDispatch();
 
   //// get current transaction type from the url////
   const currentTransactionType = useMemo(
@@ -94,6 +98,13 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
   useEffect(() => {
     if (transactionResponse) {
       updateTransactionData(transactionResponse);
+
+      //// this is to  prevent the navigation in the nav bar when we are in edit mode 
+      dispatch(addTransactionDataToStore({
+        isEditMode: true,
+        editTransactionId: editTransactionData._id,
+        transactionType: currentTransactionType
+      }));
     }
   }, [transactionResponse, updateTransactionData]);
 
@@ -108,6 +119,7 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
   const handleCancel = () => {
     resetTransactionData(currentTransactionType);
     handleCancelEdit();
+    dispatch(removeTransactionDataFromStore());
   };
 
   console.log("transactionData", transactionData);
@@ -158,6 +170,7 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
               updateTransactionField={updateTransactionField}
               addItem={addItem}
               clickedItemInTable={clickedItemInTable}
+              transactionType={transactionData?.transactionType}
             />
           </div>
 

@@ -85,12 +85,17 @@ const AddItemForm = ({
                 pl.priceLevel._id === priceLevel ||
                 pl.priceLevel.priceLevelName === priceLevel
             );
+
+            console.log("priceLevelData", priceLevelData);
+            
             rate = priceLevelData?.rate || 0;
           } else {
             rate = 0;
           }
         }
 
+        console.log("priceLevel", priceLevel);
+        console.log("transactionType", transactionType);
         console.log("rate", rate);
         
 

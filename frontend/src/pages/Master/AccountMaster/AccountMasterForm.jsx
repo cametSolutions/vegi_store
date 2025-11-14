@@ -105,6 +105,11 @@ const AccountMasterForm = ({
       toast.error("Please select at least one branch.");
       return;
     }
+
+    if (formData.priceLevel === "") {
+      formData.priceLevel = null;
+    }
+    
     if (editingId) {
       mutation.mutate(
         { id: editingId, formData },

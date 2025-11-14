@@ -176,11 +176,11 @@ export const recalculateTransactionOnPriceLevelChange = (transaction) => {
   // update each item rate and recalc baseAmount and tax amounts
   const updatedItems = transaction.items.map((item) => {
     const priceLevelObj = item.priceLevels.find(
-      (pl) => pl.priceLevel._id === selectedPriceLevelId
+      (pl) => pl?.priceLevel?._id === selectedPriceLevelId
     );
     const newRate = priceLevelObj
-      ? parseFloat(priceLevelObj.rate)
-      : parseFloat(item.rate);
+      ? parseFloat(priceLevelObj.rate || 0)
+      : 0
 
     const qty = parseFloat(item.quantity);
     const baseAmount = newRate * qty;
