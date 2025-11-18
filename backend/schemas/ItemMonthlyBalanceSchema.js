@@ -83,6 +83,10 @@ export const ItemMonthlyBalanceSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    needsRecalculation:{
+      type: Boolean,
+      default: false,
+    }
   },
   {
     timestamps: true,

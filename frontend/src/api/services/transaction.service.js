@@ -66,16 +66,11 @@ export const transactionServices = {
   },
 
   getById: async (companyId, branchId, transactionId, transactionType) => {
-
-    console.log("callllllllll");
-    
     try {
       const response = await api.get(
         `/transaction/${transactionType}/getTransactionDetails/${transactionId}?companyId=${companyId}&branchId=${branchId}&transactionId=${transactionId}&transactionType=${transactionType}`
       );
 
-      console.log("response",response);
-      
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -84,4 +79,21 @@ export const transactionServices = {
       throw new Error("An unexpected error occurred");
     }
   },
+
+    update: async (id, formData, transactionType ) => {
+    try {
+      const response = await api.put(
+        `/transaction/${transactionType}/edit/${id}`,
+        formData
+      );
+
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
+
 };

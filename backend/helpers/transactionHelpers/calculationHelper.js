@@ -67,3 +67,100 @@ export const determinePaymentStatus = (netAmount, paidAmount) => {
     return "partial";
   }
 };
+
+/**
+ * Calculate differences between original and updated transaction
+ */
+export const calculateTransactionDeltas = (original, updated) => {
+  // Amount delta
+  const netAmountDelta = updated.netAmount - original.netAmount;
+
+  console.log("updated.netAmount", updated.netAmount);
+  console.log("original.netAmount", original.netAmount);
+  
+
+  // Account changed?
+  const accountChanged =
+    original.account.toString() !== updated.account.toString();
+
+  // Item deltas
+  const stockDelta = calculateStockDeltas(original.items, updated.items);
+
+  return {
+    netAmountDelta,
+    accountChanged,
+    oldAccount: original.account,
+    oldAccountName: original.accountName,
+    newAccount: updated.account,
+    newAccountName: updated.accountName,
+    stockDelta,
+    itemsChanged: stockDelta.length > 0,
+  };
+};
+
+/**
+ * Calculate stock deltas for items
+ * Returns array of items with quantity changes
+ */
+export const calculateStockDeltas = (originalItems, updatedItems) => {
+  const deltas = [];
+
+  // Create maps for easy lookup
+  const originalMap = new Map(
+    originalItems.map((item) => [item.item.toString(), item])
+  );
+  const updatedMap = new Map(
+    updatedItems.map((item) => [item.item.toString(), item])
+  );
+
+  // Find items in updated but not in original (NEW items)
+  updatedItems.forEach((updatedItem) => {
+    const itemId = updatedItem.item.toString();
+    const originalItem = originalMap.get(itemId);
+
+    if (!originalItem) {
+      // New item added
+      deltas.push({
+        item: updatedItem.item,
+        itemName: updatedItem.itemName,
+        itemCode: updatedItem.itemCode,
+        unit: updatedItem.unit,
+        quantityDelta: updatedItem.quantity, // Full quantity (new item)
+        isNew: true,
+      });
+    } else {
+      // Item exists - check quantity change
+      const quantityDelta = updatedItem.quantity - originalItem.quantity;
+
+      if (quantityDelta !== 0) {
+        deltas.push({
+          item: updatedItem.item,
+          itemName: updatedItem.itemName,
+          itemCode: updatedItem.itemCode,
+          unit: updatedItem.unit,
+          quantityDelta,
+          isNew: false,
+        });
+      }
+    }
+  });
+
+  // Find items removed (in original but not in updated)
+  originalItems.forEach((originalItem) => {
+    const itemId = originalItem.item.toString();
+    if (!updatedMap.has(itemId)) {
+      // Item removed
+      deltas.push({
+        item: originalItem.item,
+        itemName: originalItem.itemName,
+        itemCode: originalItem.itemCode,
+        unit: originalItem.unit,
+        quantityDelta: -originalItem.quantity, // Negative (removing)
+        isRemoved: true,
+      });
+    }
+  });
+
+  return deltas;
+};
+

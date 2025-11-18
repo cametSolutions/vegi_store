@@ -15,6 +15,7 @@ import {
 } from "./transactionMappers.js";
 import { getCashBankAccountForPayment } from "../CommonTransactionHelper/CashBankAccountHelper.js";
 import { createCashBankLedgerEntry } from "../../helpers/CommonTransactionHelper/CashBankLedgerHelper.js";
+import { determineTransactionBehavior } from "./modelFindHelper.js";
 /**
  * Main transaction processor - orchestrates all steps
  */
@@ -24,7 +25,7 @@ export const processTransaction = async (transactionData, userId, session) => {
       transactionData;
 
     // Step 1: Determine transaction behavior
-    const behavior = determineTransactionBehavior(transactionType);
+    const behavior = await determineTransactionBehavior(transactionType);
 
     // // Step 2: Update stock
     await updateStock(items, behavior.stockDirection, branch, session);
@@ -49,7 +50,6 @@ export const processTransaction = async (transactionData, userId, session) => {
         branchId: branch,
         session,
       });
-      
 
       /// create cash ledger entry for cash transaction
       const ledgerEntry = await createCashBankLedgerEntry({
@@ -73,9 +73,8 @@ export const processTransaction = async (transactionData, userId, session) => {
       // createdTransaction.balanceAmount > 0 &&
       createdTransaction.accountType === "customer"
     ) {
-
       console.log("creating outstanding");
-      
+
       outstanding = await createOutstanding(
         {
           company: createdTransaction.company,
@@ -178,38 +177,38 @@ export const processTransaction = async (transactionData, userId, session) => {
   }
 };
 
-/**
- * Helper: Determine transaction behavior based on type
- */
-function determineTransactionBehavior(transactionType) {
-  const behaviors = {
-    sale: {
-      stockDirection: "out",
-      outstandingType: "dr", // Customer owes us (receivable)
-      ledgerSide: "debit",
-    },
-    debit_note: {
-      stockDirection: "out",
-      outstandingType: "dr",
-      ledgerSide: "debit",
-    },
-    purchase: {
-      stockDirection: "in",
-      outstandingType: "cr", // We owe supplier (payable)
-      ledgerSide: "credit",
-    },
-    credit_note: {
-      stockDirection: "in",
-      outstandingType: "cr",
-      ledgerSide: "credit",
-    },
-  };
+// /**
+//  * Helper: Determine transaction behavior based on type
+//  */
+// function determineTransactionBehavior(transactionType) {
+//   const behaviors = {
+//     sale: {
+//       stockDirection: "out",
+//       outstandingType: "dr", // Customer owes us (receivable)
+//       ledgerSide: "debit",
+//     },
+//     debit_note: {
+//       stockDirection: "out",
+//       outstandingType: "dr",
+//       ledgerSide: "debit",
+//     },
+//     purchase: {
+//       stockDirection: "in",
+//       outstandingType: "cr", // We owe supplier (payable)
+//       ledgerSide: "credit",
+//     },
+//     credit_note: {
+//       stockDirection: "in",
+//       outstandingType: "cr",
+//       ledgerSide: "credit",
+//     },
+//   };
 
-  const behavior = behaviors[transactionType];
+//   const behavior = behaviors[transactionType];
 
-  if (!behavior) {
-    throw new Error(`Invalid transaction type: ${transactionType}`);
-  }
+//   if (!behavior) {
+//     throw new Error(`Invalid transaction type: ${transactionType}`);
+//   }
 
-  return behavior;
-}
+//   return behavior;
+// }
