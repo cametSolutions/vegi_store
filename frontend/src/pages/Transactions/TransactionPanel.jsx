@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import CreateTransaction from "./CreateTransaction";
 import EditTransaction from "./EditTransaction"; // Import your edit component
 import TransactionList from "./components/TransactionList/TransactionList";
-
+import { useSelector } from "react-redux";
 
 const TransactionPanel = () => {
-  const [editMode, setEditMode] = useState(false);
+  const isEditMode = useSelector((state) => state.transaction.isEditMode);
+  const [editMode, setEditMode] = useState(isEditMode);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   // Handler to switch to edit mode
@@ -20,6 +21,15 @@ const TransactionPanel = () => {
     setSelectedTransaction(null);
   };
 
+  //// Sync local editMode state with Redux store
+  ///reset selected transaction when edit is completed
+
+  useEffect(() => {
+    setEditMode(isEditMode);
+    if (!isEditMode) {
+      setSelectedTransaction(null);
+    }
+  }, [isEditMode]);
 
   return (
     <div className="flex w-full justify-between bg-white gap-2">
@@ -38,7 +48,6 @@ const TransactionPanel = () => {
         <TransactionList
           onEditTransaction={handleEditTransaction}
           selectedTransaction={selectedTransaction}
-          
         />
       </div>
     </div>

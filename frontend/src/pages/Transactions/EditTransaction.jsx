@@ -14,8 +14,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { useQuery } from "@tanstack/react-query";
 import { transactionQueries } from "@/hooks/queries/transaction.queries";
 import { toast } from "sonner";
-import { addTransactionDataToStore, removeTransactionDataFromStore } from "@/store/slices/transactionSlice";
-
+import {
+  addTransactionDataToStore,
+  removeTransactionDataFromStore,
+} from "@/store/slices/transactionSlice";
 
 // Memoized components
 const TransactionHeader = React.memo(TransactionHeaderComponent);
@@ -29,10 +31,9 @@ const ItemsTable = React.memo(ItemsTableComponent);
 const TransactionSummary = React.memo(TransactionSummaryComponent);
 const TransactionActions = React.memo(TransactionActionsComponent);
 
-
 const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
   const location = useLocation();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const {
     transactionData,
@@ -47,7 +48,7 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
     handleItemClickInItemsTable,
     resetTransactionData,
   } = useTransaction();
-  const dispatch=useDispatch();
+  const dispatch = useDispatch();
 
   //// get current transaction type from the url////
   const currentTransactionType = useMemo(
@@ -99,12 +100,14 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
     if (transactionResponse) {
       updateTransactionData(transactionResponse);
 
-      //// this is to  prevent the navigation in the nav bar when we are in edit mode 
-      dispatch(addTransactionDataToStore({
-        isEditMode: true,
-        editTransactionId: editTransactionData._id,
-        transactionType: currentTransactionType
-      }));
+      //// this is to  prevent the navigation in the nav bar when we are in edit mode
+      dispatch(
+        addTransactionDataToStore({
+          isEditMode: true,
+          editTransactionId: editTransactionData._id,
+          transactionType: currentTransactionType,
+        })
+      );
     }
   }, [transactionResponse, updateTransactionData]);
 
@@ -122,17 +125,14 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
     dispatch(removeTransactionDataFromStore());
   };
 
-  console.log("transactionData", transactionData);
-
   return (
     <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
       {/* Loader Overlay */}
-      {isLoading ||
-        (transactionLoading && (
-          <div className="absolute inset-0 bg-white/60  z-50 flex items-center justify-center">
-            <CustomMoonLoader />
-          </div>
-        ))}
+      {(isLoading || transactionLoading) && (
+        <div className="absolute inset-0 bg-white/60 z-50 flex items-center justify-center">
+          <CustomMoonLoader />
+        </div>
+      )}
 
       {/* Header */}
       <TransactionHeader
@@ -199,11 +199,8 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
               transactionData={transactionData}
               onLoadingChange={setIsLoading}
               resetTransactionData={resetTransactionData}
-              onCancel={handleCancel}
               isEditMode={true}
-              // onView={useTransactionActions?.handleView}
-              // onDelete={useTransactionActions?.handleDelete}
-              // onPrint={useTransactionActions?.handlePrint}
+              onCancel={handleCancel}
             />
           </div>
         </div>

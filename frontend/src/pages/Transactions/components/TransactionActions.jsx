@@ -20,6 +20,8 @@ const TransactionActions = ({
     isEditMode
   );
 
+  
+
   // 👇 Notify parent whenever loading changes
   useEffect(() => {
     if (onLoadingChange) {
@@ -42,7 +44,7 @@ const TransactionActions = ({
     if (resetTransactionData) resetTransactionData(transactionData?.transactionType); // 👈 reset after success
   };
 
-  console.log("transaction actions component renders");
+  // console.log("transaction actions component renders");
 
   return (
     <div className="mt-2">
