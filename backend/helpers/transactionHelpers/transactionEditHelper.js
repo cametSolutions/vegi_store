@@ -91,7 +91,7 @@ export const markMonthlyBalancesForRecalculation = async (
   // 1. Mark Account Monthly Balances as Dirty
   // ========================================
   
-  // Mark edited month and all subsequent months
+  // Mark edited month and all subsequent months for original account
   await AccountMonthlyBalance.updateMany(
     {
       account: original.account,
@@ -131,49 +131,103 @@ export const markMonthlyBalancesForRecalculation = async (
   }
 
   // ========================================
-  // 2. Mark Item Monthly Balances as Dirty
+  // 2. Mark ONLY CHANGED Items as Dirty
   // ========================================
   
-  // Collect all unique items (original + updated)
-  const allItemIds = new Set();
-  
+  // Build maps for comparison: itemId → item data
+  const originalItemsMap = new Map();
   original.items.forEach(item => {
-    allItemIds.add(item.item.toString());
+    originalItemsMap.set(item.item.toString(), {
+      quantity: item.quantity,
+      rate: item.rate,
+    });
   });
-  
+
+  const updatedItemsMap = new Map();
   if (updated.items) {
     updated.items.forEach(item => {
-      allItemIds.add(item.item.toString());
+      updatedItemsMap.set(item.item.toString(), {
+        quantity: item.quantity,
+        rate: item.rate,
+      });
     });
   }
 
-  // Mark each item's monthly balances (current month onwards)
-  for (const itemId of allItemIds) {
-    await ItemMonthlyBalance.updateMany(
-      {
-        item: itemId,
-        branch: original.branch,
-        $or: [
-          { year: { $gt: year } },
-          { year: year, month: { $gte: month } }
-        ]
-      },
-      {
-        $set: {
-          needsRecalculation: true,
-          lastModified: new Date(),
-        },
-      }
-    ).session(session);
+  // ========================================
+  // Detect which items actually changed
+  // ========================================
+  const changedItemIds = new Set();
+
+  // Check for modified or removed items
+  for (const [itemId, originalData] of originalItemsMap) {
+    const updatedData = updatedItemsMap.get(itemId);
+    
+    if (!updatedData) {
+      // Item was REMOVED from transaction
+      changedItemIds.add(itemId);
+      console.log(`   🗑️  Item ${itemId} removed`);
+    } else if (
+      originalData.quantity !== updatedData.quantity ||
+      originalData.rate !== updatedData.rate
+    ) {
+      // Item quantity or rate CHANGED
+      changedItemIds.add(itemId);
+      console.log(
+        `   ✏️  Item ${itemId} changed: qty ${originalData.quantity}→${updatedData.quantity}, rate ${originalData.rate}→${updatedData.rate}`
+      );
+    }
+    // else: Item unchanged, don't mark it
   }
 
-  console.log(`✅ Marked ${year}-${month} and all subsequent months as dirty`);
+  // Check for newly added items
+  for (const [itemId, updatedData] of updatedItemsMap) {
+    if (!originalItemsMap.has(itemId)) {
+      // Item was ADDED to transaction
+      changedItemIds.add(itemId);
+      console.log(`   ➕ Item ${itemId} added (new)`);
+    }
+  }
+
+  // ========================================
+  // Mark ONLY changed items as dirty
+  // ========================================
+  if (changedItemIds.size === 0) {
+    console.log(`   ✨ No item changes detected, skipping item recalculation`);
+  } else {
+    console.log(`   🔧 Marking ${changedItemIds.size} changed items as dirty`);
+    
+    for (const itemId of changedItemIds) {
+      await ItemMonthlyBalance.updateMany(
+        {
+          item: itemId,
+          branch: original.branch,
+          $or: [
+            { year: { $gt: year } },
+            { year: year, month: { $gte: month } }
+          ]
+        },
+        {
+          $set: {
+            needsRecalculation: true,
+            lastModified: new Date(),
+          },
+        }
+      ).session(session);
+    }
+  }
+
+  console.log(
+    `✅ Marked ${year}-${month} and subsequent months as dirty (${changedItemIds.size} items affected)`
+  );
 
   return { 
     success: true,
     markedFrom: `${year}-${month}`,
-    message: "All months from edited month onwards marked for recalculation"
+    changedItemsCount: changedItemIds.size,
+    changedItemIds: Array.from(changedItemIds),
+    message: `Only ${changedItemIds.size} changed items marked for recalculation`
   };
 };
+
 
 

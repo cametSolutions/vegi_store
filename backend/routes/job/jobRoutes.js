@@ -1,5 +1,6 @@
 import express from "express";
 import { testNightlyJob } from "../../jobs/tasks/testJob.js";
+import { runNightlyJob } from "../../jobs/tasks/nightly/nightlyRecalculation.js";
 const router = express.Router();
 
 
@@ -8,7 +9,7 @@ router.post("/trigger-nightly-job", async (req, res) => {
     console.log("🔧 Manual trigger started by admin");
 
     // Call the same job function
-    await testNightlyJob();
+    await runNightlyJob();
 
     res.json({
       success: true,

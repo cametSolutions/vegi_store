@@ -308,8 +308,6 @@ export const editTransaction = async (req, res) => {
       session
     );
 
-    console.log("originalTransaction", originalTransaction);
-
     if (!originalTransaction) {
       await session.abortTransaction();
       return res.status(404).json({
@@ -317,6 +315,8 @@ export const editTransaction = async (req, res) => {
         message: "Transaction not found",
       });
     }
+
+    // console.log("originalTransaction", originalTransaction);
 
     // Validate company/branch cannot change
     if (
@@ -335,7 +335,7 @@ export const editTransaction = async (req, res) => {
     // ========================================
     const deltas = calculateTransactionDeltas(originalTransaction, updatedData);
 
-    console.log("deltas", deltas);
+    // console.log("deltas", deltas);
 
     // ========================================
     // STEP 3: Update Stock with Delta Only
@@ -359,11 +359,11 @@ export const editTransaction = async (req, res) => {
       session
     );
 
-    console.log("adjustment entries", adjustmentResult);
-    console.log(
-      "adjustment entries itemAdjustments",
-      adjustmentResult.adjustmentEntry.itemAdjustments
-    );
+    // console.log("adjustment entries", adjustmentResult);
+    // console.log(
+    //   "adjustment entries itemAdjustments",
+    //   adjustmentResult.adjustmentEntry.itemAdjustments
+    // );
 
     // ========================================
     // 5. Handle Outstanding & Cash/Bank Changes
@@ -376,27 +376,22 @@ export const editTransaction = async (req, res) => {
       session
     );
 
-    console.log("accountTypeResult", accountTypeResult);
+    // ========================================
+    // STEP 7: Mark Monthly Balances as Dirty
+    // ========================================
+    await markMonthlyBalancesForRecalculation(
+      originalTransaction,
+      updatedData,
+      session
+    );
 
     // ========================================
-    // STEP 7: Update Original Transaction Document
+    // STEP 8: Update Original Transaction Document
     // ========================================
     const updatedTransaction = await updateOriginalTransactionRecord(
       originalTransaction,
       updatedData,
       userId,
-      session
-    );
-
-    console.log("updatedTransaction", updatedTransaction);
-    
-
-    // ========================================
-    // STEP 8: Mark Monthly Balances as Dirty
-    // ========================================
-    await markMonthlyBalancesForRecalculation(
-      originalTransaction,
-      updatedData,
       session
     );
 
