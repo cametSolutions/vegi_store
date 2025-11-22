@@ -16,39 +16,33 @@ const Login = () => {
   }, [navigate, userData]);
 
   return (
-    <div className="flex flex-row flex-1 min-h-screen">
-      {/* Left Side: Info and background image */}
-      <div
-        className="flex-1 hidden md:flex flex-col justify-center items-start bg-cover bg-center relative"
-        style={{
-          backgroundImage:
-            "url('https://images.pexels.com/photos/1300972/pexels-photo-1300972.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2')",
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-green-600/50 to-emerald-800/60"></div>
-        <div className="relative z-10 p-12 text-white">
-          <h2 className="text-4xl font-bold mb-2">Welcome Back!</h2>
-          <p className="mb-4 text-lg">Join thousands of happy customers and enjoy fresh products every day.</p>
-          <div className="mt-12 flex flex-col gap-4">
-            <div>
-              <span className="text-3xl font-bold">500+</span>
-              <span className="block text-sm opacity-80 ml-2">Fresh Products</span>
-            </div>
-            <div>
-              <span className="text-3xl font-bold">1000+</span>
-              <span className="block text-sm opacity-80 ml-2">Happy Customers</span>
-            </div>
+    <div className="flex min-h-screen">
+      {/* Left: Clean Form */}
+      <div className="flex-1 flex flex-col justify-center items-center bg-white">
+        <div className="w-full max-w-sm mx-auto">
+          <h2 className="text-4xl font-bold text-gray-900 mb-1 text-center">
+            Veg Shop <span className="font-light">Login</span>
+          </h2>
+          <LoginForm onSubmit={login} isLoading={isLoading} />
+          <div className="mt-8 text-center text-gray-400 text-base">
+            Let’s Get Things Done!
           </div>
         </div>
       </div>
-
-      {/* Right Side: Login Form */}
-      <div className="flex-1 flex items-center justify-center bg-white">
-        <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-xl">
-          <h2 className="text-3xl font-bold mb-6 text-gray-700 text-center">
-            Sign In to Your Account
+      {/* Right: Clean image with overlay & tagline */}
+      <div className="hidden md:flex flex-1 items-center justify-center relative min-h-screen">
+        <img
+          src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80" // Replace with a fresh-vegetable image
+          alt="Vegetables"
+          className="object-cover h-full w-full"
+        />
+        <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+        <div className="absolute left-8 bottom-1/3 text-white z-10">
+          <h2 className="text-4xl font-bold mb-2">
+            Your Gateway <br />
+            to Freshness
           </h2>
-          <LoginForm onSubmit={login} isLoading={isLoading} />
+          <p className="text-2xl">Admin Access for Veggie Excellence</p>
         </div>
       </div>
     </div>

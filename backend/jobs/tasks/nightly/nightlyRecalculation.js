@@ -77,13 +77,12 @@ export const runNightlyJob = async () => {
     
 
     // =========================================================================
-    // PHASE 2: ACCOUNT LEDGER RECALCULATION (Future Implementation)
+    // PHASE 2: ACCOUNT LEDGER RECALCULATION 
     // =========================================================================
-    // TODO: Implement in Phase 3
-    // console.log('\n💰 PHASE 2: Account Ledger Recalculation');
-    // console.log('-'.repeat(70));
-    // const accountResults = await accountLedgerRefold.processAllDirtyAccounts();
-    // results.phases.accountLedger = accountResults;
+    console.log('\n💰 PHASE 2: Account Ledger Recalculation');
+    console.log('-'.repeat(70));
+    const accountResults = await processAllDirtyAccounts();
+    results.phases.accountLedger = accountResults;
 
     // =========================================================================
     // JOB COMPLETION

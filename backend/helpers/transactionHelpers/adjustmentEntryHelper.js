@@ -92,37 +92,63 @@ export const createAdjustmentEntries = async (
         newAmount: updated.netAmount,
 
         // Store item deltas
+        // Store item deltas with rate included
         itemAdjustments: deltas.stockDelta.map((delta) => {
-          let oldQuantity, newQuantity;
+          let oldQuantity, newQuantity, oldRate, newRate;
 
           if (delta.isNew) {
             oldQuantity = 0;
             newQuantity = Math.abs(delta.quantityDelta);
+            oldRate = 0;
+            newRate = delta.newRate;
           } else if (delta.isRemoved) {
             oldQuantity = Math.abs(delta.quantityDelta);
             newQuantity = 0;
+            oldRate = delta.oldRate;
+            newRate = 0;
           } else {
             const originalItem = original.items.find(
               (item) => item.item.toString() === delta.item.toString()
             );
             oldQuantity = originalItem ? originalItem.quantity : 0;
             newQuantity = oldQuantity + delta.quantityDelta;
+            oldRate = originalItem ? originalItem.rate : 0;
+            newRate = delta.newRate;
+          }
+
+          // Determine type for clarity in adjustment entry
+          let adjustmentType;
+          if (delta.isNew) {
+            adjustmentType = "added";
+          } else if (delta.isRemoved) {
+            adjustmentType = "removed";
+          } else if (delta.quantityDelta !== 0 && delta.rateDelta !== 0) {
+            adjustmentType = "quantity_and_rate_changed";
+          } else if (delta.quantityDelta !== 0) {
+            adjustmentType = "quantity_changed";
+          } else if (delta.rateDelta !== 0) {
+            adjustmentType = "rate_changed";
+          } else {
+            adjustmentType = "unchanged";
           }
 
           return {
             item: delta.item,
             itemName: delta.itemName,
             itemCode: delta.itemCode,
-            adjustmentType: delta.isNew
-              ? "added"
-              : delta.isRemoved
-              ? "removed"
-              : "quantity_changed",
+            adjustmentType,
             oldQuantity,
             newQuantity,
             quantityDelta: delta.quantityDelta,
+            oldRate,
+            newRate,
+            rateDelta:
+              typeof delta.rateDelta !== "undefined"
+                ? delta.rateDelta
+                : newRate - oldRate,
           };
         }),
+
         reason: updated.editReason || "Transaction edited",
         notes: updated.editNotes || null,
         editedBy: userId,

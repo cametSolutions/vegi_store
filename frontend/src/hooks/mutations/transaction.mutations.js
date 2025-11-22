@@ -16,7 +16,6 @@ export const transactionMutations = {
         queryKey: ["transactions", transactionType, "", company, branch],
       });
 
-
       toast.success(
         `${capitalizeFirstLetter(
           response?.data?.transaction?.transactionType || "Transaction"
@@ -35,9 +34,10 @@ export const transactionMutations = {
       transactionServices.update(id, formData, transactionType),
 
     onSuccess: (response, variables) => {
-      const { company, branch, transactionType,_id } = response?.data?.transaction;
-      
-           queryClient.invalidateQueries({
+      const { company, branch, transactionType, _id } =
+        response?.data?.transaction;
+
+      queryClient.invalidateQueries({
         queryKey: [
           "transactions",
           "getById",
@@ -46,6 +46,10 @@ export const transactionMutations = {
           _id,
           transactionType,
         ],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["transactions", transactionType, "", company, branch],
       });
       toast.success(
         `${capitalizeFirstLetter(

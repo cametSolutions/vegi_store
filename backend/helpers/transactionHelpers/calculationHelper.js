@@ -102,10 +102,14 @@ export const calculateTransactionDeltas = (original, updated) => {
  * Calculate stock deltas for items
  * Returns array of items with quantity changes
  */
+/**
+ * Calculate stock & rate deltas for items
+ * - quantityDelta affects stock
+ * - rateDelta is for valuation/amount change only
+ */
 export const calculateStockDeltas = (originalItems, updatedItems) => {
   const deltas = [];
 
-  // Create maps for easy lookup
   const originalMap = new Map(
     originalItems.map((item) => [item.item.toString(), item])
   );
@@ -113,54 +117,97 @@ export const calculateStockDeltas = (originalItems, updatedItems) => {
     updatedItems.map((item) => [item.item.toString(), item])
   );
 
-  // Find items in updated but not in original (NEW items)
+  // 1) Items in updated (new or changed)
   updatedItems.forEach((updatedItem) => {
     const itemId = updatedItem.item.toString();
     const originalItem = originalMap.get(itemId);
 
     if (!originalItem) {
-      // New item added
+      // NEW item
       deltas.push({
         item: updatedItem.item,
         itemName: updatedItem.itemName,
         itemCode: updatedItem.itemCode,
         unit: updatedItem.unit,
-        quantityDelta: updatedItem.quantity, // Full quantity (new item)
+
+        // stock movement
+        quantityDelta: updatedItem.quantity,
         isNew: true,
+        isRemoved: false,
+
+        // rate/amount side
+        oldRate: 0,
+        newRate: updatedItem.rate,
+        rateDelta: updatedItem.rate, // mainly for info
+
+        // helpful classification
+        changeType: "added",
       });
     } else {
-      // Item exists - check quantity change
       const quantityDelta = updatedItem.quantity - originalItem.quantity;
+      const rateDelta = updatedItem.rate - originalItem.rate;
 
-      if (quantityDelta !== 0) {
+      // Only push if something actually changed
+      if (quantityDelta !== 0 || rateDelta !== 0) {
+        let changeType = null;
+        if (quantityDelta !== 0 && rateDelta !== 0) {
+          changeType = "quantity_and_rate_changed";
+        } else if (quantityDelta !== 0) {
+          changeType = "quantity_changed";
+        } else if (rateDelta !== 0) {
+          changeType = "rate_changed";
+        }
+
         deltas.push({
           item: updatedItem.item,
           itemName: updatedItem.itemName,
           itemCode: updatedItem.itemCode,
           unit: updatedItem.unit,
+
           quantityDelta,
           isNew: false,
+          isRemoved: false,
+
+          oldQuantity: originalItem.quantity,
+          newQuantity: updatedItem.quantity,
+
+          oldRate: originalItem.rate,
+          newRate: updatedItem.rate,
+          rateDelta,
+
+          changeType,
         });
       }
     }
   });
 
-  // Find items removed (in original but not in updated)
+  // 2) Items removed (in original but not in updated)
   originalItems.forEach((originalItem) => {
     const itemId = originalItem.item.toString();
     if (!updatedMap.has(itemId)) {
-      // Item removed
       deltas.push({
         item: originalItem.item,
         itemName: originalItem.itemName,
         itemCode: originalItem.itemCode,
         unit: originalItem.unit,
-        quantityDelta: -originalItem.quantity, // Negative (removing)
+
+        quantityDelta: -originalItem.quantity,
+        isNew: false,
         isRemoved: true,
+
+        oldQuantity: originalItem.quantity,
+        newQuantity: 0,
+
+        oldRate: originalItem.rate,
+        newRate: 0,
+        rateDelta: -originalItem.rate, // just informational
+
+        changeType: "removed",
       });
     }
   });
 
   return deltas;
 };
+
 

@@ -22,27 +22,27 @@
  * │                                                             │
  * │  1. Find Dirty Items                                        │
  * │     └─> Query: ItemMonthlyBalance where needsRecalc=true   │
- * │     └─> Group by itemId + branchId                         │
+ * │     └─> Group by itemId + branchId                          │
  * │                                                             │
  * │  2. For Each Item-Branch (Sequential)                       │
  * │     ├─> START TRANSACTION                                   │
  * │     ├─> Get all dirty months                                │
- * │     ├─> Sort chronologically (Jan→Feb→Mar...)               │
- * │     │                                                       │
- * │     └─> For Each Month (Sequential, same transaction)       │
- * │         ├─> Get opening balance (prev month or Item Master) │
+ * │     ├─> Sort chronologically (Jan→Feb→Mar...)              │
+ * │     │                                                         │
+ * │     └─> For Each Month (Sequential, same transaction)      │
+ * │         ├─> Get opening balance (prev month or Item Master)│
  * │         ├─> Fetch ALL ledger entries for this month         │
  * │         ├─> Fetch ALL adjustments for this month            │
- * │         ├─> Apply adjustment deltas to quantities           │
+ * │         ├─> Apply adjustment deltas to quantities and rates │
  * │         ├─> Recalculate running balances & financial fields │
  * │         ├─> Update ledger + monthly balance                 │
  * │         └─> Mark next month dirty (cascade)                 │
- * │                                                             │
- * │     ├─> COMMIT TRANSACTION (all months)                     │
- * │     └─> Or ROLLBACK if any month fails                      │
+ * │                                                                 │
+ * │     ├─> COMMIT TRANSACTION (all months)                    │
+ * │     └─> Or ROLLBACK if any month fails                     │
  * │                                                             │
  * │  3. Log Results                                             │
- * │     └─> Items processed, months refolded, errors            │
+ * │     └─> Items processed, months refolded, errors           │
  * │                                                             │
  * └─────────────────────────────────────────────────────────────┘
  *
@@ -243,7 +243,7 @@ export const findDirtyItems = async () => {
  *
  *   Sept (clean)  →  Oct (dirty)  →  Nov (dirty)
  *   closing: 100     opening: 100     opening: 85 (reads Oct's new closing)
- *                    closing: 85      closing: 65
+ *                     closing: 85      closing: 65
  *
  * @param {String} itemId - MongoDB ObjectId as string
  * @param {String} branchId - MongoDB ObjectId as string
@@ -320,13 +320,14 @@ export const processOneItem = async (itemId, branchId, dirtyMonths) => {
  * 3. Fetch all adjustments for this month
  * 4. Build adjustment delta map (transactionId → total delta)
  * 5. Loop through ledger entries:
- *    a. Get base quantity from ledger
- *    b. Apply adjustment delta if exists
- *    c. Recalculate financial fields (baseAmount, taxAmount, amountAfterTax)
- *    d. Calculate new running balance
- *    e. Track totalIn and totalOut
+ *    a. Get base quantity & rate from ledger
+ *    b. Apply adjustment deltas (quantity & rate) if exist
+ *    c. Override account & accountName if changed
+ *    d. Recalculate financial fields (baseAmount, taxAmount, amountAfterTax)
+ *    e. Calculate new running balance
+ *    f. Track totalIn and totalOut
  * 6. Update database (within passed transaction):
- *    a. Update all ledger entries with new balances and amounts
+ *    a. Update all ledger entries with new balances, amounts, and accounts
  *    b. Update monthly balance summary
  *    c. Cascade to next month if needed
  *
@@ -436,87 +437,110 @@ export const refoldMonth = async (itemId, branchId, year, month, session) => {
   console.log(`      🔧 Found ${adjustments.length} adjustments`);
 
   // =========================================================================
-  // STEP 3.4: Build adjustment delta map
+  // STEP 3.4: Build adjustment delta map for quantity, rate, account, accountName
   // =========================================================================
-  // Structure: { transactionId: totalQuantityDelta }
-  // If same transaction adjusted multiple times, we sum all deltas
+  // Structure holds:
+  // - quantityDeltaMap: { transactionId: totalQuantityDelta }
+  // - rateDeltaMap: { transactionId: rateDelta }
+  // - accountMap: { transactionId: newAccount ObjectId }
+  // - accountNameMap: { transactionId: newAccountName string }
   const adjustmentMap = buildAdjustmentDeltaMap(adjustments, itemId);
 
-  if (Object.keys(adjustmentMap).length > 0) {
+  if (Object.keys(adjustmentMap.quantityDeltaMap).length > 0) {
     console.log(
       `      📊 Adjustments affect ${
-        Object.keys(adjustmentMap).length
+        Object.keys(adjustmentMap.quantityDeltaMap).length
       } transactions`
     );
   }
 
   // =========================================================================
-  // STEP 3.5: Recalculate running balances AND financial fields
+  // STEP 3.5: Recalculate running balances AND financial fields with adjusted quantity, rate, account
   // =========================================================================
-  // Important: When quantity changes via adjustment, all financial fields
-  // must be recalculated: baseAmount, taxAmount, amountAfterTax
   let runningBalance = openingStock;
   let totalStockIn = 0;
   let totalStockOut = 0;
-  const ledgerUpdates = []; // Store updates for batch processing
+  const ledgerUpdates = [];
 
   for (const entry of ledgerEntries) {
-    // Get base quantity from ledger entry
-    let effectiveQuantity = entry.quantity;
-    let effectiveRate = entry.rate || 0; // Original rate per unit
-
-    // Apply adjustment delta if this transaction was adjusted
     const txId = entry.transactionId.toString();
-    if (adjustmentMap[txId]) {
-      const delta = adjustmentMap[txId];
-      effectiveQuantity += delta;
+
+    // Start with values from existing ledger entry
+    let effectiveQuantity = entry.quantity;
+    let effectiveRate = entry.rate || 0;
+    let effectiveAccount = entry.account;
+    let effectiveAccountName = entry.accountName;
+
+    // Apply quantity adjustments if present for this transaction
+    if (adjustmentMap.quantityDeltaMap[txId]) {
+      effectiveQuantity += adjustmentMap.quantityDeltaMap[txId];
       console.log(
-        `🔧 Tx ${entry.transactionNumber}: ${entry.quantity} + ${delta} = ${effectiveQuantity}`
+        `🔧 Tx ${entry.transactionNumber}: quantity ${entry.quantity} + delta ${adjustmentMap.quantityDeltaMap[txId]} = ${effectiveQuantity}`
       );
     }
 
-    // =========================================================================
-    // Recalculate financial fields based on effective quantity
-    // =========================================================================
-    // Formula: baseAmount = rate × effectiveQuantity
-    // Use Math.abs() because amount is always positive (quantity can be negative for returns)
-    const recalculatedBaseAmount = effectiveRate * Math.abs(effectiveQuantity);
+    // Apply rate adjustments if present for this transaction
+    if (adjustmentMap.rateDeltaMap[txId] !== undefined) {
+      effectiveRate = entry.rate + adjustmentMap.rateDeltaMap[txId];
+      console.log(
+        `🔧 Tx ${entry.transactionNumber}: rate ${entry.rate} + delta ${adjustmentMap.rateDeltaMap[txId]} = ${effectiveRate}`
+      );
+    }
 
-    // Tax calculations (preserve original tax rate)
+    // Override account if account changed in adjustments (even if no quantity/rate change)
+    if (adjustmentMap.accountMap[txId]) {
+      effectiveAccount = adjustmentMap.accountMap[txId];
+      console.log(
+        `🔧 Tx ${entry.transactionNumber}: account changed to ${effectiveAccount}`
+      );
+    }
+
+    // Override accountName if changed in adjustments
+    if (adjustmentMap.accountNameMap[txId]) {
+      effectiveAccountName = adjustmentMap.accountNameMap[txId];
+      console.log(
+        `🔧 Tx ${entry.transactionNumber}: account name changed to ${effectiveAccountName}`
+      );
+    }
+
+    // Recalculate financial amounts based on effective quantity and rate
+    const recalculatedBaseAmount = effectiveRate * Math.abs(effectiveQuantity);
     const taxRate = entry.taxRate || 0;
     const recalculatedTaxAmount = (recalculatedBaseAmount * taxRate) / 100;
     const recalculatedAmountAfterTax =
       recalculatedBaseAmount + recalculatedTaxAmount;
 
-    // Calculate stock movement based on type (in vs out)
+    // Adjust running stock balance and totals based on movement type
     if (entry.movementType === "in") {
-      // Purchase, sales return, credit note, etc. - stock increases
       runningBalance += effectiveQuantity;
       totalStockIn += effectiveQuantity;
     } else {
-      // Sale, purchase return, debit note, etc. - stock decreases
       runningBalance -= effectiveQuantity;
       totalStockOut += effectiveQuantity;
     }
 
-    // Store update for this ledger entry (including all recalculated fields)
+    // Prepare record update object including all adjusted values
     ledgerUpdates.push({
       _id: entry._id,
-      quantity: effectiveQuantity, // ✨ Updated quantity (base + delta)
+      quantity: effectiveQuantity,
       runningStockBalance: runningBalance,
-      baseAmount: recalculatedBaseAmount, // ✨ Recalculated
-      taxAmount: recalculatedTaxAmount, // ✨ Recalculated
-      amountAfterTax: recalculatedAmountAfterTax, // ✨ Recalculated
+      baseAmount: recalculatedBaseAmount,
+      taxAmount: recalculatedTaxAmount,
+      amountAfterTax: recalculatedAmountAfterTax,
+      rate: effectiveRate,
+      account: effectiveAccount,
+      accountName: effectiveAccountName,
     });
 
-    // Enhanced logging for financial changes
-    if (adjustmentMap[txId]) {
+    // Log financial changes if any
+    const baseAmountDelta = recalculatedBaseAmount - entry.baseAmount;
+    if (baseAmountDelta !== 0) {
       console.log(
-        `         💰 Amount: ${entry.baseAmount.toFixed(
+        `        💰 Amount: ${entry.baseAmount.toFixed(
           2
-        )} → ${recalculatedBaseAmount.toFixed(2)} (Δ: ${(
-          recalculatedBaseAmount - entry.baseAmount
-        ).toFixed(2)})`
+        )} → ${recalculatedBaseAmount.toFixed(2)} (Δ: ${baseAmountDelta.toFixed(
+          2
+        )})`
       );
     }
   }
@@ -530,25 +554,24 @@ export const refoldMonth = async (itemId, branchId, year, month, session) => {
   // =========================================================================
   // STEP 3.6: Update database (within passed transaction)
   // =========================================================================
-  // Note: We don't start a new transaction here - we use the one passed from processOneItem
-  // This ensures all months are updated atomically
   try {
-    // Update all ledger entries with new running balances AND financial fields
     for (const update of ledgerUpdates) {
       await ItemLedger.updateOne(
         { _id: update._id },
         {
-          quantity: update.quantity, // ✨ Updated quantity (base + delta)
+          quantity: update.quantity,
           runningStockBalance: update.runningStockBalance,
-          baseAmount: update.baseAmount, // ✨ Recalculated based on new quantity
-          taxAmount: update.taxAmount, // ✨ Recalculated
-          amountAfterTax: update.amountAfterTax, // ✨ Recalculated
+          baseAmount: update.baseAmount,
+          taxAmount: update.taxAmount,
+          amountAfterTax: update.amountAfterTax,
+          rate: update.rate,
+          account: update.account,
+          accountName: update.accountName,
         },
-        { session } // ✨ Use passed session
+        { session }
       );
     }
 
-    // Update monthly balance summary
     await ItemMonthlyBalance.updateOne(
       {
         item: itemId,
@@ -561,17 +584,15 @@ export const refoldMonth = async (itemId, branchId, year, month, session) => {
         closingStock: closingStock,
         totalStockIn: totalStockIn,
         totalStockOut: totalStockOut,
-        needsRecalculation: false, // Mark as clean
+        needsRecalculation: false,
         lastUpdated: new Date(),
       },
-      { session } // ✨ Use passed session
+      { session }
     );
 
     // =========================================================================
     // STEP 3.7: Cascade to next month
     // =========================================================================
-    // If this month's closing changed, next month's opening is affected
-    // Mark next month as dirty so it gets reprocessed
     const nextMonth = getNextMonth(year, month);
 
     const nextMonthExists = await ItemMonthlyBalance.findOne({
@@ -579,7 +600,7 @@ export const refoldMonth = async (itemId, branchId, year, month, session) => {
       branch: branchId,
       year: nextMonth.year,
       month: nextMonth.month,
-    }).session(session); // ✨ Use passed session
+    }).session(session);
 
     if (nextMonthExists) {
       await ItemMonthlyBalance.updateOne(
@@ -590,7 +611,7 @@ export const refoldMonth = async (itemId, branchId, year, month, session) => {
           month: nextMonth.month,
         },
         { needsRecalculation: true },
-        { session } // ✨ Use passed session
+        { session }
       );
       console.log(
         `      ⚠️  Marked ${formatYearMonth(
@@ -603,7 +624,7 @@ export const refoldMonth = async (itemId, branchId, year, month, session) => {
     console.log(`      ✅ Month data updated`);
   } catch (error) {
     console.error(`      ❌ Update failed:`, error.message);
-    throw error; // Propagate error to processOneItem for rollback
+    throw error;
   }
 };
 
@@ -619,31 +640,53 @@ export const refoldMonth = async (itemId, branchId, year, month, session) => {
  *
  * @param {Array} adjustments - Array of adjustment documents
  * @param {String} itemId - Item we're processing
- * @returns {Object} - Map of { transactionId: totalDelta }
+ * @returns {Object} - Map of quantityDeltaMap, rateDeltaMap, accountMap, accountNameMap
  *
  * Example:
  * Transaction ABC adjusted twice:
- * - First adjustment: +5 KGS
- * - Second adjustment: +3 KGS
- * Result: { "ABC": 8 }
+ * - First adjustment: +5 KGS quantity, +2 rate, newAccount X
+ * - Second adjustment: +3 KGS quantity, -1 rate, newAccount Y (overwrites previous)
+ * Result:
+ * {
+ *   quantityDeltaMap: { "ABC": 8 },
+ *   rateDeltaMap: { "ABC": -1 },
+ *   accountMap: { "ABC": "Y" },
+ *   accountNameMap: { "ABC": "Account XYZ" }
+ * }
  */
 function buildAdjustmentDeltaMap(adjustments, itemId) {
-  const deltaMap = {};
+  const deltaMap = {
+    quantityDeltaMap: {},
+    rateDeltaMap: {},
+    accountMap: {},
+    accountNameMap: {},
+  };
 
   adjustments.forEach((adjustment) => {
     const txId = adjustment.originalTransaction.toString();
 
-    // Find the item adjustment within this adjustment record
-    const itemAdjustment = adjustment.itemAdjustments.find(
-      (ia) => ia.item.toString() === itemId
-    );
+    // Check for itemAdjustments for quantity/rate changes for this item
+    const itemAdjustment = adjustment.itemAdjustments
+      ? adjustment.itemAdjustments.find((ia) => ia.item.toString() === itemId)
+      : null;
 
     if (itemAdjustment && itemAdjustment.quantityDelta) {
-      // If this transaction already has deltas, sum them
-      if (!deltaMap[txId]) {
-        deltaMap[txId] = 0;
+      if (!deltaMap.quantityDeltaMap[txId]) {
+        deltaMap.quantityDeltaMap[txId] = 0;
       }
-      deltaMap[txId] += itemAdjustment.quantityDelta;
+      deltaMap.quantityDeltaMap[txId] += itemAdjustment.quantityDelta;
+    }
+
+    if (itemAdjustment && typeof itemAdjustment.rateDelta === "number") {
+      deltaMap.rateDeltaMap[txId] = itemAdjustment.rateDelta;
+    }
+
+    // ALWAYS track account change if present, even if no itemAdjustments!
+    if (adjustment.newAccount) {
+      deltaMap.accountMap[txId] = adjustment.newAccount;
+    }
+    if (adjustment.newAccountName) {
+      deltaMap.accountNameMap[txId] = adjustment.newAccountName;
     }
   });
 

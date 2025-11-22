@@ -117,7 +117,7 @@ export const adjustmentEntrySchema = new Schema(
         itemCode: String,
         adjustmentType: {
           type: String,
-          enum: ["added", "removed", "quantity_changed"],
+          enum: ["added", "removed", "quantity_changed", "rate_changed", "quantity_and_rate_changed","unchanged"],
         },
         oldQuantity: {
           type: Number,
@@ -130,6 +130,7 @@ export const adjustmentEntrySchema = new Schema(
         quantityDelta: Number,
         oldRate: Number,
         newRate: Number,
+        rateDelta: Number,
       },
     ],
 
