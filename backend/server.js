@@ -24,6 +24,7 @@ import PaymentRoutes from "./routes/FundTransactionRoutes/PaymentRoutes.js";
 import saleRoutes from "./routes/transactions/saleRoutes.js";
 import devRoutes from "./routes/devRoutes/devRoutes.js";
 import jobRoutes from "./routes/job/jobRoutes.js";
+import reportRoutes from "./routes/reports/reportRoute.js";
 
 /// Initialize Cron Jobs
 import { initializeCronJobs } from "./jobs/schedulers/cronScheduler.js";
@@ -111,6 +112,7 @@ app.use("/api/item", authMiddleware, itemRoute);
 app.use("/api/transaction", authMiddleware, PaymentRoutes);
 app.use("/api/dev", authMiddleware, devRoutes);
 app.use("/api/job", authMiddleware, jobRoutes);
+app.use("/api/reports", authMiddleware,reportRoutes );
 
 // ----------------- Production Build Serving -----------------
 if (process.env.NODE_ENV === "production") {

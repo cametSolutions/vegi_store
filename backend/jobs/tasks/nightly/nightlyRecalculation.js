@@ -38,8 +38,9 @@
  * =============================================================================
  */
 
+import { processAllDirtyAccounts } from "./accountLedgerRefold.js";
 import { processAllDirtyItems } from "./itemLedgerRefold.js";
-// const accountLedgerRefold = require('./accountLedgerRefold'); // Phase 3 - TODO
+
 
 /**
  * Main nightly job function

@@ -198,6 +198,8 @@ export const handleAccountTypeChangeOnEdit = async (
   userId,
   session
 ) => {
+  console.log("original",original);
+  
   const behavior = determineTransactionBehavior(updated.transactionType);
 
   const originalAccountType = original.accountType;
@@ -330,6 +332,9 @@ export const handleAccountTypeChangeOnEdit = async (
         sourceTransaction: original._id,
       }).session(session);
 
+      console.log("deleteResult",deleteResult);
+      
+
       result.outstandingDeleted = deleteResult.deletedCount > 0;
       console.log(`🗑️ Deleted old outstanding: ${result.outstandingDeleted}`);
 
@@ -358,7 +363,10 @@ export const handleAccountTypeChangeOnEdit = async (
       );
 
       result.outstandingCreated = true;
-      console.log(`✅ Created new outstanding: ${result.outstanding._id}`);
+      // result.outstandingId = result.outstanding._id.toString();
+      // console.log("result",result);
+      
+      // console.log(`✅ Created new outstanding: ${result.outstandingId}`);
     } else {
       // Same customer, just update outstanding
       console.log("📝 Case 3b: Same Customer, updating outstanding");
