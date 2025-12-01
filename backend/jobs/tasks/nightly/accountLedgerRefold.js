@@ -1,17 +1,14 @@
 /**
  * =============================================================================
- * ACCOUNT LEDGER REFOLD - NIGHTLY RECALCULATION ENGINE
+ * ACCOUNT LEDGER REFOLD - NIGHTLY RECALCULATION ENGINE (FIXED VERSION)
  * =============================================================================
  *
- * Mirrors the exact same architecture as itemLedgerRefold.js
- * Processes dirty AccountMonthlyBalance records by recalculating:
- * 1. AccountLedger runningBalance for each entry
- * 2. AccountMonthlyBalance totals (opening, totalDebit, totalCredit, closing)
- * 3. Applies adjustments (amountDelta, account changes)
- * 4. Cascades dirty flag to next month
+ * ✅ FIXED: Proper handling of oldAccount vs affectedAccount adjustments
+ * ✅ OLD ACCOUNT: Sets ledger amount to 0 (removes transaction)
+ * ✅ NEW ACCOUNT: Applies newAmount with account/accountName changes
  *
  * Author: Midhun Mohan (with AI assistance)
- * Last Updated: Nov 2025
+ * Last Updated: Dec 2025 - Fixed double-adjustment bug
  * =============================================================================
  */
 
@@ -30,13 +27,8 @@ import {
 
 /**
  * =============================================================================
- * MAIN ENTRY POINT
+ * MAIN ENTRY POINT (UNCHANGED)
  * =============================================================================
- */
-
-/**
- * Process all accounts that have dirty months
- * Returns summary statistics (identical structure to item refold)
  */
 export const processAllDirtyAccounts = async () => {
   console.log("💰 Finding all dirty accounts...");
@@ -53,19 +45,15 @@ export const processAllDirtyAccounts = async () => {
     return { accountsProcessed: 0, monthsRefolded: 0, errors: [] };
   }
 
-  // Statistics tracking
   let accountsProcessed = 0;
   let monthsRefolded = 0;
   const errors = [];
 
-  // Process each account-branch combination sequentially (same as items)
   for (const key of workKeys) {
     const { accountId, branchId, accountName, months } = workMap[key];
 
     try {
-      console.log(
-        `\n🔧 Processing: ${accountName} - Branch: ${branchId}`
-      );
+      console.log(`\n🔧 Processing: ${accountName} - Branch: ${branchId}`);
       console.log(
         `   Dirty months: ${months
           .map((m) => formatYearMonth(m.year, m.month))
@@ -90,7 +78,6 @@ export const processAllDirtyAccounts = async () => {
         error: error.message,
         stack: error.stack,
       });
-      // Continue with next account (isolation)
     }
   }
 
@@ -104,9 +91,7 @@ export const processAllDirtyAccounts = async () => {
   if (errors.length > 0) {
     console.log("\n⚠️  ERROR DETAILS:");
     errors.forEach((e) => {
-      console.log(
-        `   ${e.accountName} - Branch ${e.branchId}: ${e.error}`
-      );
+      console.log(`   ${e.accountName} - Branch ${e.branchId}: ${e.error}`);
     });
   }
 
@@ -120,23 +105,16 @@ export const processAllDirtyAccounts = async () => {
 
 /**
  * =============================================================================
- * STEP 1: FIND ALL DIRTY ACCOUNTS
+ * STEP 1: FIND ALL DIRTY ACCOUNTS (UNCHANGED)
  * =============================================================================
  */
-
-/**
- * Find all accounts with dirty months and group by account + branch
- * Returns: { "accountId_branchId": { accountId, branchId, accountName, months: [{year, month}] }, ... }
- */
 export const findDirtyAccounts = async () => {
-  // Query all monthly balance records that need recalculation
   const dirtyRecords = await AccountMonthlyBalance.find({
     needsRecalculation: true,
   })
     .select("account branch year month accountName")
     .lean();
 
-  // Group by account AND branch (composite key)
   const workMap = {};
 
   dirtyRecords.forEach((record) => {
@@ -164,26 +142,18 @@ export const findDirtyAccounts = async () => {
 
 /**
  * =============================================================================
- * STEP 2: PROCESS ONE ACCOUNT-BRANCH COMBINATION
+ * STEP 2: PROCESS ONE ACCOUNT-BRANCH COMBINATION (UNCHANGED)
  * =============================================================================
  */
-
-/**
- * Process all dirty months for a single account in a single branch
- * EXACT SAME TRANSACTION PATTERN AS ITEMS
- */
 export const processOneAccount = async (accountId, branchId, dirtyMonths) => {
-  // Sort months chronologically (CRITICAL)
   dirtyMonths.sort(sortMonthsChronologically);
 
   let monthsProcessed = 0;
 
-  // START TRANSACTION FOR ALL MONTHS (same as items)
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    // Process each month sequentially within the same transaction
     for (const { year, month } of dirtyMonths) {
       const monthKey = formatYearMonth(year, month);
       console.log(`   🔄 Refolding ${monthKey}...`);
@@ -198,11 +168,9 @@ export const processOneAccount = async (accountId, branchId, dirtyMonths) => {
       }
     }
 
-    // COMMIT TRANSACTION
     await session.commitTransaction();
     console.log(`   💾 All ${monthsProcessed} months committed successfully`);
   } catch (error) {
-    // ROLLBACK TRANSACTION
     await session.abortTransaction();
     console.error(`   🔄 Transaction rolled back:`, error.message);
     throw error;
@@ -215,20 +183,20 @@ export const processOneAccount = async (accountId, branchId, dirtyMonths) => {
 
 /**
  * =============================================================================
- * STEP 3: REFOLD ONE ACCOUNT MONTH (CORE ALGORITHM)
+ * STEP 3: REFOLD ONE ACCOUNT MONTH (CORE ALGORITHM - FIXED)
  * =============================================================================
  */
-
-/**
- * Refold a single month for a single account in a single branch
- * EXACT SAME LOGIC AS refoldMonth() but for accounts
- */
-export const refoldAccountMonth = async (accountId, branchId, year, month, session) => {
+export const refoldAccountMonth = async (
+  accountId,
+  branchId,
+  year,
+  month,
+  session
+) => {
   const monthKey = formatYearMonth(year, month);
+  const currentAccountIdStr = accountId.toString(); // For string comparison
 
-  // =========================================================================
-  // STEP 3.1: Get opening balance (previous month's closing OR AccountMaster)
-  // =========================================================================
+  // STEP 3.1: Get opening balance (UNCHANGED)
   const prevMonth = getPreviousMonth(year, month);
   const prevMonthRecord = await AccountMonthlyBalance.findOne({
     account: accountId,
@@ -272,9 +240,7 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
 
   console.log(`     ✅ Final opening balance: ${openingBalance}`);
 
-  // =========================================================================
-  // STEP 3.2: Fetch all ledger entries for this month
-  // =========================================================================
+  // STEP 3.2: Fetch all ledger entries for this month (UNCHANGED)
   const { startDate, endDate } = getMonthDateRange(year, month);
 
   const ledgerEntries = await AccountLedger.find({
@@ -285,16 +251,17 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
       $lt: endDate,
     },
   })
-    .sort({ transactionDate: 1, createdAt: 1 }) // Chronological order
+    .sort({ transactionDate: 1, createdAt: 1 })
     .lean();
 
   console.log(`     📝 Found ${ledgerEntries.length} ledger entries`);
 
-  // =========================================================================
-  // STEP 3.3: Fetch all adjustments for this month
-  // =========================================================================
+  // ✅ STEP 3.3: FIXED - Fetch adjustments for BOTH oldAccount AND affectedAccount
   const adjustments = await Adjustment.find({
-    affectedAccount: accountId,
+    $or: [
+      { oldAccount: accountId }, // Adjustments FROM this account
+      { affectedAccount: accountId }, // Adjustments TO this account
+    ],
     branch: branchId,
     originalTransactionDate: {
       $gte: startDate,
@@ -304,58 +271,71 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
     isReversed: false,
   }).lean();
 
-  console.log(`     🔧 Found ${adjustments.length} adjustments`);
+  console.log(`🔧 Found ${adjustments.length} adjustments`);
 
-  // =========================================================================
-  // STEP 3.4: Build adjustment delta map
-  // =========================================================================
-  const adjustmentMap = buildAccountAdjustmentDeltaMap(adjustments);
+  // ✅ STEP 3.4: FIXED - Build proper adjustment delta map
+  const adjustmentMap = buildAccountAdjustmentDeltaMap(
+    adjustments,
+    currentAccountIdStr
+  );
 
-  if (Object.keys(adjustmentMap.amountDeltaMap).length > 0) {
+  if (
+    Object.keys(adjustmentMap.amountDeltaMap).length > 0 ||
+    adjustmentMap.accountChanges.size > 0
+  ) {
     console.log(
-      `     📊 Adjustments affect ${
-        Object.keys(adjustmentMap.amountDeltaMap).length
+      ` 📊 Adjustments affect ${
+        Object.keys(adjustmentMap.amountDeltaMap).length +
+        adjustmentMap.accountChanges.size
       } transactions`
     );
   }
 
-  // =========================================================================
-  // STEP 3.5: Recalculate running balances with adjustments
-  // =========================================================================
+  // STEP 3.5: Recalculate running balances with FIXED adjustment logic
   let runningBalance = openingBalance;
   let totalDebit = 0;
   let totalCredit = 0;
   const ledgerUpdates = [];
 
+  console.log("ledgerEntries", ledgerEntries);
+
   for (const entry of ledgerEntries) {
     const txId = entry.transactionId.toString();
 
-    // Start with existing ledger values
+    // ✅ FIXED LOGIC: Handle account changes properly
     let effectiveAmount = entry.amount;
     let effectiveAccount = entry.account;
     let effectiveAccountName = entry.accountName;
 
-    // Apply amount adjustments
-    if (adjustmentMap.amountDeltaMap[txId]) {
-      effectiveAmount += adjustmentMap.amountDeltaMap[txId];
+    // SPECIAL CASE 1: This is OLD ACCOUNT - REMOVE transaction completely (set to 0)
+    if (adjustmentMap.accountChanges.has(txId)) {
+      effectiveAmount = 0;
       console.log(
-        `🔧 Tx ${entry.transactionNumber}: amount ${entry.amount} + delta ${adjustmentMap.amountDeltaMap[txId]} = ${effectiveAmount}`
+        `🔧 Tx ${entry.transactionNumber}: OLD ACCOUNT → SET TO 0 (removed)`
       );
-    }
+    } else {
+      // NORMAL CASE: Apply amount delta (for NEW accounts or simple amount changes)
+      if (adjustmentMap.amountDeltaMap[txId]) {
+        effectiveAmount += adjustmentMap.amountDeltaMap[txId];
+        console.log(
+          `🔧 Tx ${entry.transactionNumber}: amount ${entry.amount} + delta ${adjustmentMap.amountDeltaMap[txId]} = ${effectiveAmount}`
+        );
+      }
 
-    // Override account changes
-    if (adjustmentMap.accountMap[txId]) {
-      effectiveAccount = adjustmentMap.accountMap[txId];
-      console.log(
-        `🔧 Tx ${entry.transactionNumber}: account changed to ${effectiveAccount}`
-      );
-    }
+      // Account changes (only apply to NEW accounts)
+      if (adjustmentMap.accountMap[txId]) {
+        effectiveAccount = adjustmentMap.accountMap[txId];
+        console.log(
+          `🔧 Tx ${entry.transactionNumber}: account changed to ${effectiveAccount}`
+        );
+      }
 
-    if (adjustmentMap.accountNameMap[txId]) {
-      effectiveAccountName = adjustmentMap.accountNameMap[txId];
-      console.log(
-        `🔧 Tx ${entry.transactionNumber}: account name changed to ${effectiveAccountName}`
-      );
+      if (adjustmentMap.accountNameMap[txId]) {
+        effectiveAccountName = adjustmentMap.accountNameMap[txId];
+        console.log(
+          `🔧 Tx ${entry.transactionNumber}: account name changed to ${effectiveAccountName}`
+        );
+      }
     }
 
     // Update totals and running balance based on ledgerSide
@@ -380,7 +360,9 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
     const amountDelta = effectiveAmount - entry.amount;
     if (amountDelta !== 0) {
       console.log(
-        `       💰 Amount: ${entry.amount.toFixed(2)} → ${effectiveAmount.toFixed(2)} (Δ: ${amountDelta.toFixed(2)})`
+        `       💰 Amount: ${entry.amount.toFixed(
+          2
+        )} → ${effectiveAmount.toFixed(2)} (Δ: ${amountDelta.toFixed(2)})`
       );
     }
   }
@@ -388,12 +370,12 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
   const closingBalance = runningBalance;
 
   console.log(
-    `     📊 Closing balance: ${closingBalance.toFixed(2)} (Dr: ${totalDebit.toFixed(2)}, Cr: ${totalCredit.toFixed(2)})`
+    `     📊 Closing balance: ${closingBalance.toFixed(
+      2
+    )} (Dr: ${totalDebit.toFixed(2)}, Cr: ${totalCredit.toFixed(2)})`
   );
 
-  // =========================================================================
-  // STEP 3.6: Update database (within transaction)
-  // =========================================================================
+  // STEP 3.6: Update database (UNCHANGED)
   try {
     // Update all ledger entries
     for (const update of ledgerUpdates) {
@@ -429,9 +411,7 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
       { session, upsert: true }
     );
 
-    // =========================================================================
-    // STEP 3.7: Cascade to next month (EXACT SAME AS ITEMS)
-    // =========================================================================
+    // STEP 3.7: Cascade to next month (UNCHANGED)
     const nextMonth = getNextMonth(year, month);
 
     const nextMonthExists = await AccountMonthlyBalance.findOne({
@@ -469,36 +449,54 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
 
 /**
  * =============================================================================
- * HELPER: Build Account Adjustment Delta Map
+ * ✅ FIXED HELPER: Build Account Adjustment Delta Map
  * =============================================================================
+ *
+ * LOGIC:
+ * 1. OLD ACCOUNT: Set amount to 0 (remove transaction) → accountChanges Set
+ * 2. NEW ACCOUNT: Apply newAmount delta + account/accountName changes
  */
-
-/**
- * Build adjustment map for accounts (mirrors item version)
- * Matches: AdjustmentEntry.originalTransaction === AccountLedger.transactionId 
- *        + AdjustmentEntry.affectedAccount === AccountLedger.account
- */
-function buildAccountAdjustmentDeltaMap(adjustments) {
+function buildAccountAdjustmentDeltaMap(adjustments, currentAccountIdStr) {
   const deltaMap = {
     amountDeltaMap: {},
     accountMap: {},
     accountNameMap: {},
+    accountChanges: new Set(), // NEW: Track transactions to be ZEROED (old accounts)
   };
 
   adjustments.forEach((adjustment) => {
+    console.log(adjustment.originalTransaction.toString());
     const txId = adjustment.originalTransaction.toString();
+    const oldAccountId = adjustment?.oldAccount?.toString();
+    const affectedAccountId = adjustment.affectedAccount.toString();
 
-    // Amount adjustments
-    if (adjustment.amountDelta) {
-      deltaMap.amountDeltaMap[txId] = (deltaMap.amountDeltaMap[txId] || 0) + adjustment.amountDelta;
+    // ✅ CASE 1: Current account is OLD ACCOUNT - REMOVE transaction completely
+    if (oldAccountId === currentAccountIdStr) {
+      deltaMap.accountChanges.add(txId);
+      // Force amount to 0 by applying negative oldAmount
+      deltaMap.amountDeltaMap[txId] = -adjustment.oldAmount;
+      console.log(
+        `📤 OLD ACCOUNT MATCH: Tx ${txId} → SET TO 0 (removing ${adjustment.oldAmount})`
+      );
     }
+    // ✅ CASE 2: Current account is NEW/AFFECTED ACCOUNT - Apply changes
+    else if (affectedAccountId === currentAccountIdStr) {
+      // Calculate delta: newAmount - oldAmount
+      const amountDelta = adjustment.newAmount - adjustment.oldAmount;
+      if (amountDelta !== 0) {
+        deltaMap.amountDeltaMap[txId] = amountDelta;
+        console.log(
+          `📥 NEW ACCOUNT MATCH: Tx ${txId} delta ${amountDelta} (old:${adjustment.oldAmount}→new:${adjustment.newAmount})`
+        );
+      }
 
-    // Account changes (always override last one)
-    if (adjustment.newAccount) {
-      deltaMap.accountMap[txId] = adjustment.newAccount;
-    }
-    if (adjustment.newAccountName) {
-      deltaMap.accountNameMap[txId] = adjustment.newAccountName;
+      // Apply account changes
+      if (adjustment.newAccount) {
+        deltaMap.accountMap[txId] = adjustment.newAccount;
+      }
+      if (adjustment.newAccountName) {
+        deltaMap.accountNameMap[txId] = adjustment.newAccountName;
+      }
     }
   });
 
