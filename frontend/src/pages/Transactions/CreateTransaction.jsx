@@ -115,6 +115,7 @@ const CreateTransaction = () => {
               addItem={addItem}
               clickedItemInTable={clickedItemInTable}
               transactionType={transactionData?.transactionType}
+              account={transactionData?.account}
             />
           </div>
 

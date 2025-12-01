@@ -37,16 +37,27 @@ const Navbar = () => {
     { label: "Sales Return", path: "/Sales-return" },
     { label: "Receipt", path: "/transactions/receipt/create" },
     { label: "Payment", path: "/transactions/payment/create" },
-    { label: "Reports", path: "/transactions/payment/create" },
     {
-      label: "Extras",
-      path: "/price-level",
+      label: "Reports",
+      path: "/transactions/payment/create",
       hasDropdown: true,
       dropdownItems: [
         { label: "Item Report", path: "reports/item-report" },
         { label: "Item Monthly Report", path: "reports/item-monthly-report" },
         { label: "Account Report", path: "reports/account-report" },
-        { label: "Account Monthly Report", path: "reports/account-monthly-report" },
+        {
+          label: "Account Monthly Report",
+          path: "reports/account-monthly-report",
+        },
+
+      ],
+    },
+    {
+      label: "Extras",
+      path: "/price-level",
+      hasDropdown: true,
+      dropdownItems: [
+   
         { label: "Stock Adjustment", path: "/stock-adjustment" },
         { label: "Price Level", path: "/master/price-level" },
       ],
@@ -108,7 +119,12 @@ const Navbar = () => {
       <div className=" mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div onClick={()=>{handleNavClick("/")}} className="flex items-center  flex-shrink-0">
+          <div
+            onClick={() => {
+              handleNavClick("/");
+            }}
+            className="flex items-center  flex-shrink-0"
+          >
             <img src={logIcon} alt="Logo" className="h-10 w-10" />
             <img
               src={logoName}

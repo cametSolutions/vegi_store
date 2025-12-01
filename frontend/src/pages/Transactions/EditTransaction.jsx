@@ -171,6 +171,8 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
               addItem={addItem}
               clickedItemInTable={clickedItemInTable}
               transactionType={transactionData?.transactionType}
+              account={transactionData?.account}
+
             />
           </div>
 
