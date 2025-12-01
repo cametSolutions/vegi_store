@@ -15,11 +15,11 @@ import { fetchOriginalTransaction } from "../../helpers/transactionHelpers/model
 import { applyStockDeltas } from "../../helpers/transactionHelpers/stockManager.js";
 import {
   createAdjustmentEntries,
-  createCashAccountAdjustment,
+  // createCashAccountAdjustment,
 } from "../../helpers/transactionHelpers/adjustmentEntryHelper.js";
 import {
   handleAccountTypeChangeOnEdit,
-  updateOutstandingOnEdit,
+  // updateOutstandingOnEdit,
 } from "../../helpers/transactionHelpers/outstandingService.js";
 import {
   markMonthlyBalancesForRecalculation,
