@@ -45,6 +45,8 @@ const Navbar = () => {
       dropdownItems: [
         { label: "Item Report", path: "reports/item-report" },
         { label: "Item Monthly Report", path: "reports/item-monthly-report" },
+        { label: "Account Report", path: "reports/account-report" },
+        { label: "Account Monthly Report", path: "reports/account-monthly-report" },
         { label: "Stock Adjustment", path: "/stock-adjustment" },
         { label: "Price Level", path: "/master/price-level" },
       ],
