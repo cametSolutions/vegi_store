@@ -18,7 +18,7 @@ const ItemMonthlyBalanceDashboard = () => {
     companyId: selectedCompanyFromStore || "",
     branchId: selectedBranchFromStore || "",
     itemId: "",
-    year: new Date().getFullYear(), // Default current year
+    year: "", // Default current year
     page: 1,
     limit: 200,
   });

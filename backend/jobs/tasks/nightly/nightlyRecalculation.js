@@ -38,9 +38,10 @@
  * =============================================================================
  */
 
+import mongoose from "mongoose";
 import { processAllDirtyAccounts } from "./accountLedgerRefold.js";
 import { processAllDirtyItems } from "./itemLedgerRefold.js";
-
+import AdjustmentEntryModel from "../../../model/AdjustmentEntryModel.js";
 
 /**
  * Main nightly job function
@@ -75,13 +76,50 @@ export const runNightlyJob = async () => {
     const itemResults = await processAllDirtyItems();
     results.phases.itemLedger = itemResults;
 
-    
+    // PHASE 1.5:
+    if (
+      itemResults.processedAdjustmentIds &&
+      itemResults.processedAdjustmentIds.length > 0
+    ) {
+      console.log("\n🔧 PHASE 1.5: Marking processed adjustments as reversed");
+      console.log("-".repeat(70));
+
+      const session = await mongoose.startSession();
+      session.startTransaction();
+
+      try {
+        // ✅ ADD await here
+        const updateResult = await AdjustmentEntryModel.updateMany(
+          { _id: { $in: itemResults.processedAdjustmentIds } },
+          {
+            $set: {
+              isReversed: true,
+              reversedAt: new Date(),
+              status: "reversed",
+              // reversedBy: "nightly-job-v1.",
+            },
+          },
+          { session }
+        );
+
+        await session.commitTransaction();
+        console.log(
+          `✅ Marked ${updateResult.modifiedCount} adjustments as reversed`
+        );
+        results.phases.adjustmentsReversed = updateResult.modifiedCount;
+      } catch (error) {
+        await session.abortTransaction();
+        console.error("❌ Phase 1.5 failed:", error.message);
+      } finally {
+        session.endSession();
+      }
+    }
 
     // =========================================================================
-    // PHASE 2: ACCOUNT LEDGER RECALCULATION 
+    // PHASE 2: ACCOUNT LEDGER RECALCULATION
     // =========================================================================
-    console.log('\n💰 PHASE 2: Account Ledger Recalculation');
-    console.log('-'.repeat(70));
+    console.log("\n💰 PHASE 2: Account Ledger Recalculation");
+    console.log("-".repeat(70));
     const accountResults = await processAllDirtyAccounts();
     results.phases.accountLedger = accountResults;
 

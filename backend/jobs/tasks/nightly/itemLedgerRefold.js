@@ -98,6 +98,9 @@ export const processAllDirtyItems = async () => {
     `📊 Found ${workKeys.length} item-branch combinations with dirty months`
   );
 
+  // ADD THIS LINE - Track all processed adjustments
+  const allProcessedAdjustmentIds = new Set();
+
   if (workKeys.length === 0) {
     console.log("✨ No dirty items found. Database is clean!");
     return { itemsProcessed: 0, monthsRefolded: 0, errors: [] };
@@ -123,7 +126,12 @@ export const processAllDirtyItems = async () => {
           .join(", ")}`
       );
 
-      const result = await processOneItem(itemId, branchId, months);
+      const result = await processOneItem(
+        itemId,
+        branchId,
+        months,
+        allProcessedAdjustmentIds
+      );
 
       itemsProcessed++;
       monthsRefolded += result.monthsProcessed;
@@ -166,6 +174,7 @@ export const processAllDirtyItems = async () => {
     itemsProcessed,
     monthsRefolded,
     errors,
+    processedAdjustmentIds: Array.from(allProcessedAdjustmentIds), // ADD THIS
     success: errors.length === 0,
   };
 };
@@ -249,7 +258,12 @@ export const findDirtyItems = async () => {
  * @param {String} branchId - MongoDB ObjectId as string
  * @param {Array} dirtyMonths - Array of {year, month} objects
  */
-export const processOneItem = async (itemId, branchId, dirtyMonths) => {
+export const processOneItem = async (
+  itemId,
+  branchId,
+  dirtyMonths,
+  allProcessedAdjustmentIds
+) => {
   // Sort months chronologically (oldest first)
   // This is CRITICAL - we must process Jan before Feb, Feb before Mar, etc.
   dirtyMonths.sort(sortMonthsChronologically);
@@ -271,7 +285,14 @@ export const processOneItem = async (itemId, branchId, dirtyMonths) => {
       console.log(`   🔄 Refolding ${monthKey}...`);
 
       try {
-        await refoldMonth(itemId, branchId, year, month, session);
+        await refoldMonth(
+          itemId,
+          branchId,
+          year,
+          month,
+          session,
+          allProcessedAdjustmentIds
+        );
         monthsProcessed++;
         console.log(`      ✓ ${monthKey} completed`);
       } catch (error) {
@@ -337,7 +358,14 @@ export const processOneItem = async (itemId, branchId, dirtyMonths) => {
  * @param {Number} month - Month (1-12)
  * @param {Object} session - MongoDB session (transaction context)
  */
-export const refoldMonth = async (itemId, branchId, year, month, session) => {
+export const refoldMonth = async (
+  itemId,
+  branchId,
+  year,
+  month,
+  session,
+  processedAdjustmentIds
+) => {
   const monthKey = formatYearMonth(year, month);
 
   // =========================================================================
@@ -435,6 +463,11 @@ export const refoldMonth = async (itemId, branchId, year, month, session) => {
   }).lean();
 
   console.log(`      🔧 Found ${adjustments.length} adjustments`);
+
+  // ADD THIS after fetching adjustments:
+  const usedAdjustmentIds = adjustments.map((adj) => adj._id.toString());
+  usedAdjustmentIds.forEach((id) => processedAdjustmentIds.add(id));
+  console.log(`      🔧 Collected ${usedAdjustmentIds.length} adjustment IDs`);
 
   // =========================================================================
   // STEP 3.4: Build adjustment delta map for quantity, rate, account, accountName
@@ -622,6 +655,7 @@ export const refoldMonth = async (itemId, branchId, year, month, session) => {
     }
 
     console.log(`      ✅ Month data updated`);
+
   } catch (error) {
     console.error(`      ❌ Update failed:`, error.message);
     throw error;

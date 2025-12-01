@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { api } from "@/api/client/apiClient";
 import { useSelector } from "react-redux";
+import { formatDate, formatDateShort } from "../../../../shared/utils/date";
 
 const ItemLedgerDashboard = () => {
   const [ledgerData, setLedgerData] = useState([]);
@@ -42,7 +43,7 @@ const ItemLedgerDashboard = () => {
     fetchLedgerData();
   }, [filters]);
 
-  const formatDate = (date) => new Date(date).toLocaleDateString();
+  // const formatDate = (date) => new Date(date).toLocaleDateString();
 
   const getMovementSign = (movementType) => {
     return movementType === "in" ? "+" : "-";
@@ -108,7 +109,7 @@ const ItemLedgerDashboard = () => {
                   onMouseLeave={() => setCurrentItemGroup(null)}
                 >
                   <td className="border border-gray-300 px-3 py-2">
-                    {formatDate(ledger.transactionDate)}
+                    {formatDateShort(ledger.transactionDate)}
                   </td>
                   <td className="border border-gray-300 px-3 py-2">
                     <div className="font-medium">{ledger.itemName}</div>
