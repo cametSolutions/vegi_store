@@ -96,6 +96,9 @@ export const ItemMonthlyBalanceSchema = new mongoose.Schema(
 // Compound index for unique constraint and faster queries
 ItemMonthlyBalanceSchema.index({ item: 1, branch: 1, periodKey: 1 }, { unique: true });
 ItemMonthlyBalanceSchema.index({ company: 1, branch: 1, periodKey: 1 });
+ItemMonthlyBalanceSchema.index({ needsRecalculation: 1 });
+ItemMonthlyBalanceSchema.index({ item: 1, branch: 1, year: 1, month: 1 });
+ItemMonthlyBalanceSchema.index({ item: 1, branch: 1 });
 
 // Method to calculate closing stock
 ItemMonthlyBalanceSchema.methods.calculateClosingStock = function () {

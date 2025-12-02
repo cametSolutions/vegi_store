@@ -224,6 +224,8 @@ adjustmentEntrySchema.index({ affectedAccount: 1, adjustmentDate: -1 });
 adjustmentEntrySchema.index({ adjustmentNumber: 1 }, { unique: true });
 adjustmentEntrySchema.index({ oldAccount: 1, branch: 1, originalTransactionDate: 1 });
 adjustmentEntrySchema.index({ affectedAccount: 1, branch: 1, originalTransactionDate: 1 });
+adjustmentEntrySchema.index({ "itemAdjustments.item": 1, branch: 1, originalTransactionDate: 1, status: 1 });
+adjustmentEntrySchema.index({ originalTransaction: 1 });
 
 // ========================================
 // STATIC METHODS

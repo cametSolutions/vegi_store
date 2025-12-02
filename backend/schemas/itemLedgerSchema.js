@@ -103,6 +103,9 @@ ItemLedgerSchema.index({ item: 1, transactionDate: 1 });
 ItemLedgerSchema.index({ company: 1, branch: 1 });
 ItemLedgerSchema.index({ transactionId: 1 });
 ItemLedgerSchema.index({ account: 1 });
+ItemLedgerSchema.index({ item: 1, branch: 1, transactionDate: 1 });
+ItemLedgerSchema.index({ transactionId: 1 });
+ItemLedgerSchema.index({ item: 1, branch: 1 });
 
 // Static method to get last stock balance for an item
 ItemLedgerSchema.statics.getLastStockBalance = async function (
