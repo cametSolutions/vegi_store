@@ -49,6 +49,8 @@ import AdjustmentEntryModel from "../../../model/AdjustmentEntryModel.js";
  *
  * @returns {Object} - Job execution results
  */
+
+
 export const runNightlyJob = async () => {
   console.log("\n" + "=".repeat(70));
   console.log("🌙 NIGHTLY RECALCULATION JOB STARTED");
@@ -76,45 +78,6 @@ export const runNightlyJob = async () => {
     const itemResults = await processAllDirtyItems();
     results.phases.itemLedger = itemResults;
 
-    // // PHASE 1.5:
-    // if (
-    //   itemResults.processedAdjustmentIds &&
-    //   itemResults.processedAdjustmentIds.length > 0
-    // ) {
-    //   console.log("\n🔧 PHASE 1.5: Marking processed adjustments as reversed");
-    //   console.log("-".repeat(70));
-
-    //   const session = await mongoose.startSession();
-    //   session.startTransaction();
-
-    //   try {
-    //     // ✅ ADD await here
-    //     const updateResult = await AdjustmentEntryModel.updateMany(
-    //       { _id: { $in: itemResults.processedAdjustmentIds } },
-    //       {
-    //         $set: {
-    //           isReversed: true,
-    //           reversedAt: new Date(),
-    //           status: "reversed",
-    //           // reversedBy: "nightly-job-v1.",
-    //         },
-    //       },
-    //       { session }
-    //     );
-
-    //     await session.commitTransaction();
-    //     console.log(
-    //       `✅ Marked ${updateResult.modifiedCount} adjustments as reversed`
-    //     );
-    //     results.phases.adjustmentsReversed = updateResult.modifiedCount;
-    //   } catch (error) {
-    //     await session.abortTransaction();
-    //     console.error("❌ Phase 1.5 failed:", error.message);
-    //   } finally {
-    //     session.endSession();
-    //   }
-    // }
-
     // =========================================================================
     // PHASE 2: ACCOUNT LEDGER RECALCULATION
     // =========================================================================
@@ -122,6 +85,52 @@ export const runNightlyJob = async () => {
     console.log("-".repeat(70));
     const accountResults = await processAllDirtyAccounts();
     results.phases.accountLedger = accountResults;
+
+    // =========================================================================
+    // PHASE 3: MARK ALL PROCESSED ADJUSTMENTS AS REVERSED
+    // =========================================================================
+    // Combine adjustment IDs from both phases and deduplicate
+    const combinedProcessedAdjustmentIds = [
+      ...(itemResults.processedAdjustmentIds || []),
+      ...(accountResults.processedAdjustmentIds || []),
+    ];
+    const uniqueAdjustmentIds = [...new Set(combinedProcessedAdjustmentIds)];
+
+    if (uniqueAdjustmentIds.length > 0) {
+      console.log(
+        "\n🔧 PHASE 3: Marking all processed adjustments as reversed"
+      );
+      console.log("-".repeat(70));
+
+      const session = await mongoose.startSession();
+      session.startTransaction();
+
+      try {
+        const updateResult = await AdjustmentEntryModel.updateMany(
+          { _id: { $in: uniqueAdjustmentIds } },
+          {
+            $set: {
+              isReversed: true,
+              reversedAt: new Date(),
+              status: "reversed",
+              // reversedBy: "nightly-job-v1.",
+            },
+          },
+          { session }
+        );
+
+        await session.commitTransaction();
+        console.log(
+          `✅ Marked ${updateResult.modifiedCount} adjustments as reversed`
+        );
+        results.phases.adjustmentsReversed = updateResult.modifiedCount;
+      } catch (error) {
+        await session.abortTransaction();
+        console.error("❌ Phase 3 failed:", error.message);
+      } finally {
+        session.endSession();
+      }
+    }
 
     // =========================================================================
     // JOB COMPLETION
@@ -136,15 +145,15 @@ export const runNightlyJob = async () => {
     console.log("=".repeat(70));
     console.log(`⏱️  Total Duration: ${duration} seconds`);
     console.log(`📦 Items Processed: ${itemResults.itemsProcessed}`);
-    console.log(`📅 Months Refolded: ${itemResults.monthsRefolded}`);
-    console.log(`❌ Errors: ${itemResults.errors.length}`);
+    console.log(`📅 Months Refolded: ${accountResults.monthsRefolded}`);
+    console.log(`❌ Item Errors: ${itemResults.errors.length}`);
+    console.log(`❌ Account Errors: ${accountResults.errors.length}`);
     console.log("=".repeat(70) + "\n");
 
     // =========================================================================
     // ALERTS (Future Enhancement)
     // =========================================================================
-    // If there were errors, send alert
-    if (itemResults.errors.length > 0) {
+    if (itemResults.errors.length > 0 || accountResults.errors.length > 0) {
       console.log("⚠️  ALERT: Job completed with errors. Review logs.");
       // TODO: Send email/Slack notification
       // await sendAlertNotification(results);
