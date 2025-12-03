@@ -32,6 +32,7 @@ import {
  * console.log(`Refolded ${result.monthsRefolded} months`);
  */
 export const processAllDirtyAccounts = async () => {
+  // throw new Error("Deprecated: Use nightlyRecalculation.js instead.");
   console.log("💰 Finding all dirty accounts...");
 
   const workMap = await findDirtyAccounts();

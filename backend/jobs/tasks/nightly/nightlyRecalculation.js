@@ -50,7 +50,6 @@ import AdjustmentEntryModel from "../../../model/AdjustmentEntryModel.js";
  * @returns {Object} - Job execution results
  */
 
-
 export const runNightlyJob = async () => {
   console.log("\n" + "=".repeat(70));
   console.log("🌙 NIGHTLY RECALCULATION JOB STARTED");

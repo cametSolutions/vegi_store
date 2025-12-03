@@ -4,6 +4,7 @@ import CustomBarLoader from "../loaders/CustomBarLoader";
 import RouteChangeLoader from "../loaders/RouteChangeLoader";
 import { useSelector } from "react-redux";
 import NoCompanyDataErrorPage from "../errors/NoCompanyDataErrorPage";
+import RevaluationLoaderOverlay from "../Revaluation/RevaluationLoaderOverlay";
 
 function MainLayout() {
   const isLoading = useSelector((state) => state.loader.isLoading);
@@ -50,6 +51,9 @@ function MainLayout() {
             <Outlet />
           )}
         </div>
+
+        {/* Global revaluation loader */}
+        <RevaluationLoaderOverlay />
       </main>
     </div>
   );

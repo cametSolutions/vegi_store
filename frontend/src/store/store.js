@@ -2,10 +2,12 @@ import { configureStore } from "@reduxjs/toolkit";
 import companyBranchReducer from "./slices/companyBranchSlice";
 import LoaderReducer from "./slices/loaderSlice";
 import transactionSlice from "./slices/transactionSlice";
+import revaluationLoaderReducer from "./slices/revaluationLoaderSlice";
 export const store = configureStore({
   reducer: {
     companyBranch: companyBranchReducer,
     loader: LoaderReducer,
     transaction: transactionSlice,
+    revaluationLoader: revaluationLoaderReducer,
   },
 });
