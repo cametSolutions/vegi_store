@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import { processTransaction } from "../../helpers/transactionHelpers/transactionProcessor.js";
-import { determinePaymentStatus } from "../../helpers/transactionHelpers/calculationHelper.js";
+import {
+  calculateTransactionDeltas,
+  determinePaymentStatus,
+} from "../../helpers/transactionHelpers/calculationHelper.js";
 import {
   getTransactionModel,
   transactionTypeToModelName,
@@ -8,6 +11,85 @@ import {
 import { sleep } from "../../../shared/utils/delay.js";
 
 import { createFundTransaction } from "../../services/fundTransactionService.js";
+import { fetchOriginalTransaction } from "../../helpers/transactionHelpers/modelFindHelper.js";
+import { applyStockDeltas } from "../../helpers/transactionHelpers/stockManager.js";
+import {
+  createAdjustmentEntries,
+  // createCashAccountAdjustment,
+} from "../../helpers/transactionHelpers/adjustmentEntryHelper.js";
+import {
+  handleAccountTypeChangeOnEdit,
+  // updateOutstandingOnEdit,
+} from "../../helpers/transactionHelpers/outstandingService.js";
+import {
+  markMonthlyBalancesForRecalculation,
+  updateOriginalTransactionRecord,
+} from "../../helpers/transactionHelpers/transactionEditHelper.js";
+
+/**
+ * get transactions (handles sales, purchase, credit_note, debit_note)
+ */
+
+export const getTransactions = async (req, res) => {
+  try {
+    // sleep(10000);
+    // throw new Error("sleep");
+    const transactionType = req.query.transactionType;
+
+    // Validate transaction type
+    const validTypes = ["sale", "purchase", "credit_note", "debit_note"];
+    if (!validTypes.includes(transactionType)) {
+      return res.status(400).json({ message: "Invalid transaction type" });
+    }
+
+    const transactionModel = getTransactionModel(transactionType);
+
+    // Get query parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const searchTerm = req.query.searchTerm || "";
+    const companyId = req.query.companyId;
+    const branchId = req.query.branchId;
+    const sortBy = req.query.sortBy || "transactionDate";
+    const sortOrder = req.query.sortOrder || "desc";
+
+    // Convert 'desc' to -1, 'asc' to 1
+    const sortDirection = sortOrder === "desc" ? -1 : 1;
+
+    const sort = {
+      [sortBy]: sortDirection,
+      _id: sortDirection, // Secondary sort for consistency
+    };
+
+    // Build filter - MUST include transactionType
+    const filter = { transactionType };
+
+    if (searchTerm) {
+      filter.$or = [
+        { accountName: { $regex: searchTerm, $options: "i" } },
+        { transactionNumber: { $regex: searchTerm, $options: "i" } },
+      ];
+    }
+    if (companyId) filter.company = companyId;
+    if (branchId) filter.branch = branchId;
+
+    // Use the static method for pagination
+    const result = await transactionModel.getPaginatedTransactions(
+      filter,
+      page,
+      limit,
+      sort
+    );
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error fetching transactions:", error);
+    res.status(500).json({
+      message: "Error fetching transactions",
+      error: error.message,
+    });
+  }
+};
 
 /**
  * Create transaction (handles sales, purchase, credit_note, debit_note)
@@ -84,15 +166,12 @@ export const createTransaction = async (req, res) => {
           ? "receipt"
           : "payment";
 
+      const { previousBalanceAmount, netAmount, paidAmount } = transactionData;
 
+      console.log("transactionData", transactionData);
 
-      const {previousBalanceAmount,netAmount,paidAmount} = transactionData;
-
-      console.log("transactionData",transactionData);
-      
-      const totalAmountForReceipt= netAmount+previousBalanceAmount;
-      const closingBalanceAmountForReceipt= totalAmountForReceipt-paidAmount;
-      
+      const totalAmountForReceipt = netAmount + previousBalanceAmount;
+      const closingBalanceAmountForReceipt = totalAmountForReceipt - paidAmount;
 
       receiptResult = await createFundTransaction(
         {
@@ -107,7 +186,8 @@ export const createTransaction = async (req, res) => {
           paymentMode: "cash",
           reference: result.transaction._id,
           referenceModel:
-            transactionTypeToModelName[transactionData.transactionType] ||"Sale",
+            transactionTypeToModelName[transactionData.transactionType] ||
+            "Sale",
           referenceType: transactionData.transactionType,
           date: transactionData.date || new Date(),
           user: req.user,
@@ -115,7 +195,6 @@ export const createTransaction = async (req, res) => {
         session
       );
     }
-
 
     // Commit transaction
     await session.commitTransaction();
@@ -175,66 +254,183 @@ export const createTransaction = async (req, res) => {
 };
 
 /**
- * get transactions (handles sales, purchase, credit_note, debit_note)
+ * get transaction details (handles sales, purchase, credit_note, debit_note)
  */
 
-export const getTransactions = async (req, res) => {
+export const getTransactionDetail = async (req, res) => {
   try {
-    // sleep(10000);
-    // throw new Error("sleep");
-    const transactionType = req.query.transactionType;
+    const { transactionId } = req.params;
+    const { companyId, branchId, transactionType } = req.query;
+    const TransactionModel = getTransactionModel(transactionType);
 
-    // Validate transaction type
-    const validTypes = ["sale", "purchase", "credit_note", "debit_note"];
-    if (!validTypes.includes(transactionType)) {
-      return res.status(400).json({ message: "Invalid transaction type" });
+    const transaction = await TransactionModel.findOne({
+      _id: transactionId,
+      company: companyId,
+      branch: branchId,
+    });
+
+    if (!transaction) {
+      return res.status(404).json({
+        message: "Transaction not found",
+      });
     }
 
-    const transactionModel = getTransactionModel(transactionType);
+    return res.status(200).json(transaction);
+  } catch (error) {
+    console.error("Error fetching transaction:", error);
 
-    // Get query parameters
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const searchTerm = req.query.searchTerm || "";
-    const companyId = req.query.companyId;
-    const branchId = req.query.branchId;
-    const sortBy = req.query.sortBy || "transactionDate";
-    const sortOrder = req.query.sortOrder || "desc";
+    return res.status(500).json({
+      message: "Failed to fetch transaction",
+      error: error?.message || "Internal server error",
+    });
+  }
+};
 
-    // Convert 'desc' to -1, 'asc' to 1
-    const sortDirection = sortOrder === "desc" ? -1 : 1;
+/**
+ * Edit transaction - Adjustment-Only Approach
+ * Pattern: Calculate Delta → Create Adjustment Entries → Update Outstanding
+ */
+export const editTransaction = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-    const sort = {
-      [sortBy]: sortDirection,
-      _id: sortDirection, // Secondary sort for consistency
-    };
+  try {
+    const { transactionId } = req.params;
+    const updatedData = req.body;
+    const userId = req.user.id;
 
-    // Build filter - MUST include transactionType
-    const filter = { transactionType };
-
-    if (searchTerm) {
-      filter.$or = [
-        { accountName: { $regex: searchTerm, $options: "i" } },
-        { transactionNumber: { $regex: searchTerm, $options: "i" } },
-      ];
-    }
-    if (companyId) filter.company = companyId;
-    if (branchId) filter.branch = branchId;
-
-    // Use the static method for pagination
-    const result = await transactionModel.getPaginatedTransactions(
-      filter,
-      page,
-      limit,
-      sort
+    // ========================================
+    // STEP 1: Fetch Original Transaction
+    // ========================================
+    const originalTransaction = await fetchOriginalTransaction(
+      transactionId,
+      updatedData.transactionType,
+      session
     );
 
-    res.status(200).json(result);
+    if (!originalTransaction) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        success: false,
+        message: "Transaction not found",
+      });
+    }
+
+    // console.log("originalTransaction", originalTransaction);
+
+    // Validate company/branch cannot change
+    if (
+      originalTransaction.company.toString() !== updatedData.company ||
+      originalTransaction.branch.toString() !== updatedData.branch
+    ) {
+      await session.abortTransaction();
+      return res.status(403).json({
+        success: false,
+        message: "Cannot change company or branch during edit",
+      });
+    }
+
+    // ========================================
+    // STEP 2: Calculate Deltas (Differences)
+    // ========================================
+    const deltas = calculateTransactionDeltas(originalTransaction, updatedData);
+
+    // console.log("deltas", deltas);
+
+    // ========================================
+    // STEP 3: Update Stock with Delta Only
+    // ========================================
+    if (deltas.stockDelta.length > 0) {
+      await applyStockDeltas(
+        deltas.stockDelta,
+        originalTransaction.branch,
+        session
+      );
+    }
+
+    // ========================================
+    // STEP 4: Create Adjustment Entries
+    // ========================================
+    const adjustmentResult = await createAdjustmentEntries(
+      originalTransaction,
+      updatedData,
+      deltas,
+      userId,
+      session
+    );
+
+    // console.log("adjustment entries", adjustmentResult);
+    // console.log(
+    //   "adjustment entries itemAdjustments",
+    //   adjustmentResult.adjustmentEntry.itemAdjustments
+    // );
+
+    // ========================================
+    // 5. Handle Outstanding & Cash/Bank Changes
+    // ========================================
+    const accountTypeResult = await handleAccountTypeChangeOnEdit(
+      originalTransaction,
+      updatedData,
+      deltas,
+      userId,
+      session
+    );
+
+    // ========================================
+    // STEP 7: Mark Monthly Balances as Dirty
+    // ========================================
+    await markMonthlyBalancesForRecalculation(
+      originalTransaction,
+      updatedData,
+      session
+    );
+
+    // ========================================
+    // STEP 8: Update Original Transaction Document
+    // ========================================
+    const updatedTransaction = await updateOriginalTransactionRecord(
+      originalTransaction,
+      updatedData,
+      userId,
+      session
+    );
+
+    // Commit transaction
+    await session.commitTransaction();
+
+    res.status(200).json({
+      success: true,
+      message: "Transaction edited successfully",
+      data: {
+        transaction: updatedTransaction,
+        adjustment: adjustmentResult.adjustmentEntry,
+        accountTypeChanges: {
+          outstandingDeleted: accountTypeResult.outstandingDeleted,
+          outstandingCreated: accountTypeResult.outstandingCreated,
+          cashBankDeleted: accountTypeResult.cashBankDeleted,
+          cashBankCreated: accountTypeResult.cashBankCreated,
+        },
+        note: "Ledger will be recalculated in nightly job",
+      },
+    });
   } catch (error) {
-    console.error("Error fetching transactions:", error);
+    await session.abortTransaction();
+
+    console.error("Transaction edit error:", error);
+
+    if (error.message.includes("Insufficient stock")) {
+      return res.status(422).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
     res.status(500).json({
-      message: "Error fetching transactions",
+      success: false,
+      message: "Failed to edit transaction",
       error: error.message,
     });
+  } finally {
+    session.endSession();
   }
 };

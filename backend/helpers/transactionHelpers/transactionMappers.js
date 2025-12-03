@@ -9,7 +9,6 @@ export const transactionTypeToModelName = (transactionType) => {
     debit_note: "DebitNote",
   };
 
-  console.log("haiii",mapping[transactionType]);
   
   return mapping[transactionType] || transactionType;
 };

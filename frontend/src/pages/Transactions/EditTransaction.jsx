@@ -1,256 +1,213 @@
-// ===== EditTransaction.jsx =====
-import React, { useState, useEffect } from 'react';
-import TransactionTypeSelector from './components/TransactionTypeSelector';
-import TransactionAccountSelector from './components/TransactionAccountSelector';
-import AddItemForm from './components/AddItemForm';
-import ItemsTable from './components/ItemsTable';
-import TransactionSummary from './components/TransactionSummary';
-import TransactionActions from './components/TransactionActions';
+import React, { useEffect, useMemo, useState } from "react";
+import TransactionAccountSelectorComponent from "./components/TransactionAccountSelector";
+import AddItemFormComponent from "./components/AddItemForm";
+import ItemsTableComponent from "./components/ItemsTable";
+import TransactionSummaryComponent from "./components/TransactionSummary";
+import TransactionActionsComponent from "./components/TransactionActions";
+import TransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
+import CustomMoonLoader from "../../components/loaders/CustomMoonLoader"; // Import the loader
+import { getTransactionType } from "./utils/transactionUtils";
+import { useTransaction } from "./hooks/useTransaction";
+import { useTransactionActions } from "./hooks/useTransactionActions";
+import { useLocation } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { useQuery } from "@tanstack/react-query";
+import { transactionQueries } from "@/hooks/queries/transaction.queries";
+import { toast } from "sonner";
 import {
-  transactionTypes,
-  products,
-  getTransactionType,
-  calculateItemAmount,
-  calculateTotal,
-  calculateNetAmount,
-  calculateClosingBalance
-} from './utils/transactionUtils';
+  addTransactionDataToStore,
+  removeTransactionDataFromStore,
+} from "@/store/slices/transactionSlice";
 
-const EditTransaction = ({ transactionId }) => {
-  const [transactionData, setTransactionData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [newItem, setNewItem] = useState({
-    code: '',
-    name: '',
-    unit: 'kg',
-    qty: 0,
-    rate: 0
-  });
+// Memoized components
+const TransactionHeader = React.memo(TransactionHeaderComponent);
+const TransactionAccountSelector = React.memo(
+  TransactionAccountSelectorComponent
+);
 
-  // Mock data for demonstration - replace with actual API call
-  useEffect(() => {
-    const fetchTransaction = async () => {
-      setLoading(true);
-      try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Mock existing transaction data
-        const mockTransaction = {
-          id: transactionId || 'TXN001',
-          type: 'sale',
-          date: '2024-01-15',
-          documentNo: '544591',
-          partyType: 'customer',
-          partyName: 'John Doe',
-          balance: 500,
-          items: [
-            { code: 'V001', name: 'Tomato', unit: 'kg', qty: 5, rate: 40, amount: 200 },
-            { code: 'V002', name: 'Onion', unit: 'kg', qty: 3, rate: 30, amount: 90 },
-            { code: 'V003', name: 'Potato', unit: 'kg', qty: 2, rate: 25, amount: 50 }
-          ],
-          discount: 20,
-          paidAmount: 300,
-          reference: 'REF-001',
-          notes: 'Regular customer order'
-        };
-        
-        setTransactionData(mockTransaction);
-      } catch (error) {
-        console.error('Error fetching transaction:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+///
+const AddItemForm = React.memo(AddItemFormComponent);
+const ItemsTable = React.memo(ItemsTableComponent);
+const TransactionSummary = React.memo(TransactionSummaryComponent);
+const TransactionActions = React.memo(TransactionActionsComponent);
 
-    fetchTransaction();
-  }, [transactionId]);
+const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
+  const location = useLocation();
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 flex items-center justify-center">
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-slate-600 mt-4 text-center">Loading transaction...</p>
-        </div>
-      </div>
-    );
-  }
+  const {
+    transactionData,
+    updateTransactionData,
+    updateTransactionField,
+    updateItemQuantity,
+    removeItem,
+    handleDiscountChange,
+    handlePaidAmountChange,
+    addItem,
+    clickedItemInTable,
+    handleItemClickInItemsTable,
+    resetTransactionData,
+  } = useTransaction();
+  const dispatch = useDispatch();
 
-  if (!transactionData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 flex items-center justify-center">
-        <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-          <p className="text-red-600 text-lg">Transaction not found</p>
-        </div>
-      </div>
-    );
-  }
-
-  const currentTransactionType = getTransactionType(transactionData.type);
-  const total = calculateTotal(transactionData.items);
-  const netAmount = calculateNetAmount(total, transactionData.discount);
-  const closingBalance = calculateClosingBalance(
-    transactionData.balance,
-    netAmount,
-    transactionData.paidAmount,
-    transactionData.type
+  //// get current transaction type from the url////
+  const currentTransactionType = useMemo(
+    () => getTransactionType(location),
+    [location]
   );
 
-  const handleTransactionTypeChange = (type) => {
-    setTransactionData(prev => ({ ...prev, type }));
-  };
+  ////  for adding transaction type to the transaction data when the component loads or when the transaction type changes////
+  useEffect(() => {
+    resetTransactionData(currentTransactionType);
+    //// add to global state that edit mode is true and the transaction id
+    updateTransactionData({
+      isEditMode: true,
+      editTransactionId: editTransactionData._id,
+      transactionType: currentTransactionType,
+    });
+  }, [currentTransactionType, updateTransactionField]);
 
-  const handleTransactionDataChange = (updatedData) => {
-    setTransactionData(updatedData);
-  };
+  // Reset transaction data when navigating away from this page
+  useEffect(() => {
+    return () => {
+      resetTransactionData(currentTransactionType);
+    };
+  }, [resetTransactionData]);
 
-  const handleNewItemChange = (updatedItem) => {
-    setNewItem(updatedItem);
-  };
+  const selectedCompanyFromStore = useSelector(
+    (state) => state.companyBranch?.selectedCompany
+  );
+  const selectedBranchFromStore = useSelector(
+    (state) => state.companyBranch?.selectedBranch
+  );
 
-  const handleProductSelect = (product) => {
-    setNewItem(prev => ({
-      ...prev,
-      code: product.code,
-      name: product.name,
-      rate: product.rate
-    }));
-  };
+  //// fetch the details of the tns for which we need the edit to be done///
+  const {
+    data: transactionResponse,
+    isLoading: transactionLoading,
+    isError: transactionError,
+  } = useQuery({
+    ...transactionQueries.getTransactionById(
+      selectedCompanyFromStore._id,
+      selectedBranchFromStore._id,
+      editTransactionData._id,
+      currentTransactionType
+    ),
+  });
 
-  const handleAddItem = () => {
-    if (newItem.code && newItem.qty > 0) {
-      const amount = calculateItemAmount(newItem.qty, newItem.rate);
-      setTransactionData(prev => ({
-        ...prev,
-        items: [...prev.items, { ...newItem, amount }]
-      }));
-      setNewItem({ code: '', name: '', unit: 'kg', qty: 0, rate: 0 });
+  /// update the transaction data when the transaction response changes
+  useEffect(() => {
+    if (transactionResponse) {
+      updateTransactionData(transactionResponse);
+
+      //// this is to  prevent the navigation in the nav bar when we are in edit mode
+      dispatch(
+        addTransactionDataToStore({
+          isEditMode: true,
+          editTransactionId: editTransactionData._id,
+          transactionType: currentTransactionType,
+        })
+      );
     }
-  };
+  }, [transactionResponse, updateTransactionData]);
 
-  const handleUpdateQuantity = (index, qty) => {
-    setTransactionData(prev => ({
-      ...prev,
-      items: prev.items.map((item, i) => 
-        i === index ? { ...item, qty, amount: calculateItemAmount(qty, item.rate) } : item
-      )
-    }));
-  };
-
-  const handleRemoveItem = (index) => {
-    setTransactionData(prev => ({
-      ...prev,
-      items: prev.items.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handleDiscountChange = (discount) => {
-    setTransactionData(prev => ({ ...prev, discount }));
-  };
-
-  const handlePaidAmountChange = (paidAmount) => {
-    setTransactionData(prev => ({ ...prev, paidAmount }));
-  };
-
-  const handleUpdate = () => {
-    console.log('Updating transaction:', transactionData);
-    // Implement update API call
-    alert('Transaction updated successfully!');
-  };
-
-  const handleView = () => {
-    console.log('Viewing transaction:', transactionData);
-    // Implement view logic (maybe open in new tab or modal)
-  };
-
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this transaction?')) {
-      console.log('Deleting transaction:', transactionData);
-      // Implement delete API call
-      alert('Transaction deleted successfully!');
+  // Handle error state with useEffect
+  useEffect(() => {
+    if (transactionError) {
+      toast.error("An error occurred while loading transaction details");
+      handleCancel();
     }
-  };
+  }, [transactionError]);
 
   const handleCancel = () => {
-    if (window.confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
-      console.log('Cancelling edit');
-      // Navigate back or reset form
-    }
+    resetTransactionData(currentTransactionType);
+    handleCancelEdit();
+    dispatch(removeTransactionDataFromStore());
   };
 
-  const handlePrint = () => {
-    console.log('Printing transaction:', transactionData);
-    // Implement print logic
-    window.print();
-  };
+  console.log("transactionData in EditTransaction:", transactionData);
+  
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Edit Mode Indicator */}
-        <div className="bg-amber-100 border-l-4 border-amber-500 p-4 mb-6 rounded-r-lg">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-amber-700">
-                You are editing transaction <strong>{transactionData.documentNo}</strong>. Make sure to save your changes.
-              </p>
-            </div>
+    <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
+      {/* Loader Overlay */}
+      {(isLoading || transactionLoading) && (
+        <div className="absolute inset-0 bg-white/60 z-50 flex items-center justify-center">
+          <CustomMoonLoader />
+        </div>
+      )}
+
+      {/* Header */}
+      <TransactionHeader
+        currentTransactionType={currentTransactionType}
+        date={transactionData.transactionDate}
+        updateTransactionField={updateTransactionField}
+        isEditMode={transactionData.isEditMode}
+        transactionNumber={editTransactionData.transactionNumber}
+      />
+
+      {/* Main Content */}
+      <div className="flex h-[calc(100vh-56px)]">
+        <div className="flex-1 p-1 overflow-hidden flex flex-col">
+          <div className="flex flex-col py-2 bg-white">
+            <TransactionAccountSelector
+              accountType={transactionData?.accountType}
+              accountName={transactionData?.accountName}
+              openingBalance={transactionData?.openingBalance}
+              account={transactionData?.account}
+              transactionType={transactionData?.transactionType}
+              priceLevel={transactionData?.priceLevel}
+              priceLevelName={transactionData?.priceLevelName}
+              // transactionData={transactionData}
+              updateTransactionField={updateTransactionField}
+              updateTransactionData={updateTransactionData}
+              branch={selectedBranchFromStore?._id}
+              company={selectedCompanyFromStore?._id}
+            />
+
+            <AddItemForm
+              items={transactionData?.items}
+              branch={selectedBranchFromStore?._id}
+              company={selectedCompanyFromStore?._id}
+              priceLevel={transactionData?.priceLevel}
+              updateTransactionField={updateTransactionField}
+              addItem={addItem}
+              clickedItemInTable={clickedItemInTable}
+              transactionType={transactionData?.transactionType}
+              account={transactionData?.account}
+
+            />
           </div>
-        </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <TransactionTypeSelector
-            transactionTypes={transactionTypes}
-            selectedType={transactionData.type}
-            onTypeChange={handleTransactionTypeChange}
-          />
-        </div>
+          <div className="flex-1">
+            <ItemsTable
+              items={transactionData?.items}
+              onUpdateQuantity={updateItemQuantity}
+              onRemoveItem={removeItem}
+              handleItemClickInItemsTable={handleItemClickInItemsTable}
+            />
 
-        <TransactionAccountSelector
-          transactionData={transactionData}
-          onTransactionChange={handleTransactionDataChange}
-          currentTransactionType={currentTransactionType}
-        />
+            <TransactionSummary
+              total={transactionData.subtotal}
+              netAmount={transactionData.netAmount}
+              discount={transactionData.discount}
+              paidAmount={transactionData.paidAmount}
+              balanceAmount={transactionData.balanceAmount}
+              totalDue={transactionData.totalDue}
+              onDiscountChange={handleDiscountChange}
+              onPaidAmountChange={handlePaidAmountChange}
+              transactionType={transactionData.transactionType}
+            />
 
-        <AddItemForm
-          newItem={newItem}
-          onNewItemChange={handleNewItemChange}
-          products={products}
-          onProductSelect={handleProductSelect}
-          onAddItem={handleAddItem}
-        />
-
-        <ItemsTable
-          items={transactionData.items}
-          onUpdateQuantity={handleUpdateQuantity}
-          onRemoveItem={handleRemoveItem}
-        />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TransactionSummary
-            total={total}
-            discount={transactionData.discount}
-            onDiscountChange={handleDiscountChange}
-            netAmount={netAmount}
-            paidAmount={transactionData.paidAmount}
-            onPaidAmountChange={handlePaidAmountChange}
-            closingBalance={closingBalance}
-          />
-
-          <TransactionActions
-            onSave={handleUpdate}
-            onView={handleView}
-            onDelete={handleDelete}
-            onCancel={handleCancel}
-            onPrint={handlePrint}
-            isEditMode={true}
-          />
+            <TransactionActions
+              onSave={useTransactionActions?.handleSave}
+              transactionData={transactionData}
+              onLoadingChange={setIsLoading}
+              resetTransactionData={resetTransactionData}
+              isEditMode={true}
+              onCancel={handleCancel}
+            />
+          </div>
         </div>
       </div>
     </div>

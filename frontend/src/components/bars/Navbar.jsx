@@ -10,6 +10,7 @@ import ProfileDropdown from "../dropDowns/ProfileDropdown";
 import { Link, useNavigate } from "react-router-dom";
 import logoName from "../../../public/images/Logo/logoName.png";
 import logIcon from "../../../public/images/Logo/logoIcon.png";
+import { useSelector } from "react-redux";
 
 const Navbar = () => {
   const menuItems = [
@@ -27,34 +28,54 @@ const Navbar = () => {
     // },
 
     { label: "Account Master", path: "/master/account-master" },
-     { label: "Item Master", path: "/master/item-master" },
-        { label: "Rate Setting", path: "/master/rate-setting" },
+    { label: "Item Master", path: "/master/item-master" },
+    { label: "Rate Setting", path: "/master/rate-setting" },
 
-        { label: "Purchase", path: "/transactions/purchase/create" },
-        { label: "Purchase Return", path: "/purchase-return" },
+    { label: "Purchase", path: "/transactions/purchase/create" },
+    { label: "Purchase Return", path: "/purchase-return" },
     { label: "Sales", path: "/transactions/sale/create" },
     { label: "Sales Return", path: "/Sales-return" },
     { label: "Receipt", path: "/transactions/receipt/create" },
     { label: "Payment", path: "/transactions/payment/create" },
-    { label: "Reports", path: "/transactions/payment/create" },
+    {
+      label: "Reports",
+      path: "/transactions/payment/create",
+      hasDropdown: true,
+      dropdownItems: [
+        { label: "Item Report", path: "reports/item-report" },
+        { label: "Item Monthly Report", path: "reports/item-monthly-report" },
+        { label: "Account Report", path: "reports/account-report" },
         {
+          label: "Account Monthly Report",
+          path: "reports/account-monthly-report",
+        },
+
+      ],
+    },
+    {
       label: "Extras",
       path: "/price-level",
       hasDropdown: true,
       dropdownItems: [
+   
         { label: "Stock Adjustment", path: "/stock-adjustment" },
         { label: "Price Level", path: "/master/price-level" },
-
       ],
     },
   ];
 
+  const transactionDataFromStore = useSelector((state) => state.transaction);
+
   const navigate = useNavigate();
 
   const handleNavClick = (path) => {
-    navigate(path);
-    // console.log(`Navigating to: ${path}`);
-    // Replace with your router navigation logic
+    if (transactionDataFromStore.isEditMode) {
+      alert(
+        "Please save the current transaction before navigating to another page or cancel it"
+      );
+    } else {
+      navigate(path);
+    }
   };
 
   const NavLink = ({ item }) => {
@@ -98,10 +119,19 @@ const Navbar = () => {
       <div className=" mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center  flex-shrink-0">
-          <img src={logIcon} alt="Logo" className="h-10 w-10" />
-          <img src={logoName} alt="Logo" className="h-32 w-32 mt-2 ml-[-10px]" />
-          </Link>
+          <div
+            onClick={() => {
+              handleNavClick("/");
+            }}
+            className="flex items-center  flex-shrink-0"
+          >
+            <img src={logIcon} alt="Logo" className="h-10 w-10" />
+            <img
+              src={logoName}
+              alt="Logo"
+              className="h-32 w-32 mt-2 ml-[-10px]"
+            />
+          </div>
 
           {/* Navigation Links */}
           <div className="flex items-center space-x-1">

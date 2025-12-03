@@ -1,6 +1,15 @@
 /// Utility to format a date to a readable string
 export const formatDate = (date) => new Date(date).toLocaleDateString("en-GB");
 
+/// Utility to format a date to a short readable string
+
+export const formatDateShort = (date) =>
+  new Date(date).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
 /**
  * Generate period key from date (format: YYYY-MM)
  */

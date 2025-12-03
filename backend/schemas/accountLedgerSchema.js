@@ -74,6 +74,7 @@ export const AccountLedgerSchema = new mongoose.Schema(
 AccountLedgerSchema.index({ account: 1, transactionDate: 1 });
 AccountLedgerSchema.index({ company: 1, branch: 1 });
 AccountLedgerSchema.index({ transactionId: 1 });
+AccountLedgerSchema.index({ account: 1, branch: 1, transactionDate: 1 });
 
 // Static method to get last balance for an account
 AccountLedgerSchema.statics.getLastBalance = async function (

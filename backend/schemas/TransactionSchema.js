@@ -93,7 +93,6 @@ const TransactionSchema = new mongoose.Schema(
     },
     transactionNumber: {
       type: String,
-   
       required: [true, "Transaction number is required"],
       default: function () {
         const prefix = this.transactionType?.toUpperCase().slice(0, 3) || "TXN";
@@ -200,6 +199,27 @@ const TransactionSchema = new mongoose.Schema(
       type: String,
       trim: true,
       maxlength: [500, "Notes cannot exceed 500 characters"],
+    },
+
+    // ========================================
+    // for edit reference
+    // ========================================
+    lastUpdatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    lastUpdatedAt: {
+      type: Date,
+      default: null,
+    },
+    editCount: {
+      type: Number,
+      default: 0,
+    },
+    lastEditReason: {
+      type: String,
+      default: null,
     },
 
     // ==================== AUDIT ====================
@@ -344,7 +364,7 @@ TransactionSchema.index({
   transactionType: 1,
   transactionDate: -1,
 });
-TransactionSchema.index({company: 1, transactionNumber: 1 }, { unique: true });
+TransactionSchema.index({ company: 1, transactionNumber: 1 }, { unique: true });
 TransactionSchema.index({ account: 1, transactionDate: -1 });
 TransactionSchema.index({
   company: 1,

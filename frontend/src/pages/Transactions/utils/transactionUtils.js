@@ -36,8 +36,6 @@ export const products = [
 export const getTransactionType = (location) => {
   const pathName = location?.pathname || "";
   return pathName?.split("/")[2];
-
-  
 };
 
 export const getPartyLabel = (transactionType) =>
@@ -90,6 +88,10 @@ export const createEmptyTransaction = () => ({
 
   reference: "",
   notes: "",
+
+  /// details for edit
+  isEditMode: false,
+  editTransactionId: null,
 });
 
 // ==================== TRANSACTION CALCULATIONS ====================
@@ -125,10 +127,6 @@ export const calculateTransactionTotals = (transaction) => {
   const netAmount =
     parseFloat(totalAmountAfterTax) - parseFloat(discountAmount);
 
-    console.log( parseFloat(netAmount));
-    console.log( parseFloat(transaction?.openingBalance || 0));
-    
-
   /// total due
   /// if transaction type is purchase or credit note the net amount is considered as -ve value
   /// so we need to reflect that in showing total due
@@ -140,7 +138,8 @@ export const calculateTransactionTotals = (transaction) => {
       : -1;
 
   const totalDue =
-    parseFloat(netAmount*multiplier) + parseFloat(transaction?.openingBalance || 0);
+    parseFloat(netAmount * multiplier) +
+    parseFloat(transaction?.openingBalance || 0);
 
   // 6️⃣ Balance Amount (NOT closing balance - just balance)
   const balanceAmount =
@@ -176,12 +175,12 @@ export const recalculateTransactionOnPriceLevelChange = (transaction) => {
 
   // update each item rate and recalc baseAmount and tax amounts
   const updatedItems = transaction.items.map((item) => {
-    const priceLevelObj = item.priceLevels.find(
-      (pl) => pl.priceLevel._id === selectedPriceLevelId
+    const priceLevelObj = item?.priceLevels?.find(
+      (pl) => pl?.priceLevel?._id === selectedPriceLevelId
     );
     const newRate = priceLevelObj
-      ? parseFloat(priceLevelObj.rate)
-      : parseFloat(item.rate);
+      ? parseFloat(priceLevelObj?.rate || 0)
+      : 0
 
     const qty = parseFloat(item.quantity);
     const baseAmount = newRate * qty;
@@ -214,9 +213,8 @@ export const recalculateTransactionOnPriceLevelChange = (transaction) => {
   return recalculatedTransaction;
 };
 
-
 // Utility function to convert string numbers to actual numbers
-export const convertStringNumbersToNumbers=(data) =>{
+export const convertStringNumbersToNumbers = (data) => {
   if (Array.isArray(data)) {
     return data.map(convertStringNumbersToNumbers);
   } else if (data !== null && typeof data === "object") {
@@ -231,6 +229,4 @@ export const convertStringNumbersToNumbers=(data) =>{
   } else {
     return data;
   }
-}
-
-
+};

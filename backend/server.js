@@ -6,7 +6,7 @@ import helmet from "helmet";
 import mongoSanitize from "express-mongo-sanitize";
 import hpp from "hpp";
 import rateLimit from "express-rate-limit";
-import path from 'path';
+import path from "path";
 
 // DB + Middlewares
 import connectDB from "./config/db.js";
@@ -23,6 +23,12 @@ import itemRoute from "./routes/itemmaster/itemRoute.js";
 import PaymentRoutes from "./routes/FundTransactionRoutes/PaymentRoutes.js";
 import saleRoutes from "./routes/transactions/saleRoutes.js";
 import devRoutes from "./routes/devRoutes/devRoutes.js";
+import jobRoutes from "./routes/job/jobRoutes.js";
+import reportRoutes from "./routes/reports/reportRoute.js";
+import revaluationRoute from "./routes/revaluation/revaluation.js";
+
+/// Initialize Cron Jobs
+import { initializeCronJobs } from "./jobs/schedulers/cronScheduler.js";
 
 // ----------------- App Init -----------------
 dotenv.config();
@@ -75,8 +81,24 @@ app.use("/api", limiter);
 // ----------------- DB Connection -----------------
 connectDB().catch((err) => console.error("DB connection failed", err));
 
-// ----------------- Routes -----------------
+// ----------------- Cron Jobs -----------------
+let cronTask = null;
+// Initialize cron jobs when server starts
+if (process.env === "production") {
+  cronTask = initializeCronJobs();
+  cronTask.start(); // Start the scheduled task
+  console.log("✅ Cron jobs initialized");
+}
 
+process.on("SIGINT", () => {
+  if (cronTask) {
+    cronTask.stop(); // Stop accepting new cron triggers
+    console.log("⏹️ Cron jobs stopped");
+  }
+  process.exit(0); // Now exit cleanly
+});
+
+// ----------------- Routes -----------------
 app.use("/api/auth", authRoute);
 app.use("/api/company", authMiddleware, companyRoute);
 app.use("/api/branch", authMiddleware, branchRoute);
@@ -88,13 +110,16 @@ app.use("/api/transaction/purchase", authMiddleware, saleRoutes);
 app.use("/api/item", authMiddleware, itemRoute);
 app.use("/api/transaction", authMiddleware, PaymentRoutes);
 app.use("/api/dev", authMiddleware, devRoutes);
+app.use("/api/job", authMiddleware, jobRoutes);
+app.use("/api/reports", authMiddleware, reportRoutes);
+app.use("/api/revaluation", authMiddleware, revaluationRoute);
 
 // ----------------- Production Build Serving -----------------
 if (process.env.NODE_ENV === "production") {
   console.log("Environment:", process.env.NODE_ENV);
 
   const __dirname = path.resolve();
-  const frontendPath = path.join(__dirname,"..","frontend", "dist");
+  const frontendPath = path.join(__dirname, "..", "frontend", "dist");
 
   console.log("Serving static files from:", frontendPath);
 
@@ -102,7 +127,6 @@ if (process.env.NODE_ENV === "production") {
   app.use(express.static(frontendPath));
 
   console.log("front end path", frontendPath);
-  
 
   // Handle SPA routing - serve index.html for all non-API routes using named splat wildcard
   app.get("/*splat", (req, res) => {

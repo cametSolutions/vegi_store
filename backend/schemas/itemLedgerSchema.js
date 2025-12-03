@@ -78,15 +78,15 @@ export const ItemLedgerSchema = new mongoose.Schema(
       type: Number,
       required: [true, "Running stock balance is required"],
     },
-    account: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "AccountMaster",
-      required: [true, "Account is required"],
-    },
-    accountName: {
-      type: String,
-      required: [true, "Account name is required"],
-    },
+    // account: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "AccountMaster",
+    //   required: [true, "Account is required"],
+    // },
+    // accountName: {
+    //   type: String,
+    //   required: [true, "Account name is required"],
+    // },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -103,6 +103,9 @@ ItemLedgerSchema.index({ item: 1, transactionDate: 1 });
 ItemLedgerSchema.index({ company: 1, branch: 1 });
 ItemLedgerSchema.index({ transactionId: 1 });
 ItemLedgerSchema.index({ account: 1 });
+ItemLedgerSchema.index({ item: 1, branch: 1, transactionDate: 1 });
+ItemLedgerSchema.index({ transactionId: 1 });
+ItemLedgerSchema.index({ item: 1, branch: 1 });
 
 // Static method to get last stock balance for an item
 ItemLedgerSchema.statics.getLastStockBalance = async function (

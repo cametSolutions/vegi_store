@@ -66,6 +66,10 @@ export const AccountMonthlyBalanceSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    needsRecalculation:{
+      type: Boolean,
+      default: false,
+    }
   },
   {
     timestamps: true,
@@ -78,6 +82,8 @@ AccountMonthlyBalanceSchema.index(
   { unique: true }
 );
 AccountMonthlyBalanceSchema.index({ company: 1, branch: 1, periodKey: 1 });
+AccountMonthlyBalanceSchema.index({ needsRecalculation: 1 });
+AccountMonthlyBalanceSchema.index({ account: 1, branch: 1, year: 1, month: 1 });
 
 // Static method to get opening balance for a specific month
 AccountMonthlyBalanceSchema.statics.getOpeningBalance = async function (

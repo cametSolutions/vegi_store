@@ -196,7 +196,7 @@ const TransactionAccountSelector = ({
         accountName: cashAccountResponse?.accountName,
         account: cashAccountResponse?._id,
         openingBalance: cashAccountResponse?.outstandingNet || 0,
-        netAmount: 0,
+        // netAmount: ,
         email: cashAccountResponse?.email || "",
         phone: cashAccountResponse?.phoneNo || "",
       });
@@ -280,7 +280,7 @@ const TransactionAccountSelector = ({
         account: account?._id,
         openingBalance: account?.outstandingNet || 0,
         previousBalanceAmount: account?.outstandingDr || 0,
-        netAmount: 0,
+        // netAmount: 0,
         email: account?.email,
         phone: account?.phoneNo,
         priceLevel: selectedPriceLevel,
@@ -311,7 +311,7 @@ const TransactionAccountSelector = ({
         accountName: "",
         account: "",
         openingBalance: 0,
-        netAmount: 0,
+        // netAmount: 0,
         email: "",
         phone: "",
       });
@@ -329,7 +329,7 @@ const TransactionAccountSelector = ({
       accountName: "",
       account: "",
       openingBalance: 0,
-      netAmount: 0,
+      // netAmount: 0,
       email: "",
       phone: "",
     });

@@ -6,6 +6,7 @@ import {
   Settings,
   Database,
   Power,
+  RefreshCcw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -39,6 +40,7 @@ import {
 } from "@/store/slices/companyBranchSlice";
 import { useAuth } from "@/hooks/queries/auth.queries";
 import { userQueries } from "@/hooks/queries/user.queries";
+import RunRevaluation from "../Revaluation/RunRevaluation";
 
 // Memoized components for better performance
 const UserInfoSection = ({ user, initials, displayName }) => (
@@ -210,9 +212,13 @@ const ProfileDropdown = () => {
       }
 
       // If no stored data exists, set defaults from API
-      if (!storedCompany && !selectedCompanyFromStore && loggedUser.access?.[0]) {
+      if (
+        !storedCompany &&
+        !selectedCompanyFromStore &&
+        loggedUser.access?.[0]
+      ) {
         const { company, branches } = loggedUser.access[0];
-        
+
         if (company) {
           dispatch(SetSelectedCompanyInStore(company));
           setLocalStorageItem("selectedCompany", company);
@@ -226,7 +232,14 @@ const ProfileDropdown = () => {
         }
       }
     }
-  }, [loggedUser, isLoading, isError, dispatch, selectedCompanyFromStore, selectedBranchFromStore]);
+  }, [
+    loggedUser,
+    isLoading,
+    isError,
+    dispatch,
+    selectedCompanyFromStore,
+    selectedBranchFromStore,
+  ]);
 
   // Sync local state with Redux (Redux is source of truth)
   useEffect(() => {
@@ -280,11 +293,11 @@ const ProfileDropdown = () => {
   const handleSelectBranch = useCallback(
     (branch) => {
       dispatch(showLoader());
-      
+
       // Update Redux (source of truth)
       dispatch(SetSelectedBranchInStore(branch));
       setLocalStorageItem("selectedBranch", branch);
-      
+
       navigate("/");
 
       setTimeout(() => {
@@ -459,7 +472,7 @@ const ProfileDropdown = () => {
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="flex items-center gap-2">
               <Database className="w-4 h-4" />
-              Master Data
+              <span className="ml-2">Master Data</span>
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="w-48">
               {masterMenuItems.map(({ path, label, icon: Icon }) => (
@@ -474,6 +487,12 @@ const ProfileDropdown = () => {
             </DropdownMenuSubContent>
           </DropdownMenuSub>
 
+          {/* <DropdownMenuItem onClick={() => handleNavigate("/settings")}>
+            <RefreshCcw className="w-4 h-4 mr-2" />
+            Run Revaluation
+          </DropdownMenuItem> */}
+
+          <RunRevaluation />
           <DropdownMenuSeparator />
 
           {/* Logout */}

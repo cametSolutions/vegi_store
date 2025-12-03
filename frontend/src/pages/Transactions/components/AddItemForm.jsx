@@ -16,7 +16,8 @@ const AddItemForm = ({
   updateTransactionField,
   addItem,
   clickedItemInTable,
-  transactionType
+  transactionType,
+  account
 }) => {
   const [localItem, setLocalItem] = useState({
     item: null,
@@ -70,6 +71,14 @@ const AddItemForm = ({
 
   // Update form fields when search results are received
   useEffect(() => {
+
+    if(!account && shouldSearch) {
+      toast.error("Customer Not Selected", {
+        description: "Please select a customer before adding items.",
+      });
+      setShouldSearch(false);
+      return;
+    }
     // Only process when we were searching and fetch is complete
     if (shouldSearch && !isFetching && searchResponse !== undefined) {
       if (searchResponse?.data && searchResponse.data.length > 0) {
@@ -85,12 +94,17 @@ const AddItemForm = ({
                 pl.priceLevel._id === priceLevel ||
                 pl.priceLevel.priceLevelName === priceLevel
             );
+
+            console.log("priceLevelData", priceLevelData);
+            
             rate = priceLevelData?.rate || 0;
           } else {
             rate = 0;
           }
         }
 
+        console.log("priceLevel", priceLevel);
+        console.log("transactionType", transactionType);
         console.log("rate", rate);
         
 
