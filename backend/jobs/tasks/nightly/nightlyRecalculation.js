@@ -2,54 +2,20 @@
  * =============================================================================
  * NIGHTLY RECALCULATION - MAIN ORCHESTRATOR
  * =============================================================================
- *
- * This is the main entry point for the nightly recalculation job.
- * It coordinates all refold operations and handles logging.
- *
- * EXECUTION FLOW:
- *
- * ┌─────────────────────────────────────────────────────────┐
- * │                 NIGHTLY JOB LIFECYCLE                   │
- * ├─────────────────────────────────────────────────────────┤
- * │                                                         │
- * │  1. Job Triggered by Cron (11 PM daily)                 │
- * │     ↓                                                   │
- * │  2. runNightlyJob() starts                              │
- * │     ↓                                                   │
- * │  3. Phase 1: Item Ledger Refold                         │
- * │     └─> processAllDirtyItems()                          │
- * │         ├─> Find dirty items                            │
- * │         ├─> Process each item                           │
- * │         └─> Return statistics                           │
- * │     ↓                                                   │
- * │  4. Phase 2: Account Ledger Refold (TODO - Future)      │
- * │     └─> processAllDirtyAccounts()                       │
- * │     ↓                                                   │
- * │  5. Log Results & Send Alerts (if needed)               │
- * │     └─> Console logs                                    │
- * │     └─> Email/Slack notification (future)               │
- * │     ↓                                                   │
- * │  6. Job Completes                                       │
- * │                                                         │
- * └─────────────────────────────────────────────────────────┘
- *
- * Author: [Your Team]
- * Last Updated: Nov 2025
- * =============================================================================
+ * Last Updated: Dec 2025
  */
 
 import mongoose from "mongoose";
 import { processAllDirtyAccounts } from "./accountLedgerRefold.js";
 import { processAllDirtyItems } from "./itemLedgerRefold.js";
 import AdjustmentEntryModel from "../../../model/AdjustmentEntryModel.js";
+import { sendAdminAlert } from "../../../utils/emailAlert.js";
+// 
 
 /**
  * Main nightly job function
  * Called by the cron scheduler every night at configured time
- *
- * @returns {Object} - Job execution results
  */
-
 export const runNightlyJob = async () => {
   console.log("\n" + "=".repeat(70));
   console.log("🌙 NIGHTLY RECALCULATION JOB STARTED");
@@ -88,7 +54,6 @@ export const runNightlyJob = async () => {
     // =========================================================================
     // PHASE 3: MARK ALL PROCESSED ADJUSTMENTS AS REVERSED
     // =========================================================================
-    // Combine adjustment IDs from both phases and deduplicate
     const combinedProcessedAdjustmentIds = [
       ...(itemResults.processedAdjustmentIds || []),
       ...(accountResults.processedAdjustmentIds || []),
@@ -112,7 +77,6 @@ export const runNightlyJob = async () => {
               isReversed: true,
               reversedAt: new Date(),
               status: "reversed",
-              // reversedBy: "nightly-job-v1.",
             },
           },
           { session }
@@ -126,13 +90,15 @@ export const runNightlyJob = async () => {
       } catch (error) {
         await session.abortTransaction();
         console.error("❌ Phase 3 failed:", error.message);
+        // We don't throw here to allow the job to finish reporting stats
+        results.phases.adjustmentsReversedError = error.message;
       } finally {
         session.endSession();
       }
     }
 
     // =========================================================================
-    // JOB COMPLETION
+    // JOB COMPLETION & REPORTING
     // =========================================================================
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     results.endTime = new Date();
@@ -140,28 +106,29 @@ export const runNightlyJob = async () => {
     results.success = true;
 
     console.log("\n" + "=".repeat(70));
-    console.log("✅ NIGHTLY RECALCULATION JOB COMPLETED SUCCESSFULLY");
+    console.log("✅ NIGHTLY RECALCULATION JOB COMPLETED");
     console.log("=".repeat(70));
     console.log(`⏱️  Total Duration: ${duration} seconds`);
-    console.log(`📦 Items Processed: ${itemResults.itemsProcessed}`);
-    console.log(`📅 Months Refolded: ${accountResults.monthsRefolded}`);
-    console.log(`❌ Item Errors: ${itemResults.errors.length}`);
-    console.log(`❌ Account Errors: ${accountResults.errors.length}`);
-    console.log("=".repeat(70) + "\n");
 
-    // =========================================================================
-    // ALERTS (Future Enhancement)
-    // =========================================================================
-    if (itemResults.errors.length > 0 || accountResults.errors.length > 0) {
-      console.log("⚠️  ALERT: Job completed with errors. Review logs.");
-      // TODO: Send email/Slack notification
-      // await sendAlertNotification(results);
+    // Check for partial errors (Job finished, but some items failed)
+    const totalErrors =
+      (itemResults.errors?.length || 0) + (accountResults.errors?.length || 0);
+
+    if (totalErrors > 0) {
+      console.log(`⚠️  ALERT: Job completed with ${totalErrors} errors.`);
+      await sendAlertNotification(
+        results,
+        itemResults.errors,
+        accountResults.errors
+      );
+    } else {
+      console.log("✨ Clean Run: No errors detected.");
     }
 
     return results;
   } catch (error) {
     // =========================================================================
-    // ERROR HANDLING
+    // CRITICAL FAILURE HANDLING
     // =========================================================================
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     results.endTime = new Date();
@@ -173,17 +140,13 @@ export const runNightlyJob = async () => {
     };
 
     console.error("\n" + "=".repeat(70));
-    console.error("❌ NIGHTLY RECALCULATION JOB FAILED");
+    console.error("❌ NIGHTLY RECALCULATION JOB CRASHED");
     console.error("=".repeat(70));
     console.error(`⏱️  Duration Before Failure: ${duration} seconds`);
-    console.error(`📝 Error Message: ${error.message}`);
-    console.error("=".repeat(70));
-    console.error("📋 Full Stack Trace:");
     console.error(error.stack);
-    console.error("=".repeat(70) + "\n");
 
-    // TODO: Send critical alert notification
-    // await sendCriticalAlert(error);
+    // Send Critical Alert immediately
+    await sendCriticalAlert(error);
 
     return results;
   }
@@ -191,25 +154,51 @@ export const runNightlyJob = async () => {
 
 /**
  * =============================================================================
- * FUTURE ENHANCEMENTS (Phase 2+)
+ * ALERT HELPERS
  * =============================================================================
  */
 
 /**
- * Send alert notification when job completes with errors
- * Can be email, Slack, SMS, etc.
+ * Helper: Send alert when job completes but has data errors
  */
-async function sendAlertNotification(results) {
-  // TODO: Implement notification system
-  // Example: Send email with error summary
-  // Example: Post to Slack channel
-  console.log("📧 Alert notification sent (not implemented yet)");
+async function sendAlertNotification(
+  results,
+  itemErrors = [],
+  accountErrors = []
+) {
+  const subject = `⚠️ Warning: Nightly Job Completed with Errors`;
+
+  let errorHtml = `<h3>Job Summary</h3>
+  <ul>
+    <li><strong>Duration:</strong> ${results.durationSeconds}s</li>
+    <li><strong>Item Errors:</strong> ${itemErrors.length}</li>
+    <li><strong>Account Errors:</strong> ${accountErrors.length}</li>
+  </ul>`;
+
+  if (itemErrors.length > 0) {
+    errorHtml += `<h4>Item Errors (First 5):</h4>
+    <pre style="background:#eee; padding:10px;">${JSON.stringify(
+      itemErrors.slice(0, 5),
+      null,
+      2
+    )}</pre>`;
+  }
+
+  await sendAdminAlert(subject, errorHtml);
 }
 
 /**
- * Send critical alert when job completely fails
+ * Helper: Send critical alert when job crashes completely
  */
 async function sendCriticalAlert(error) {
-  // TODO: Implement critical alert system
-  console.log("🚨 Critical alert sent (not implemented yet)");
+  const subject = `🚨 CRITICAL: Nightly Job Failed`;
+  const html = `
+    <h2 style="color:red;">Job Crashed</h2>
+    <p>The nightly recalculation job threw an unhandled exception and stopped.</p>
+    <p><strong>Error:</strong> ${error.message}</p>
+    <h3>Stack Trace:</h3>
+    <pre style="background:#f8d7da; padding:15px; border:1px solid #f5c6cb;">${error.stack}</pre>
+  `;
+
+  await sendAdminAlert(subject, html);
 }

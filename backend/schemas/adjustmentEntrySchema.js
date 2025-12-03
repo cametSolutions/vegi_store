@@ -29,7 +29,7 @@ export const adjustmentEntrySchema = new Schema(
       type: Schema.Types.ObjectId,
       refPath: "originalTransactionModel",
       required: true,
-      index: true,
+      // index: true,
     },
     originalTransactionModel: {
       type: String,
