@@ -81,15 +81,14 @@ app.use("/api", limiter);
 // ----------------- DB Connection -----------------
 connectDB().catch((err) => console.error("DB connection failed", err));
 
+// ----------------- Cron Jobs -----------------
 let cronTask = null;
-
 // Initialize cron jobs when server starts
-
-// if (process.env.NODE_ENV === "production") {
-//   cronTask = initializeCronJobs();
-//   cronTask.start(); // Start the scheduled task
-//   console.log("✅ Cron jobs initialized");
-// }
+if (process.env === "production") {
+  cronTask = initializeCronJobs();
+  cronTask.start(); // Start the scheduled task
+  console.log("✅ Cron jobs initialized");
+}
 
 process.on("SIGINT", () => {
   if (cronTask) {
@@ -100,7 +99,6 @@ process.on("SIGINT", () => {
 });
 
 // ----------------- Routes -----------------
-
 app.use("/api/auth", authRoute);
 app.use("/api/company", authMiddleware, companyRoute);
 app.use("/api/branch", authMiddleware, branchRoute);
@@ -113,7 +111,7 @@ app.use("/api/item", authMiddleware, itemRoute);
 app.use("/api/transaction", authMiddleware, PaymentRoutes);
 app.use("/api/dev", authMiddleware, devRoutes);
 app.use("/api/job", authMiddleware, jobRoutes);
-app.use("/api/reports", authMiddleware,reportRoutes );
+app.use("/api/reports", authMiddleware, reportRoutes);
 app.use("/api/revaluation", authMiddleware, revaluationRoute);
 
 // ----------------- Production Build Serving -----------------
@@ -151,5 +149,3 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server started at http://localhost:${PORT}`);
 });
-
-
