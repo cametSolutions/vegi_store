@@ -25,7 +25,7 @@ import mongoose from "mongoose";
     transactionModel: {
       type: String,
       required: true,
-      enum:  ["Receipt", "Payment","Sale","Purchase"] // ✅ lowercase only
+      enum:  ["SalesReturn", "PurchaseReturn", "Sale","Purchase","Payment", "Receipt"] 
     },
     transactionNumber: {
       type: String,
@@ -40,7 +40,7 @@ import mongoose from "mongoose";
     transactionType: {
       type: String,
       required: true,
-      enum: ["receipt", "payment", "sale", "purchase"] // ✅ lowercase only
+      enum: ["receipt", "payment", "sale", "purchase", "sales_return", "purchase_return"] // ✅ lowercase only
     },
 
     account: {

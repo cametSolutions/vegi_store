@@ -32,8 +32,7 @@ export const processTransaction = async (transactionData, userId, session) => {
 
     const transactionModel = getTransactionModel(transactionType);
 
-    console.log(" transactionType:", transactionType);
-    console.log(" transactionModel:", transactionModel);
+  
     
 
     // // Step 3: Create transaction record

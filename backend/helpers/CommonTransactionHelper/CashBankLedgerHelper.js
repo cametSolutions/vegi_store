@@ -1,4 +1,5 @@
 import CashBankLedger from "../../model/CashBankLedgerModel.js";
+import { getTransactionModel, transactionTypeToModelName } from "../transactionHelpers/transactionMappers.js";
 
 /**
  * Create a Cash/Bank Ledger Entry
@@ -33,7 +34,7 @@ export const createCashBankLedgerEntry = async ({
     const entryType = type === "receipt" ? "debit" : "credit";
 
     // ✅ Capitalize for Mongoose model name
-    const modelName = type.charAt(0).toUpperCase() + type.slice(1); // "Receipt" or "Payment"
+    const modelName = transactionTypeToModelName(type);
 
     const ledgerData = {
       company,

@@ -34,7 +34,7 @@ export const adjustmentEntrySchema = new Schema(
     originalTransactionModel: {
       type: String,
       required: true,
-      enum: ["Sale", "Purchase", "CreditNote", "DebitNote"],
+      enum: ["Sale", "Purchase", "SalesReturn", "PurchaseReturn"],
     },
     originalTransactionNumber: {
       type: String,
