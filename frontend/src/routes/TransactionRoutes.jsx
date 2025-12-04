@@ -3,9 +3,7 @@ import { lazy } from "react";
 import ProtectedRoute from "../components/Layout/ProtectedRoute";
 import TransactionPanel from "@/pages/Transactions/TransactionPanel";
 import CashTransactionPanel from "@/pages/CashTransaction/CashTransactionPanel";
-const CreateTransaction = lazy(() =>
-  import("../pages/Transactions/CreateTransaction")
-);
+
 
 export default function TransactionRoutes() {
   return (
