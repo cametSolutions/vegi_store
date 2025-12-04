@@ -26,6 +26,9 @@ import devRoutes from "./routes/devRoutes/devRoutes.js";
 import jobRoutes from "./routes/job/jobRoutes.js";
 import reportRoutes from "./routes/reports/reportRoute.js";
 import revaluationRoute from "./routes/revaluation/revaluation.js";
+import salesReturnRoutes from "./routes/transactions/sales_return_routes.js";
+import purchaseReturnRoutes from "./routes/transactions/purchase_return_routes.js";
+import purchaseRoutes from "./routes/transactions/purchaseRoutes.js";
 
 /// Initialize Cron Jobs
 import { initializeCronJobs } from "./jobs/schedulers/cronScheduler.js";
@@ -106,7 +109,9 @@ app.use("/api/user", authMiddleware, userRoute);
 app.use("/api/pricelevel", authMiddleware, pricelevelRoute);
 app.use("/api/accountmaster", authMiddleware, acccountmasterRoute);
 app.use("/api/transaction/sale", authMiddleware, saleRoutes);
-app.use("/api/transaction/purchase", authMiddleware, saleRoutes);
+app.use("/api/transaction/purchase", authMiddleware, purchaseRoutes);
+app.use("/api/transaction/sales_return", authMiddleware, salesReturnRoutes);
+app.use("/api/transaction/purchase_return", authMiddleware, purchaseReturnRoutes);
 app.use("/api/item", authMiddleware, itemRoute);
 app.use("/api/transaction", authMiddleware, PaymentRoutes);
 app.use("/api/dev", authMiddleware, devRoutes);

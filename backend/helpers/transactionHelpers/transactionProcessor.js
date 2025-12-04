@@ -32,6 +32,10 @@ export const processTransaction = async (transactionData, userId, session) => {
 
     const transactionModel = getTransactionModel(transactionType);
 
+    console.log(" transactionType:", transactionType);
+    console.log(" transactionModel:", transactionModel);
+    
+
     // // Step 3: Create transaction record
     const transaction = await transactionModel.create([transactionData], {
       session,
@@ -187,7 +191,7 @@ export const processTransaction = async (transactionData, userId, session) => {
 //       outstandingType: "dr", // Customer owes us (receivable)
 //       ledgerSide: "debit",
 //     },
-//     debit_note: {
+//     purchase_return: {
 //       stockDirection: "out",
 //       outstandingType: "dr",
 //       ledgerSide: "debit",
@@ -197,7 +201,7 @@ export const processTransaction = async (transactionData, userId, session) => {
 //       outstandingType: "cr", // We owe supplier (payable)
 //       ledgerSide: "credit",
 //     },
-//     credit_note: {
+//     sales_return: {
 //       stockDirection: "in",
 //       outstandingType: "cr",
 //       ledgerSide: "credit",

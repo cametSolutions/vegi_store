@@ -8,14 +8,14 @@ export const transactionTypes = [
     color: "green",
   },
   {
-    value: "credit_note",
-    label: "Credit Note",
+    value: "sales_return",
+    label: "Sales Return",
     icon: "TrendingUp",
     color: "emerald",
   },
   {
-    value: "debit_note",
-    label: "Debit Note",
+    value: "purchase_return",
+    label: "Purchase Return",
     icon: "RefreshCw",
     color: "orange",
   },
@@ -39,7 +39,7 @@ export const getTransactionType = (location) => {
 };
 
 export const getPartyLabel = (transactionType) =>
-  transactionType === "sale" || transactionType === "credit_note"
+  transactionType === "sale" || transactionType === "sales_return"
     ? "Customer"
     : "Supplier";
 
@@ -49,10 +49,10 @@ export const getDocumentLabel = (transactionType) => {
       return "Invoice No";
     case "purchase":
       return "Bill No";
-    case "credit_note":
-      return "Credit Note No";
-    case "debit_note":
-      return "Debit Note No";
+    case "sales_return":
+      return "Sales Return No";
+    case "purchase_return":
+      return "Purchase Return No";
     default:
       return "Document No";
   }
@@ -133,7 +133,7 @@ export const calculateTransactionTotals = (transaction) => {
 
   const multiplier =
     transaction.transactionType === "sale" ||
-    transaction.transactionType === "debit_note"
+    transaction.transactionType === "purchase_return"
       ? 1
       : -1;
 
@@ -165,7 +165,7 @@ export const calculateClosingBalance = (
   transactionType
 ) => {
   const multiplier =
-    transactionType === "sale" || transactionType === "debit_note" ? 1 : -1;
+    transactionType === "sale" || transactionType === "purchase_return" ? 1 : -1;
   return openingBalance + netAmount * multiplier - paidAmount;
 };
 

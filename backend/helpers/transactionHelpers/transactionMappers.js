@@ -1,12 +1,12 @@
 import { ReceiptModel } from "../../model/FundTransactionMode.js";
-import { PurchaseModel, SalesModel } from "../../model/TransactionModel.js";
+import { PurchaseModel, SalesModel, SalesReturnModel, PurchaseReturnModel } from "../../model/TransactionModel.js";
 
 export const transactionTypeToModelName = (transactionType) => {
   const mapping = {
     sale: "Sale",
     purchase: "Purchase",
-    credit_note: "CreditNote",
-    debit_note: "DebitNote",
+    sales_return: "SalesReturn",
+    purchase_return: "PurchaseReturn",
   };
 
   
@@ -19,8 +19,8 @@ export const getTransactionModel = (transactionType) => {
     sale: SalesModel,
     purchase: PurchaseModel,
     receipt: ReceiptModel,
-    // credit_note: CreditNoteModel, // You'll need to create these
-    // debit_note: DebitNoteModel, // You'll need to create these
+    sales_return: SalesReturnModel, // You'll need to create these
+    purchase_return: PurchaseReturnModel, // You'll need to create these
   };
   return mapping[transactionType];
 };

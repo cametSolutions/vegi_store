@@ -32,9 +32,9 @@ const Navbar = () => {
     { label: "Rate Setting", path: "/master/rate-setting" },
 
     { label: "Purchase", path: "/transactions/purchase/create" },
-    { label: "Purchase Return", path: "/purchase-return" },
+    { label: "Purchase Return", path: "/transactions/purchase_return/create" },
     { label: "Sales", path: "/transactions/sale/create" },
-    { label: "Sales Return", path: "/Sales-return" },
+    { label: "Sales Return", path: "/transactions/sales_return/create" },
     { label: "Receipt", path: "/transactions/receipt/create" },
     { label: "Payment", path: "/transactions/payment/create" },
     {

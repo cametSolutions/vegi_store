@@ -82,7 +82,7 @@ export const FundTransactionSchema = new mongoose.Schema(
 
     referenceType:{
       type: String,
-      enum: ["sale", "purchase", "credit_note", "debit_note"],
+      enum: ["sale", "purchase", "sales_return", "purchase_return"],
     },
 
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

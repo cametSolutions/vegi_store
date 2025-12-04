@@ -35,7 +35,7 @@ const OutstandingSchema = new mongoose.Schema(
     transactionModel: {
       type: String,
       required: [true, "Transaction model is required"],
-      enum: ["Sale", "Purchase", "CreditNote", "DebitNote", "OpeningBalance"],
+      enum: ["Sale", "Purchase", "SalesReturn", "PurchaseReturn", "OpeningBalance"],
     },
     sourceTransaction: {
       type: mongoose.Schema.Types.ObjectId,
@@ -51,8 +51,8 @@ const OutstandingSchema = new mongoose.Schema(
         values: [
           "sale",
           "purchase",
-          "credit_note",
-          "debit_note",
+          "sales_return",
+          "purchase_return",
           "opening_balance",
         ],
         message: "Invalid transaction type",

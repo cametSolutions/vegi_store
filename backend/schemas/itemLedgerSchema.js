@@ -46,7 +46,7 @@ export const ItemLedgerSchema = new mongoose.Schema(
     },
     transactionType: {
       type: String,
-      enum: ["sale", "purchase", "credit_note", "debit_note"],
+      enum: ["sale", "purchase", "sales_return", "purchase_return"],
       required: [true, "Transaction type is required"],
     },
     movementType: {

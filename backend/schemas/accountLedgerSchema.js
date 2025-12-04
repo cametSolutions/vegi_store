@@ -37,7 +37,7 @@ export const AccountLedgerSchema = new mongoose.Schema(
     },
     transactionType: {
       type: String,
-      enum: ["sale", "purchase", "credit_note", "debit_note","receipt","payment"],
+      enum: ["sale", "purchase", "sales_return", "purchase_return","receipt","payment"],
       required: [true, "Transaction type is required"],
     },
     ledgerSide: {

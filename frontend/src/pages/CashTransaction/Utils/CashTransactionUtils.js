@@ -7,14 +7,14 @@ export const transactionTypes = [
     color: "green",
   },
   {
-    value: "credit_note",
-    label: "Credit Note",
+    value: "sales_return",
+    label: "Sales Return",
     icon: "TrendingUp",
     color: "emerald",
   },
   {
-    value: "debit_note",
-    label: "Debit Note",
+    value: "purchase_return",
+    label: "Purchase Return",
     icon: "RefreshCw",
     color: "orange",
   },

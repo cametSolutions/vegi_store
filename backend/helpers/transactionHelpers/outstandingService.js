@@ -143,11 +143,11 @@ export const updateOutstandingOnEdit = async (
   let closingBalanceAmount;
 
   if (behavior.outstandingType === "dr") {
-    // For Sale and Debit Note (Dr vouchers)
+    // For Sale and Purchase Return (Dr vouchers)
     closingBalanceAmount =
       updated.netAmount - appliedReceipts + appliedPayments;
   } else {
-    // For Purchase and Credit Note (Cr vouchers)
+    // For Purchase and Sales Return (Cr vouchers)
     closingBalanceAmount = -(
       updated.netAmount -
       appliedPayments +

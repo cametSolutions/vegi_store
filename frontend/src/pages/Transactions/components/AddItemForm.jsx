@@ -17,7 +17,7 @@ const AddItemForm = ({
   addItem,
   clickedItemInTable,
   transactionType,
-  account
+  account,
 }) => {
   const [localItem, setLocalItem] = useState({
     item: null,
@@ -71,8 +71,7 @@ const AddItemForm = ({
 
   // Update form fields when search results are received
   useEffect(() => {
-
-    if(!account && shouldSearch) {
+    if (!account && shouldSearch) {
       toast.error("Customer Not Selected", {
         description: "Please select a customer before adding items.",
       });
@@ -86,27 +85,23 @@ const AddItemForm = ({
 
         // Find the appropriate rate based on priceLevel
         let rate = "";
-        if (foundProduct.priceLevels && foundProduct.priceLevels.length > 0 ) {
-
-          if (priceLevel && transactionType==="sale") {
+        if (foundProduct.priceLevels && foundProduct.priceLevels.length > 0) {
+          if (
+            priceLevel &&
+            (transactionType === "sale" || transactionType === "sales_return")
+          ) {
             const priceLevelData = foundProduct.priceLevels.find(
               (pl) =>
                 pl.priceLevel._id === priceLevel ||
                 pl.priceLevel.priceLevelName === priceLevel
             );
 
-            console.log("priceLevelData", priceLevelData);
-            
+
             rate = priceLevelData?.rate || 0;
           } else {
             rate = 0;
           }
         }
-
-        console.log("priceLevel", priceLevel);
-        console.log("transactionType", transactionType);
-        console.log("rate", rate);
-        
 
         // Find current stock for the branch
         let currentStock = "";
@@ -162,7 +157,10 @@ const AddItemForm = ({
     if (!foundProduct || !foundProduct.priceLevels) return;
 
     let newRate = "";
-    if (priceLevel && transactionType==="sale") {
+    if (
+      priceLevel &&
+      (transactionType === "sale" || transactionType === "sales_return")
+    ) {
       const priceLevelData = foundProduct.priceLevels.find(
         (pl) =>
           pl.priceLevel._id === priceLevel ||

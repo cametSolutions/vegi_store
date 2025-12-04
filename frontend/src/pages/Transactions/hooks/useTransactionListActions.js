@@ -44,7 +44,7 @@ export const useTransactionListActions = () => {
       id: "CN-280595",
       date: "27/09/2025",
       party: "SULYMAN",
-      type: "Credit Note",
+      type: "Sales Return",
       total: 1091.3,
       discount: 130.0,
       paid: 961.3,
@@ -66,7 +66,7 @@ export const useTransactionListActions = () => {
       id: "DN-280597",
       date: "26/09/2025",
       party: "S P",
-      type: "Debit Note",
+      type: "Purchase Return",
       total: 4150.7,
       discount: 350.0,
       paid: 3800.7,
@@ -110,7 +110,7 @@ export const useTransactionListActions = () => {
       id: "CN-280601",
       date: "25/09/2025",
       party: "PEETER",
-      type: "Credit Note",
+      type: "Sales Return",
       total: 2640.8,
       discount: 500.0,
       paid: 2140.8,
@@ -121,7 +121,7 @@ export const useTransactionListActions = () => {
       id: "CN-280601",
       date: "25/09/2025",
       party: "PEETER",
-      type: "Credit Note",
+      type: "Sales Return",
       total: 2640.8,
       discount: 500.0,
       paid: 2140.8,
@@ -132,7 +132,7 @@ export const useTransactionListActions = () => {
       id: "CN-280601",
       date: "25/09/2025",
       party: "PEETER",
-      type: "Credit Note",
+      type: "Sales Return",
       total: 2640.8,
       discount: 500.0,
       paid: 2140.8,
@@ -143,7 +143,7 @@ export const useTransactionListActions = () => {
       id: "CN-280601",
       date: "25/09/2025",
       party: "PEETER",
-      type: "Credit Note",
+      type: "Sales Return",
       total: 2640.8,
       discount: 500.0,
       paid: 2140.8,
@@ -154,7 +154,7 @@ export const useTransactionListActions = () => {
       id: "CN-280601",
       date: "25/09/2025",
       party: "PEETER",
-      type: "Credit Note",
+      type: "Sales Return",
       total: 2640.8,
       discount: 500.0,
       paid: 2140.8,
@@ -165,7 +165,7 @@ export const useTransactionListActions = () => {
       id: "CN-280601",
       date: "25/09/2025",
       party: "PEETER",
-      type: "Credit Note",
+      type: "Sales Return",
       total: 2640.8,
       discount: 500.0,
       paid: 2140.8,
@@ -176,7 +176,7 @@ export const useTransactionListActions = () => {
       id: "CN-280601",
       date: "25/09/2025",
       party: "PEETER",
-      type: "Credit Note",
+      type: "Sales Return",
       total: 2640.8,
       discount: 500.0,
       paid: 2140.8,
@@ -187,7 +187,7 @@ export const useTransactionListActions = () => {
       id: "CN-280601",
       date: "25/09/2025",
       party: "PEETER",
-      type: "Credit Note",
+      type: "Sales Return",
       total: 2640.8,
       discount: 500.0,
       paid: 2140.8,
@@ -298,9 +298,9 @@ export const useTransactionListActions = () => {
         return "bg-blue-100 text-blue-800";
       case "Purchase":
         return "bg-purple-100 text-purple-800";
-      case "Credit Note":
+      case "Sales Return":
         return "bg-green-100 text-green-800";
-      case "Debit Note":
+      case "Purchase Return":
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
