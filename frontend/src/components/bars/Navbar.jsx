@@ -49,6 +49,10 @@ const Navbar = () => {
           label: "Account Monthly Report",
           path: "reports/account-monthly-report",
         },
+        {
+          label: "Outstanding Report",
+          path: "reports/outstanding-report",
+        },
 
       ],
     },
