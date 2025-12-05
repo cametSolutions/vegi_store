@@ -21,9 +21,9 @@ export const getTypeColor = (type) => {
       return "bg-blue-100 text-blue-800";
     case "Purchase":
       return "bg-purple-100 text-purple-800";
-    case "Credit Note":
+    case "Sales Return":
       return "bg-green-100 text-green-800";
-    case "Debit Note":
+    case "Purchase Return":
       return "bg-red-100 text-red-800";
     default:
       return "bg-gray-100 text-gray-800";
@@ -40,10 +40,10 @@ export const getTypeLabel = (type) => {
       return "Sale Invoice";
     case "Purchase":
       return "Purchase Invoice";
-    case "Credit Note":
-      return "Credit Note";
-    case "Debit Note":
-      return "Debit Note";
+    case "Sales Return":
+      return "Sales Return";
+    case "Purchase Return":
+      return "Purchase Return";
     default:
       return type;
   }

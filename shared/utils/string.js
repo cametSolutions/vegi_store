@@ -4,8 +4,10 @@ export const truncate = (str, maxLength) => {
   return str.length > maxLength ? str.slice(0, maxLength) + "…" : str;
 };
 
-/// Converts a  first letter of a string to title case
-export const capitalizeFirstLetter = (str) => {
+export const capitalizeFirstLetter = (str = "") => {
   if (!str) return "";
-  return str.charAt(0).toUpperCase() + str.slice(1);
+  return str
+    .replace(/_/g, " ") // replace underscores with space
+    .toLowerCase() // convert entire string to lowercase
+    .replace(/\b\w/g, (c) => c.toUpperCase()); // capitalize first letter of each word
 };

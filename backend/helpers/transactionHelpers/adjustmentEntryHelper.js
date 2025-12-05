@@ -35,8 +35,8 @@ export const createAdjustmentEntries = async (
   userId,
   session
 ) => {
-  // Sale/Debit Note: Dr (debit side) - Customer owes you
-  // Purchase/Credit Note: Cr (credit side) - You owe supplier
+  // Sale/Purchase Return: Dr (debit side) - Customer owes you
+  // Purchase/Sales Return: Cr (credit side) - You owe supplier
   const behavior = determineTransactionBehavior(updated.transactionType);
 
   console.log("behavior", behavior);

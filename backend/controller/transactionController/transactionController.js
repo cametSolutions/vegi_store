@@ -27,7 +27,7 @@ import {
 } from "../../helpers/transactionHelpers/transactionEditHelper.js";
 
 /**
- * get transactions (handles sales, purchase, credit_note, debit_note)
+ * get transactions (handles sales, purchase, sales_return, purchase_return)
  */
 
 export const getTransactions = async (req, res) => {
@@ -37,7 +37,7 @@ export const getTransactions = async (req, res) => {
     const transactionType = req.query.transactionType;
 
     // Validate transaction type
-    const validTypes = ["sale", "purchase", "credit_note", "debit_note"];
+    const validTypes = ["sale", "purchase", "sales_return", "purchase_return"];
     if (!validTypes.includes(transactionType)) {
       return res.status(400).json({ message: "Invalid transaction type" });
     }
@@ -92,7 +92,7 @@ export const getTransactions = async (req, res) => {
 };
 
 /**
- * Create transaction (handles sales, purchase, credit_note, debit_note)
+ * Create transaction (handles sales, purchase, sales_return, purchase_return)
  */
 export const createTransaction = async (req, res) => {
   const session = await mongoose.startSession();
@@ -105,7 +105,7 @@ export const createTransaction = async (req, res) => {
     transactionData.createdBy = userId;
 
     // Validate transaction type
-    const validTypes = ["sale", "purchase", "credit_note", "debit_note"];
+    const validTypes = ["sale", "purchase", "sales_return", "purchase_return"];
     if (!validTypes.includes(transactionData.transactionType)) {
       await session.abortTransaction();
       return res.status(400).json({
@@ -162,7 +162,7 @@ export const createTransaction = async (req, res) => {
     if (paidAmount > 0) {
       const receiptType =
         transactionData.transactionType === "sale" ||
-        transactionData.transactionType === "credit_note"
+        transactionData.transactionType === "sales_return"
           ? "receipt"
           : "payment";
 
@@ -254,7 +254,7 @@ export const createTransaction = async (req, res) => {
 };
 
 /**
- * get transaction details (handles sales, purchase, credit_note, debit_note)
+ * get transaction details (handles sales, purchase, sales_return, purchase_return)
  */
 
 export const getTransactionDetail = async (req, res) => {

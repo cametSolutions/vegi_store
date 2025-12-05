@@ -69,6 +69,8 @@ export const deleteData = async (req, res) => {
       "Outstanding",
       "OutstandingSettlement",
       "AdjustmentEntry",
+      "SalesReturn",
+      "PurchaseReturn"
     ];
 
     // Build dynamic filter

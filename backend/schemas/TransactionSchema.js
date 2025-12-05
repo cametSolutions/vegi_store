@@ -82,7 +82,7 @@ const TransactionSchema = new mongoose.Schema(
     },
     transactionType: {
       type: String,
-      enum: ["sale", "purchase", "credit_note", "debit_note"],
+      enum: ["sale", "purchase", "sales_return", "purchase_return"],
       required: [true, "Transaction type is required"],
     },
 
@@ -256,8 +256,8 @@ TransactionSchema.virtual("displayType").get(function () {
   const types = {
     sale: "Sales Invoice",
     purchase: "Purchase Invoice",
-    credit_note: "Credit Note",
-    debit_note: "Debit Note",
+    sales_return: "Sales Return",
+    purchase_return: "Purchase Return",
   };
   return types[this.transactionType];
 });

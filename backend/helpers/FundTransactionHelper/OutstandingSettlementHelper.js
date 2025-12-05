@@ -363,10 +363,10 @@ export const getUnsettledBalance = async (accountId, outstandingType) => {
     let pending;
     
     if (outstandingType === "dr") {
-      // DR vouchers (Sale/Debit Note): Pending = Bill Amount - Receipts + Payments
+      // DR vouchers (Sale/Purchase Return): Pending = Bill Amount - Receipts + Payments
       pending = outstanding.totalAmount - totalReceipts + totalPayments;
     } else {
-      // CR vouchers (Purchase/Credit Note): Pending = -(Bill Amount - Payments + Receipts)
+      // CR vouchers (Purchase/Sales Return): Pending = -(Bill Amount - Payments + Receipts)
       pending = -(outstanding.totalAmount - totalPayments + totalReceipts);
     }
 

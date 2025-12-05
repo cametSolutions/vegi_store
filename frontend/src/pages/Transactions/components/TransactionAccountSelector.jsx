@@ -43,6 +43,7 @@ const TransactionAccountSelector = ({
   company,
   modifyOnPriceLevelChange,
 }) => {
+
   // ============================================================================
   // CONSTANTS
   // ============================================================================
@@ -82,8 +83,8 @@ const TransactionAccountSelector = ({
   // API QUERIES
   // ============================================================================
   // Query for customer search
-  const crTransactionTypes = ["purchase", "credit_note"];
-  const accountTypeForSearch = crTransactionTypes.includes(transactionType) ? "supplier" : "customer";
+  const supplierTransactionTypes = ["purchase", "purchase_return"];
+  const accountTypeForSearch = supplierTransactionTypes.includes(transactionType) ? "supplier" : "customer";
   const {
     data: apiResponse,
     isLoading,
@@ -133,7 +134,9 @@ const TransactionAccountSelector = ({
   const accounts = apiResponse?.data || [];
   const totalCount = apiResponse?.totalCount || 0;
   const hasMore = apiResponse?.hasMore || false;
-  const isPriceLevelNeeded=transactionType === "sale" 
+  const isPriceLevelNeeded=transactionType === "sale"  || transactionType === "sales_return";
+
+
 
   // Extract price levels from API response and filter by branch
   const allPriceLevels = priceLevelsResponse?.data || [];

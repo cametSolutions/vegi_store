@@ -4,8 +4,8 @@ export const getTransactionModelName = (transactionType) => {
   const mapping = {
     sale: "Sale",
     purchase: "Purchase",
-    credit_note: "CreditNote",
-    debit_note: "DebitNote",
+    sales_return: "CreditNote",
+    purchase_return: "DebitNote",
   };
   return mapping[transactionType] || transactionType;
 };
@@ -41,7 +41,7 @@ export const determineTransactionBehavior =  (transactionType) => {
       outstandingType: "dr", // Customer owes us (receivable)
       ledgerSide: "debit",
     },
-    debit_note: {
+    purchase_return: {
       stockDirection: "out",
       outstandingType: "dr",
       ledgerSide: "debit",
@@ -51,7 +51,7 @@ export const determineTransactionBehavior =  (transactionType) => {
       outstandingType: "cr", // We owe supplier (payable)
       ledgerSide: "credit",
     },
-    credit_note: {
+    sales_return: {
       stockDirection: "in",
       outstandingType: "cr",
       ledgerSide: "credit",
