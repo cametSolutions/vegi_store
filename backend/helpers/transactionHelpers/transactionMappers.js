@@ -7,6 +7,8 @@ export const transactionTypeToModelName = (transactionType) => {
     purchase: "Purchase",
     sales_return: "SalesReturn",
     purchase_return: "PurchaseReturn",
+    receipt: "Receipt",
+    payment: "Payment",
   };
 
   
