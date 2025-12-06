@@ -3,6 +3,7 @@ import {
   createFundTransactionController,getTransactions
 
 } from "../../controller/FundTransactionController/FundTransactionController.js";
+import { getTransactionDetail } from "../../controller/transactionController/transactionController.js";
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ const router = express.Router();
 // The transactionType comes from the URL parameter
 router.post("/:transactionType/createFundTransaction", createFundTransactionController);
 router.get("/:transactionType/getall", getTransactions);
-router.get("/:transactionType/getall", getTransactions);
+router.get("/:transactionType/getTransactionDetails/:transactionId", getTransactionDetail);
 
 
 

@@ -161,7 +161,8 @@ export const getTransactions = async (req, res) => {
 
     // Transform data for frontend table
     const formattedTransactions = result.data.map((transaction) => ({
-      billNo: transaction.transactionNumber || "N/A",
+      _id: transaction._id,
+      transactionNumber: transaction.transactionNumber || "N/A",
       transactionDate: transaction.transactionDate,
       accountName: transaction.account?.accountName || "N/A",
       previousBalanceAmount: transaction.previousBalanceAmount || 0,

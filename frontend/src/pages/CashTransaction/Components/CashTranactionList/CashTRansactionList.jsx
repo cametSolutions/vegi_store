@@ -13,7 +13,7 @@ import { LoaderCircle } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import InfiniteScroll from "react-infinite-scroll-component";
-const TransactionList = () => {
+const TransactionList = ({ onEditTransaction, selectedTransaction }) => {
   const location = useLocation();
   const currentTransactionType = useMemo(
     () => getTransactionType(location),
@@ -94,6 +94,9 @@ const TransactionList = () => {
           fetchNextPage={fetchNextPage}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
+          onEditTransaction={onEditTransaction} // Pass to ListTable
+          editTransactionId={selectedTransaction?._id}
+      
     
         />
       </div>

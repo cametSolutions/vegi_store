@@ -1,17 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
-import {
-
-  createEmptyTransaction,
-
-} from "../Utils/CashTransactionUtils";
+import { createEmptyTransaction } from "../Utils/CashTransactionUtils";
 
 export const useCashTransaction = (initialData = null) => {
   const [CashtransactionData, setCashtransactionData] = useState(
     initialData || createEmptyTransaction()
   );
 
-
-   const updateCashtransactionData = useCallback((updates) => {
+  const updateCashtransactionData = useCallback((updates) => {
     setCashtransactionData((prev) => ({ ...prev, ...updates }));
   }, []);
 
@@ -19,18 +14,16 @@ export const useCashTransaction = (initialData = null) => {
     setCashtransactionData((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-   const resetCashTransactionData = useCallback(() => {
-    console.log("resetCashTransactionData");
-    setCashtransactionData(createEmptyTransaction());
+  const resetCashTransactionData = useCallback((transactionType) => {
+    setCashtransactionData(createEmptyTransaction(), transactionType);
   }, []);
-    
-  
+
   return {
     CashtransactionData,
-   updateCashtransactionData,
+    updateCashtransactionData,
     updateTransactionField,
     resetCashTransactionData,
-   
+
     setCashtransactionData,
   };
 };
