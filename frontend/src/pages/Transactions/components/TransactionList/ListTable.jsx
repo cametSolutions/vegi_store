@@ -2,7 +2,8 @@ import { formatDate } from "../../../../../../shared/utils/date";
 import { formatINR } from "../../../../../../shared/utils/currency";
 import { LoaderCircle } from "lucide-react";
 import InfiniteScroll from "react-infinite-scroll-component";
-
+import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 const ListTable = ({
   data,
   isFetching,
@@ -11,9 +12,11 @@ const ListTable = ({
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
-  onEditTransaction, // Accept the prop
+  onEditTransaction,
   editTransactionId,
+  currentTransactionType, // Add this prop to know the transaction type
 }) => {
+  const navigate = useNavigate();
   const columns = [
     { key: "id", label: "Bill No", width: "w-[12%]" },
     { key: "date", label: "Date", align: "center", width: "w-[12%]" },
@@ -22,8 +25,30 @@ const ListTable = ({
     { key: "discount", label: "Disc", align: "center", width: "w-[14%]" },
     { key: "paid", label: "Paid", align: "center", width: "w-[14%]" },
     { key: "balance", label: "Balance", align: "right", width: "w-[14%]" },
+    { key: "Print", label: "Print", align: "center", width: "w-[12%]" },
   ];
-
+ const selectedCompanyFromStore = useSelector(
+     (state) => state.companyBranch?.selectedCompany
+   );
+   const selectedBranchFromStore = useSelector(
+     (state) => state.companyBranch?.selectedBranch
+   );
+  // Navigate to print preview
+ const handlePrintClick = (transaction) => {
+  const transactionType = currentTransactionType || transaction?.transactionType || "sale";
+  console.log(transactionType);
+  
+  // Get Redux state
+ 
+  
+  // Pass state with navigation
+  navigate(`/transactions/Print/${transaction._id}?type=${transactionType}`, {
+    state: {
+      companyId: selectedCompanyFromStore?._id,
+      branchId: selectedBranchFromStore?._id,
+    }
+  });
+};
 
   // Double click handler
   const handleDoubleClick = (transaction) => {
@@ -39,14 +64,10 @@ const ListTable = ({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`${
-                    column.width
-                  } text-white border-b px-3 py-2 text-${
+                  className={`${column.width} text-white border-b px-3 py-2 text-${
                     column.align || "center"
                   } text-[11px] font-medium uppercase ${
-                    column.sortable !== false
-                      ? "cursor-pointer hover:bg-gray-400"
-                      : ""
+                    column.sortable !== false ? "cursor-pointer hover:bg-gray-400" : ""
                   }`}
                 >
                   <div
@@ -123,9 +144,7 @@ const ListTable = ({
                     colSpan={columns.length}
                     className="text-center py-20 h-[calc(100vh-260px)]"
                   >
-                    <p className="text-gray-500 text-sm">
-                      No transactions found
-                    </p>
+                    <p className="text-gray-500 text-sm">No transactions found</p>
                   </td>
                 </tr>
               ) : (
@@ -174,13 +193,24 @@ const ListTable = ({
                     >
                       <span
                         className={`${
-                          transaction?.balanceAmount > 0
-                            ? "text-red-600"
-                            : "text-green-600"
+                          transaction?.balanceAmount > 0 ? "text-red-600" : "text-green-600"
                         }`}
                       >
                         ₹{formatINR(transaction?.netAmount)}
                       </span>
+                    </td>
+                    <td
+                      className={`${columns[7].width} px-3 py-2 text-center text-[9.5px] font-mono`}
+                    >
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePrintClick(transaction);
+                        }}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-[10px] font-semibold"
+                      >
+                        Print
+                      </button>
                     </td>
                   </tr>
                 ))
