@@ -3,15 +3,26 @@ import {
   validateTransactionData,
   getTransactionModel,
   prepareTransactionData,
+  validateEditRequest,
 } from "../helpers/FundTransactionHelper/FundTransactionHelper.js";
-import { settleOutstandingFIFO } from "../helpers/FundTransactionHelper/OutstandingSettlementHelper.js";
-import { createCashBankLedgerEntry } from "../helpers/CommonTransactionHelper/CashBankLedgerHelper.js";
+import {
+  deleteOutstandingSettlements,
+  settleOutstandingFIFO,
+} from "../helpers/FundTransactionHelper/OutstandingSettlementHelper.js";
+import {
+  createCashBankLedgerEntry,
+  deleteCashBankLedger,
+} from "../helpers/CommonTransactionHelper/CashBankLedgerHelper.js";
 import { getCashBankAccountForPayment } from "../helpers/CommonTransactionHelper/CashBankAccountHelper.js";
 import { createAccountLedger } from "../helpers/CommonTransactionHelper/ledgerService.js";
-import { updateAccountMonthlyBalance } from "../helpers/CommonTransactionHelper/monthlyBalanceService.js";
+import {
+  markMonthlyBalanceDirtyForFundTransaction,
+  updateAccountMonthlyBalance,
+} from "../helpers/CommonTransactionHelper/monthlyBalanceService.js";
 import AccountMaster from "../model/masters/AccountMasterModel.js";
 import { calculateFundTransactionDeltas } from "../helpers/transactionHelpers/calculationHelper.js";
 import { createFundTransactionAdjustmentEntry } from "../helpers/transactionHelpers/adjustmentEntryHelper.js";
+// import { createFundTransactionAdjustmentEntry } from "../helpers/transactionHelpers/adjustmentEntryHelper.js";
 
 /**
  * Creates a fund transaction (receipt or payment)
@@ -221,7 +232,6 @@ export const createFundTransaction = async (data, session = null) => {
   }
 };
 
-
 /**
  * Main service function to edit a receipt/payment
  * Handles all database operations in a transaction
@@ -276,10 +286,10 @@ export const editFundTransaction = async ({
     console.log("Deltas:", deltas);
 
     // ========================================
-    // STEP 4: REVERSE OUTSTANDING SETTLEMENTS
+    // STEP 4: DELETE OUTSTANDING SETTLEMENTS (✅ UPDATED)
     // ========================================
-    console.log("\n🔄 STEP 4: Reversing outstanding settlements...");
-    const reversedSettlements = await reverseOutstandingSettlements({
+    console.log("\n🔄 STEP 4: Deleting outstanding settlements...");
+    const deletedSettlements = await deleteOutstandingSettlements({
       transactionId: originalTx._id,
       transactionType,
       transactionNumber: originalTx.transactionNumber,
@@ -287,26 +297,24 @@ export const editFundTransaction = async ({
       amount: originalTx.amount,
       session,
     });
-    console.log(
-      `✅ Reversed ${reversedSettlements.length} settlement(s)`
-    );
+    console.log(`✅ Deleted ${deletedSettlements.length} settlement(s)`);
 
     // ========================================
-    // STEP 5: REVERSE CASH/BANK LEDGER
+    // STEP 5: DELETE CASH/BANK LEDGER
     // ========================================
-    console.log("\n💰 STEP 5: Reversing cash/bank ledger entry...");
-    const reversedCashBankEntry = await reverseCashBankLedger({
+    console.log("\n💰 STEP 5: Deleting cash/bank ledger entry...");
+    const deletedCashBankEntry = await deleteCashBankLedger({
       transactionId: originalTx._id,
       transactionType,
       session,
     });
-    console.log("✅ Cash/Bank ledger reversed:", reversedCashBankEntry._id);
+    console.log("✅ Cash/Bank ledger entry deleted:", deletedCashBankEntry._id);
 
     // ========================================
     // STEP 6: UPDATE TRANSACTION RECORD
     // ========================================
     console.log("\n📝 STEP 6: Updating transaction record...");
-    
+
     // Update only allowed fields
     if (updateData.amount !== undefined) {
       originalTx.amount = updateData.amount;
@@ -327,18 +335,22 @@ export const editFundTransaction = async ({
       originalTx.description = updateData.description;
     }
 
+    if (updateData.closingBalanceAmount !== undefined) {
+      originalTx.closingBalanceAmount = updateData.closingBalanceAmount;
+    }
+
     // Clear old settlement details (will be repopulated)
     originalTx.settlementDetails = [];
 
     await originalTx.save({ session });
-    console.log("✅ Transaction record updated");
+    console.log("✅ Transaction record updated", originalTx);
 
     // ========================================
     // STEP 7: GET PARTY ACCOUNT DETAILS
     // ========================================
-    const partyAccount = await AccountMaster.findById(originalTx.account).session(
-      session
-    );
+    const partyAccount = await AccountMaster.findById(
+      originalTx.account
+    ).session(session);
 
     if (!partyAccount) {
       throw new Error("Party account not found");
@@ -366,6 +378,7 @@ export const editFundTransaction = async ({
     await originalTx.save({ session });
 
     console.log(`✅ Created ${newSettlements.length} new settlement(s)`);
+    console.log(" New settlements:", newSettlements);
 
     // ========================================
     // STEP 9: GET CASH/BANK ACCOUNT
@@ -403,20 +416,23 @@ export const editFundTransaction = async ({
       createdBy: user._id,
       session,
     });
-    console.log("✅ New cash/bank ledger entry created:", newCashBankEntry._id);
+    console.log("✅ New cash/bank ledger entry created:", newCashBankEntry);
 
     // ========================================
     // STEP 11: MARK MONTHLY BALANCE AS DIRTY
     // ========================================
     console.log("\n📅 STEP 11: Marking monthly balance as dirty...");
-    await markMonthlyBalanceDirty({
+    const dirtyTaggingResult = await markMonthlyBalanceDirtyForFundTransaction({
       accountId: originalTx.account,
       transactionDate: originalTx.transactionDate,
       company: originalTx.company,
       branch: originalTx.branch,
       session,
     });
-    console.log("✅ Monthly balance marked for recalculation");
+    console.log(
+      "✅ Monthly balance marked for recalculation",
+      dirtyTaggingResult
+    );
 
     // ========================================
     // STEP 12: CREATE ADJUSTMENT ENTRY
@@ -426,16 +442,15 @@ export const editFundTransaction = async ({
       originalTransaction: originalTx,
       transactionType,
       deltas,
-      reversedSettlements,
+      deletedSettlements, // ✅ UPDATED: Changed from reversedSettlements
       newSettlements,
-      reversedCashBankEntry,
+      deletedCashBankEntry,
       newCashBankEntry,
       cashBankAccount,
       editedBy: user._id,
       session,
     });
-    console.log("✅ Adjustment entry created:", adjustmentEntry.adjustmentNumber);
-
+    console.log("✅ Adjustment entry created:", adjustmentEntry);
     // ========================================
     // COMMIT TRANSACTION
     // ========================================
@@ -450,12 +465,15 @@ export const editFundTransaction = async ({
         amountDelta: adjustmentEntry.amountDelta,
       },
       settlements: {
-        reversed: reversedSettlements.length,
+        reversed: deletedSettlements.length,
         created: newSettlements.length,
-        totalSettled: newSettlements.reduce((sum, s) => sum + s.settledAmount, 0),
+        totalSettled: newSettlements.reduce(
+          (sum, s) => sum + s.settledAmount,
+          0
+        ),
       },
       cashBankUpdate: {
-        reversedEntry: reversedCashBankEntry._id,
+        reversedEntry: deletedCashBankEntry._id,
         newEntry: newCashBankEntry._id,
         accountUsed: cashBankAccount.accountName,
       },

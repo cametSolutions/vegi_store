@@ -1,3 +1,4 @@
+import CashBankLedgerModel from "../../model/CashBankLedgerModel.js";
 import CashBankLedger from "../../model/CashBankLedgerModel.js";
 import { getTransactionModel, transactionTypeToModelName } from "../transactionHelpers/transactionMappers.js";
 

@@ -3,44 +3,6 @@ import OutstandingModel from "../../model/OutstandingModel.js";
 import AccountMasterModel from "../../model/masters/AccountMasterModel.js";
 import OutstandingSettlementModel from "../../model/OutstandingSettlementModel.js";
 
-/**
- * Update account outstanding balance after receipt/payment
- */
-// export const updateAccountOutstanding = async ({
-//   accountId,
-//   amount,
-//   transactionType,
-//   session
-// }) => {
-//   console.log("\n💰 Updating account outstanding balance...");
-  
-//   const account = await AccountMasterModel.findById(accountId).session(session);
-
-//   console.log("accountggggg",account);
-  
-  
-//   if (!account) {
-//     throw new Error('Account not found');
-//   }
-//  const normalizedType = transactionType.toLowerCase();
-//    const isReceipt = normalizedType === 'receipt';
-  
-//    console.log("📊 Current balance:", {
-//     outstandingDr: account.outstandingDr || 0,
-//     outstandingCr: account.outstandingCr || 0
-//   });
-
-//   if (transactionType === 'receipt') {
-//     account.outstandingDr = Math.max(0, (account.outstandingDr || 0) - amount);
-//     console.log(`✅ Reduced DR by ${amount}, new DR: ${account.outstandingDr}`);
-//   } else if (transactionType === 'payment') {
-//     account.outstandingCr = Math.max(0, (account.outstandingCr || 0) - amount);
-//     console.log(`✅ Reduced CR by ${amount}, new CR: ${account.outstandingCr}`);
-//   }
-
-//   await account.save({ session });
-//   console.log("💾 Account balance updated successfully");
-// };
 
 /**
  * Settle outstanding items for an account using FIFO method
@@ -247,17 +209,17 @@ export const settleOutstandingFIFO = async ({
 };
 
 /**
- * Reverse all outstanding settlements for a transaction
+ * Delete all outstanding settlements for a transaction and restore outstanding records
  * 
  * Process:
  * 1. Find all OutstandingSettlement entries for this transaction
  * 2. For each settlement, restore the outstanding record to pre-settlement state
- * 3. Mark settlement entries as "reversed"
+ * 3. DELETE settlement link entries (not mark as reversed)
  * 4. Remove transaction from outstanding's appliedReceipts/appliedPayments array
  * 
- * @returns Array of reversed settlement details
+ * @returns Array of deleted settlement details (for adjustment entry tracking)
  */
-export const reverseOutstandingSettlements = async ({
+export const deleteOutstandingSettlements = async ({
   transactionId,
   transactionType,
   transactionNumber,
@@ -265,7 +227,7 @@ export const reverseOutstandingSettlements = async ({
   amount,
   session,
 }) => {
-  console.log("\n🔄 ===== REVERSING OUTSTANDING SETTLEMENTS =====");
+  console.log("\n🔄 ===== DELETING OUTSTANDING SETTLEMENTS =====");
   console.log("Transaction:", transactionNumber);
   console.log("Type:", transactionType);
 
@@ -279,17 +241,17 @@ export const reverseOutstandingSettlements = async ({
     settlementStatus: "active",
   }).session(session);
 
-  console.log(`📊 Found ${settlementLinks.length} settlement(s) to reverse`);
+  console.log(`📊 Found ${settlementLinks.length} settlement(s) to delete`);
 
   if (settlementLinks.length === 0) {
-    console.log("⚠️ No settlements found to reverse");
+    console.log("⚠️ No settlements found to delete");
     return [];
   }
 
-  const reversedSettlements = [];
+  const deletedSettlements = [];
 
   for (const link of settlementLinks) {
-    console.log(`\n🔧 Reversing settlement for outstanding: ${link.outstandingNumber}`);
+    console.log(`\n🔧 Processing settlement for outstanding: ${link.outstandingNumber}`);
 
     // Find the outstanding record
     const outstanding = await OutstandingModel.findById(link.outstanding).session(
@@ -311,15 +273,19 @@ export const reverseOutstandingSettlements = async ({
       currentBalance: outstanding.closingBalanceAmount,
     });
 
+    // ========================================
+    // RESTORE OUTSTANDING RECORD
+    // ========================================
+
     // Reverse the settlement amounts in outstanding record
     outstanding.paidAmount -= settledAmount;
 
     // Restore closingBalanceAmount based on type
     if (normalizedType === "payment") {
-      // For payments: subtract from closingBalanceAmount (make it more negative)
+      // For payments: subtract from closingBalanceAmount (make it more negative for CR type)
       outstanding.closingBalanceAmount -= settledAmount;
     } else {
-      // For receipts: add to closingBalanceAmount (make it more positive)
+      // For receipts: add to closingBalanceAmount (restore the DR amount)
       outstanding.closingBalanceAmount += settledAmount;
     }
 
@@ -332,12 +298,12 @@ export const reverseOutstandingSettlements = async ({
       outstanding.status = "partial";
     }
 
-    // Remove this transaction from appliedReceipts/appliedPayments array
-    if (Array.isArray(outstanding[appliedField])) {
-      outstanding[appliedField] = outstanding[appliedField].filter(
-        (app) => app.transaction.toString() !== transactionId.toString()
-      );
-    }
+    // // Remove this transaction from appliedReceipts/appliedPayments array
+    // if (Array.isArray(outstanding[appliedField])) {
+    //   outstanding[appliedField] = outstanding[appliedField].filter(
+    //     (app) => app.transaction.toString() !== transactionId.toString()
+    //   );
+    // }
 
     await outstanding.save({ session });
     console.log("✅ Outstanding restored:", {
@@ -346,27 +312,35 @@ export const reverseOutstandingSettlements = async ({
       newPaidAmount: outstanding.paidAmount,
     });
 
-    // Mark settlement link as reversed
-    link.settlementStatus = "reversed";
-    link.reversedAt = new Date();
-    await link.save({ session });
-    console.log("✅ Settlement link marked as reversed");
-
-    // Track for adjustment entry
-    reversedSettlements.push({
+    // ========================================
+    // STORE INFO BEFORE DELETION (for adjustment tracking)
+    // ========================================
+    deletedSettlements.push({
+      settlementLinkId: link._id,
       outstandingId: outstanding._id,
       outstandingNumber: outstanding.transactionNumber,
       settledAmount,
       previousBalance: link.previousOutstandingAmount,
       restoredBalance: outstanding.closingBalanceAmount,
     });
+
+    // ========================================
+    // DELETE SETTLEMENT LINK (not mark as reversed)
+    // ========================================
+    await OutstandingSettlementModel.deleteOne(
+      { _id: link._id },
+      { session }
+    );
+    console.log("✅ Settlement link deleted:", link._id);
   }
 
-  console.log("\n✅ ===== REVERSAL COMPLETED =====");
-  console.log(`Total reversed: ${reversedSettlements.length} settlement(s)`);
+  console.log("\n✅ ===== DELETION COMPLETED =====");
+  console.log(`Total deleted: ${deletedSettlements.length} settlement(s)`);
 
-  return reversedSettlements;
+  return deletedSettlements;
 };
+
+
 /**
  * Get unsettled outstanding balance for an account
  */

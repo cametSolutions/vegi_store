@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { getTransactionModel } from "../../helpers/FundTransactionHelper/FundTransactionHelper.js";
-import { createFundTransaction } from "../../services/fundTransactionService.js";
+import { createFundTransaction, editFundTransaction } from "../../services/fundTransactionService.js";
 
 /**
  * Create a new cash transaction (Receipt or Payment)
@@ -286,6 +286,8 @@ export const deleteTransaction = async (req, res) => {
 export const editFundTransactionController = async (req, res) => {
   try {
     const { transactionType, transactionId } = req.params;
+
+    console.log("Edit request params:", req.params);
 
     // Validate user authentication
     if (!req.user?._id) {

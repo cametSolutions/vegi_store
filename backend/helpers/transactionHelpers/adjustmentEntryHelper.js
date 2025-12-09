@@ -229,14 +229,13 @@ export const createCashAccountAdjustment = async (
   return adjustmentEntry;
 };
 
-
 // services/adjustmentService.js
 
 export const createFundTransactionAdjustmentEntry = async ({
   originalTransaction,
   transactionType,
   deltas,
-  reversedSettlements,
+  deletedSettlements,
   newSettlements,
   deletedCashBankEntry, // ✅ UPDATED: Changed from reversedCashBankEntry
   newCashBankEntry,
@@ -254,15 +253,19 @@ export const createFundTransactionAdjustmentEntry = async ({
 
   // Determine adjustment type
   let adjustmentType = "amount_change";
-  if (deltas.paymentModeChanged || deltas.chequeDetailsChanged || deltas.narrationChanged) {
+  if (
+    deltas.paymentModeChanged ||
+    deltas.chequeDetailsChanged ||
+    deltas.narrationChanged
+  ) {
     adjustmentType = deltas.amountChanged ? "mixed" : "amount_change";
   }
 
   // Prepare settlements summary
   const settlementsSummary = {
-    oldSettlementsCount: reversedSettlements.length,
+    oldSettlementsCount: deletedSettlements.length,
     newSettlementsCount: newSettlements.length,
-    outstandingsReversed: reversedSettlements.map((s) => s.outstandingNumber),
+    outstandingsReversed: deletedSettlements.map((s) => s.outstandingNumber),
     outstandingsSettled: newSettlements.map((s) => s.outstandingNumber),
   };
 
@@ -311,7 +314,6 @@ export const createFundTransactionAdjustmentEntry = async ({
   await adjustmentEntry.save({ session });
 
   console.log("✅ Adjustment entry created successfully");
-  
+
   return adjustmentEntry;
 };
-

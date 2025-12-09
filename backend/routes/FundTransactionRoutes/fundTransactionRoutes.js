@@ -1,9 +1,9 @@
 import express from "express";
 import {
-  createFundTransactionController,getTransactions
+  createFundTransactionController,editFundTransactionController,getTransactions
 
 } from "../../controller/FundTransactionController/FundTransactionController.js";
-import { getTransactionDetail } from "../../controller/transactionController/transactionController.js";
+import {  getTransactionDetail } from "../../controller/transactionController/transactionController.js";
 
 const router = express.Router();
 
@@ -12,6 +12,7 @@ const router = express.Router();
 router.post("/:transactionType/createFundTransaction", createFundTransactionController);
 router.get("/:transactionType/getall", getTransactions);
 router.get("/:transactionType/getTransactionDetails/:transactionId", getTransactionDetail);
+router.put("/:transactionType/edit/:transactionId", editFundTransactionController);
 
 
 
