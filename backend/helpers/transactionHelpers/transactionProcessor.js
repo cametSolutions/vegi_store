@@ -74,7 +74,7 @@ export const processTransaction = async (transactionData, userId, session) => {
       });
     } else if (
       // createdTransaction.balanceAmount > 0 &&
-      createdTransaction.accountType === "customer"
+      createdTransaction.accountType === "customer" || createdTransaction.accountType === "supplier"
     ) {
       console.log("creating outstanding");
 

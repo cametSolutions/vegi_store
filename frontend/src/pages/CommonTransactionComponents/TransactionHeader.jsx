@@ -20,12 +20,19 @@ const TransactionHeader = ({
 
   // Handle date change
   const handleDateChange = (selectedDate) => {
+
+    console.log("selectedDate",selectedDate);
+    console.log("selectedDate",date);
+    
     if (selectedDate) {
       // Convert to YYYY-MM-DD format for backend
       const year = selectedDate.getFullYear();
       const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
       const day = String(selectedDate.getDate()).padStart(2, "0");
       const formattedDate = `${year}-${month}-${day}`;
+
+      console.log("formatted Date", formattedDate);
+      
       updateTransactionField("transactionDate", formattedDate);
     }
   };

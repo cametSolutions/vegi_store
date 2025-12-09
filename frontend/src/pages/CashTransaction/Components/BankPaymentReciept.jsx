@@ -11,6 +11,9 @@ const BankPaymentDetails = ({
   branch,
   company,
 }) => {
+
+  console.log("paymentMode",paymentMode);
+  
   const [actionMode, setActionMode] = useState(null);
 
   const handlepaymentMode = (method) => {
@@ -53,7 +56,7 @@ const BankPaymentDetails = ({
       hoverBorder: 'hover:border-purple-400'
     },
     { 
-      value: 'bank_transfer', 
+      value: 'bankTransfer', 
       label: 'Bank Transfer', 
       icon: ArrowRightLeft,
       bgColor: 'bg-orange-50',

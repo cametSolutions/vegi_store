@@ -1,3 +1,4 @@
+import CashBankLedgerModel from "../../model/CashBankLedgerModel.js";
 import CashBankLedger from "../../model/CashBankLedgerModel.js";
 import { getTransactionModel, transactionTypeToModelName } from "../transactionHelpers/transactionMappers.js";
 
@@ -293,4 +294,56 @@ export const getAllCashBankBalances = async (company, branch) => {
     accounts,
     summary,
   };
+};
+
+
+/**
+ * Delete the cash/bank ledger entry for a transaction
+ * 
+ * We delete the old entry completely and will create a fresh one
+ * The adjustment entry maintains the audit trail
+ */
+export const deleteCashBankLedger = async ({
+  transactionId,
+  transactionType,
+  session,
+}) => {
+  console.log("\n💰 ===== DELETING CASH/BANK LEDGER =====");
+
+  // Find the cash/bank ledger entry for this transaction
+  const ledgerEntry = await CashBankLedgerModel.findOne({
+    transaction: transactionId,
+    transactionType: transactionType.toLowerCase(),
+  }).session(session);
+
+  if (!ledgerEntry) {
+    throw new Error("Cash/Bank ledger entry not found for this transaction");
+  }
+
+  console.log("Found cash/bank entry to delete:", {
+    id: ledgerEntry._id,
+    entryType: ledgerEntry.entryType,
+    amount: ledgerEntry.amount,
+    accountName: ledgerEntry.accountName,
+  });
+
+  // Store entry ID for adjustment tracking before deletion
+  const deletedEntryId = ledgerEntry._id;
+  const deletedEntryDetails = {
+    _id: deletedEntryId,
+    entryType: ledgerEntry.entryType,
+    amount: ledgerEntry.amount,
+    accountId: ledgerEntry.account,
+    accountName: ledgerEntry.accountName,
+  };
+
+  // Delete the entry
+  await CashBankLedgerModel.deleteOne(
+    { _id: deletedEntryId },
+    { session }
+  );
+
+  console.log("✅ Cash/Bank ledger entry deleted");
+
+  return deletedEntryDetails;
 };

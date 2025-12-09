@@ -52,6 +52,7 @@ const ListTable = ({
 
   // Double click handler
   const handleDoubleClick = (transaction) => {
+    
     onEditTransaction(transaction);
   };
 
@@ -154,7 +155,7 @@ const ListTable = ({
                     className={`${
                       editTransactionId === transaction._id
                         ? "bg-[#add4f3]  "
-                        : " bg-slate-200 hover:bg-slate-200 "
+                        : " bg-slate-200 hover:bg-slate-300 "
                     }  transition-colors cursor-pointer`}
                     onDoubleClick={() => handleDoubleClick(transaction)}
                   >
