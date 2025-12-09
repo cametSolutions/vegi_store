@@ -265,3 +265,65 @@ export const deleteTransaction = async (req, res) => {
     session.endSession();
   }
 };
+
+
+/**
+ * Edit an existing Receipt or Payment transaction
+ * 
+ * @route PUT /api/fund-transactions/:transactionType/:transactionId
+ * @access Private
+ * 
+ * Workflow:
+ * 1. Validate edit request and permissions
+ * 2. Reverse outstanding settlements (mark as reversed)
+ * 3. Reverse cash/bank ledger entry
+ * 4. Update the transaction record itself
+ * 5. Re-run FIFO settlement with new amount
+ * 6. Create new cash/bank ledger entry
+ * 7. Mark monthly balance as dirty (for night job)
+ * 8. Create adjustment entry for audit trail
+ */
+export const editFundTransactionController = async (req, res) => {
+  try {
+    const { transactionType, transactionId } = req.params;
+
+    // Validate user authentication
+    if (!req.user?._id) {
+      return res.status(401).json({
+        success: false,
+        message: "User ID not found in token. Please login again.",
+      });
+    }
+
+    // Validate transaction type
+    if (!["receipt", "payment"].includes(transactionType.toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Transaction type must be "receipt" or "payment"',
+      });
+    }
+
+    // Call main edit service
+    const result = await editFundTransaction({
+      transactionId,
+      transactionType: transactionType.toLowerCase(),
+      updateData: req.body,
+      user: req.user,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `${
+        transactionType.charAt(0).toUpperCase() + transactionType.slice(1)
+      } updated successfully`,
+      data: result,
+    });
+  } catch (error) {
+    console.error("Edit fund transaction error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update transaction",
+      error: error.message,
+    });
+  }
+};

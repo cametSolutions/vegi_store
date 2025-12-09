@@ -39,6 +39,7 @@ export const createResourceApi = (resourcePath, customEndpoints = {}) => {
     },
 
     update: async (id, data, params = {}) => {
+      
       const url = buildUrl(customEndpoints.update, id, params);
       const response = await api.put(url, data);
       return response.data;

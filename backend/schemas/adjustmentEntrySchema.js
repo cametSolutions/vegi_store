@@ -29,12 +29,11 @@ export const adjustmentEntrySchema = new Schema(
       type: Schema.Types.ObjectId,
       refPath: "originalTransactionModel",
       required: true,
-      // index: true,
     },
     originalTransactionModel: {
       type: String,
       required: true,
-      enum: ["Sale", "Purchase", "SalesReturn", "PurchaseReturn"],
+      enum: ["Sale", "Purchase", "SalesReturn", "PurchaseReturn", "Receipt", "Payment"], // ✅ UPDATED
     },
     originalTransactionNumber: {
       type: String,
@@ -52,8 +51,6 @@ export const adjustmentEntrySchema = new Schema(
     adjustmentNumber: {
       type: String,
       required: true,
-    //   unique: true,
-    //   index: true,
     },
     adjustmentDate: {
       type: Date,
@@ -83,7 +80,7 @@ export const adjustmentEntrySchema = new Schema(
     },
     affectedAccountName: String,
 
-    // For account change adjustments
+    // For account change adjustments (not used for receipt/payment currently)
     oldAccount: {
       type: Schema.Types.ObjectId,
       ref: "AccountMaster",
@@ -106,7 +103,7 @@ export const adjustmentEntrySchema = new Schema(
     oldAmount: Number,
     newAmount: Number,
 
-    // For item adjustments
+    // For item adjustments (Sale/Purchase only)
     itemAdjustments: [
       {
         item: {
@@ -117,7 +114,7 @@ export const adjustmentEntrySchema = new Schema(
         itemCode: String,
         adjustmentType: {
           type: String,
-          enum: ["added", "removed", "quantity_changed", "rate_changed", "quantity_and_rate_changed","unchanged"],
+          enum: ["added", "removed", "quantity_changed", "rate_changed", "quantity_and_rate_changed", "unchanged"],
         },
         oldQuantity: {
           type: Number,
@@ -134,26 +131,34 @@ export const adjustmentEntrySchema = new Schema(
       },
     ],
 
-    // // ========================================
-    // // LEDGER REFERENCES
-    // // ========================================
-    // // Links to ledger entries created for this adjustment
-    // accountLedgerEntries: [
-    //   {
-    //     type: Schema.Types.ObjectId,
-    //     ref: "AccountLedger",
-    //   },
-    // ],
-    // itemLedgerEntries: [
-    //   {
-    //     type: Schema.Types.ObjectId,
-    //     ref: "ItemLedger",
-    //   },
-    // ],
-    // cashBankLedgerEntry: {
-    //   type: Schema.Types.ObjectId,
-    //   ref: "CashBankLedger",
-    // },
+    // ========================================
+    // ✅ NEW: CASH/BANK IMPACT (Receipt/Payment)
+    // ========================================
+    cashBankImpact: {
+      accountId: {
+        type: Schema.Types.ObjectId,
+        ref: "AccountMaster",
+      },
+      accountName: String,
+      reversedLedgerEntry: {
+        type: Schema.Types.ObjectId,
+        ref: "CashBankLedger",
+      },
+      newLedgerEntry: {
+        type: Schema.Types.ObjectId,
+        ref: "CashBankLedger",
+      },
+    },
+
+    // ========================================
+    // ✅ NEW: SETTLEMENT SUMMARY (Receipt/Payment)
+    // ========================================
+    settlementsSummary: {
+      oldSettlementsCount: Number,
+      newSettlementsCount: Number,
+      outstandingsReversed: [String],  // Array of outstanding numbers that were reversed
+      outstandingsSettled: [String],   // Array of outstanding numbers that were settled after edit
+    },
 
     // ========================================
     // OUTSTANDING REFERENCE
@@ -179,7 +184,6 @@ export const adjustmentEntrySchema = new Schema(
       ref: "User",
       required: true,
     },
-    // editedByName: String,
 
     // ========================================
     // STATUS & FLAGS
@@ -365,7 +369,6 @@ adjustmentEntrySchema.methods.reverse = async function (userId, reason, session)
   return this.save({ session });
 };
 
+const AdjustmentEntry = mongoose.model("AdjustmentEntry", adjustmentEntrySchema);
 
-// const AdjustmentEntry = mongoose.model("AdjustmentEntry", adjustmentEntrySchema);
-
-// export default AdjustmentEntry;
+export default AdjustmentEntry;
