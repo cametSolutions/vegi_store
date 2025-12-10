@@ -4,6 +4,7 @@ import { LoaderCircle, Printer } from "lucide-react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+
 const ListTable = ({
   data,
   isFetching,
@@ -17,6 +18,14 @@ const ListTable = ({
   currentTransactionType, // Add this prop to know the transaction type
 }) => {
   const navigate = useNavigate();
+  
+  const selectedCompanyFromStore = useSelector(
+    (state) => state.companyBranch?.selectedCompany
+  );
+  const selectedBranchFromStore = useSelector(
+    (state) => state.companyBranch?.selectedBranch
+  );
+
   const columns = [
     { key: "id", label: "Bill No", width: "w-[12%]" },
     { key: "date", label: "Date", align: "center", width: "w-[12%]" },
@@ -27,12 +36,7 @@ const ListTable = ({
     { key: "balance", label: "Balance", align: "right", width: "w-[14%]" },
     { key: "Print", label: "Print", align: "right", width: "w-[12%]" },
   ];
- const selectedCompanyFromStore = useSelector(
-     (state) => state.companyBranch?.selectedCompany
-   );
-   const selectedBranchFromStore = useSelector(
-     (state) => state.companyBranch?.selectedBranch
-   );
+
   // Navigate to print preview
  const handlePrintClick = (transaction) => {
   const transactionType = currentTransactionType || transaction?.transactionType || "sale";

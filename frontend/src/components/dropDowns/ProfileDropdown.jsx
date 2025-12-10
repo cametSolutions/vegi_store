@@ -321,8 +321,8 @@ const ProfileDropdown = () => {
   // Navigation items configuration
   const masterMenuItems = useMemo(
     () => [
-      { path: "/masters/company", label: "Company Master", icon: Building2 },
-      { path: "/masters/branch", label: "Branch Master", icon: GitBranch },
+      { path: "/master/company-master", label: "Company Master", icon: Building2 },
+      { path: "/master/branch-master", label: "Branch Master", icon: GitBranch },
       { path: "/masters/user", label: "User Master", icon: User },
     ],
     []

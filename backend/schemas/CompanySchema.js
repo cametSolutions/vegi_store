@@ -51,11 +51,11 @@ const CompanySchema = new mongoose.Schema(
     },
     gstNumber: {
       type: String,
-      match: [/^\d{15}$/, "GST Number must be 15 characters"]
+      // match: [/^\d{15}$/, "GST Number must be 15 characters"]
     },
     panNumber: {
       type: String,
-      match: [/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN format"]
+      // match: [/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN format"]
     },
     website: {
       type: String
