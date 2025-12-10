@@ -1,6 +1,6 @@
 import { formatDate } from "../../../../../../shared/utils/date";
 import { formatINR } from "../../../../../../shared/utils/currency";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, Printer } from "lucide-react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -25,7 +25,7 @@ const ListTable = ({
     { key: "discount", label: "Disc", align: "center", width: "w-[14%]" },
     { key: "paid", label: "Paid", align: "center", width: "w-[14%]" },
     { key: "balance", label: "Balance", align: "right", width: "w-[14%]" },
-    { key: "Print", label: "Print", align: "center", width: "w-[12%]" },
+    { key: "Print", label: "Print", align: "right", width: "w-[12%]" },
   ];
  const selectedCompanyFromStore = useSelector(
      (state) => state.companyBranch?.selectedCompany
@@ -36,11 +36,8 @@ const ListTable = ({
   // Navigate to print preview
  const handlePrintClick = (transaction) => {
   const transactionType = currentTransactionType || transaction?.transactionType || "sale";
-  console.log(transactionType);
   
   // Get Redux state
- 
-  
   // Pass state with navigation
   navigate(`/transactions/Print/${transaction._id}?type=${transactionType}`, {
     state: {
@@ -205,12 +202,11 @@ const ListTable = ({
                     >
                       <button
                         onClick={(e) => {
-                          e.stopPropagation();
                           handlePrintClick(transaction);
                         }}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-[10px] font-semibold"
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-[10px] font-semibold cursor-pointer"
                       >
-                        Print
+                        <Printer size={12} />
                       </button>
                     </td>
                   </tr>
