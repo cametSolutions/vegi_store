@@ -1,9 +1,10 @@
 import { formatDate } from "../../../../../../shared/utils/date";
 import { formatINR } from "../../../../../../shared/utils/currency";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, Printer } from "lucide-react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+
 const ListTable = ({
   data,
   isFetching,
@@ -17,6 +18,14 @@ const ListTable = ({
   currentTransactionType, // Add this prop to know the transaction type
 }) => {
   const navigate = useNavigate();
+  
+  const selectedCompanyFromStore = useSelector(
+    (state) => state.companyBranch?.selectedCompany
+  );
+  const selectedBranchFromStore = useSelector(
+    (state) => state.companyBranch?.selectedBranch
+  );
+
   const columns = [
     { key: "id", label: "Bill No", width: "w-[12%]" },
     { key: "date", label: "Date", align: "center", width: "w-[12%]" },
@@ -27,28 +36,19 @@ const ListTable = ({
     { key: "balance", label: "Balance", align: "right", width: "w-[14%]" },
     { key: "Print", label: "Print", align: "center", width: "w-[12%]" },
   ];
- const selectedCompanyFromStore = useSelector(
-     (state) => state.companyBranch?.selectedCompany
-   );
-   const selectedBranchFromStore = useSelector(
-     (state) => state.companyBranch?.selectedBranch
-   );
+
   // Navigate to print preview
- const handlePrintClick = (transaction) => {
-  const transactionType = currentTransactionType || transaction?.transactionType || "sale";
-  console.log(transactionType);
-  
-  // Get Redux state
- 
-  
-  // Pass state with navigation
-  navigate(`/transactions/Print/${transaction._id}?type=${transactionType}`, {
-    state: {
-      companyId: selectedCompanyFromStore?._id,
-      branchId: selectedBranchFromStore?._id,
-    }
-  });
-};
+  const handlePrintClick = (transaction) => {
+    const transactionType = currentTransactionType || transaction?.transactionType || "sale";
+    
+    // Pass state with navigation
+    navigate(`/transactions/Print/${transaction._id}?type=${transactionType}`, {
+      state: {
+        companyId: selectedCompanyFromStore?._id,
+        branchId: selectedBranchFromStore?._id,
+      }
+    });
+  };
 
   // Double click handler
   const handleDoubleClick = (transaction) => {
@@ -207,9 +207,10 @@ const ListTable = ({
                           e.stopPropagation();
                           handlePrintClick(transaction);
                         }}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-[10px] font-semibold"
+                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1 rounded transition-colors inline-flex items-center justify-center"
+                        title="Print"
                       >
-                        Print
+                        <Printer className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>
