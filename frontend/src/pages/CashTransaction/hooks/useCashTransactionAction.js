@@ -1,15 +1,17 @@
 import { useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cashtransactionMutations } from "../../../hooks/mutations/cashTransaction.mutation";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { convertStringNumbersToNumbers } from "../Utils/CashTransactionUtils";
 import { toast } from "sonner";
+import { removeTransactionDataFromStore } from "@/store/slices/transactionSlice";
 
 export const useCashTransactionActions = (
   CashtransactionData,
   isEditMode = false
 ) => {
   const queryClient = useQueryClient();
+  const dispatch = useDispatch();
 
   const company = useSelector(
     (state) => state.companyBranch?.selectedCompany?._id
@@ -32,11 +34,15 @@ export const useCashTransactionActions = (
       // Choose mutation based on mode
       if (isEditMode) {
         // Update existing transaction
-        await updateMutation.mutateAsync({
-          id: CashtransactionData._id,
-          formData: { ...convertedData, company, branch },
-          transactionType: CashtransactionData.transactionType,
-        });
+        await updateMutation
+          .mutateAsync({
+            id: CashtransactionData._id,
+            formData: { ...convertedData, company, branch },
+            transactionType: CashtransactionData.transactionType,
+          })
+          .finally(() => {
+            dispatch(removeTransactionDataFromStore());
+          })
       } else {
         // Create new transaction
         await createMutation.mutateAsync({

@@ -4,63 +4,69 @@ import { cashTransactionServices } from "../../api/services/cashTransaction.serv
 import { capitalizeFirstLetter } from "../../../../shared/utils/string";
 
 export const cashtransactionMutations = {
-create: (queryClient) => ({
-  mutationFn: ({ formData, transactionType }) =>
-    cashTransactionServices.create(formData, transactionType),
+  create: (queryClient) => ({
+    mutationFn: ({ formData, transactionType }) =>
+      cashTransactionServices.create(formData, transactionType),
 
-  onSuccess: (response, variables) => {
-    // The response structure based on your logs shows the transaction is directly in response
-    const transaction = response?.data.transaction 
-    
-    const company =  transaction?.company;
-    const branch =  transaction?.branch;
-    const transactionType = transaction?.transactionType ;
+    onSuccess: (response, variables) => {
+      // The response structure based on your logs shows the transaction is directly in response
+      const transaction = response?.data.transaction;
 
-    // Invalidate the transaction list query
-    queryClient.invalidateQueries({
-      queryKey: ["transactions", transactionType, "", company, branch],
-    });
+      const company = transaction?.company;
+      const branch = transaction?.branch;
+      const transactionType = transaction?.transactionType;
 
-    toast.success(`${capitalizeFirstLetter(transactionType)} Transaction created successfully!`);
-
-
-    // Invalidate account balance if needed
-    if (transaction?.account) {
-      const accountId = transaction.account._id || transaction.account;
+      // Invalidate the transaction list query
       queryClient.invalidateQueries({
-        queryKey: ["account", accountId],
+        queryKey: ["transactions", transactionType, "", company, branch],
       });
-    }
-  },
 
-  onError: (error) => {
-    console.error("Transaction creation failed:", error);
-    toast.error('Error creating transaction. Please try again.');
-    
-  }
-}),
+      toast.success(
+        `${capitalizeFirstLetter(transactionType)} created successfully!`
+      );
+
+      // Invalidate account balance if needed
+      if (transaction?.account) {
+        const accountId = transaction.account._id || transaction.account;
+        queryClient.invalidateQueries({
+          queryKey: ["account", accountId],
+        });
+      }
+    },
+
+    onError: (error) => {
+      console.error("Transaction creation failed:", error);
+      toast.error("Error creating transaction. Please try again.");
+    },
+  }),
 
   update: (queryClient) => ({
     mutationFn: ({ id, formData, transactionType }) =>
-
-      
       cashTransactionServices.update(id, formData, transactionType),
 
     onSuccess: (data, variables) => {
-      console.log("Transaction updated successfully:", data);
+      const transaction = data.data.transaction;
+      const { company, branch, transactionType } = transaction;
+      toast.success(
+        `${capitalizeFirstLetter(transactionType)}  updated successfully!`
+      );
+
+      // Invalidate the transaction list query
       queryClient.invalidateQueries({
-        queryKey: ['transaction', variables.transactionType]
+        queryKey: ["transactions", transactionType, "", company, branch],
       });
-      // Also invalidate the specific transaction query
-      queryClient.invalidateQueries({
-        queryKey: ['transaction', variables.id]
-      });
-      alert('Transaction updated successfully!');
+      // Invalidate account balance if needed
+      if (transaction?.account) {
+        const accountId = transaction.account._id || transaction.account;
+        queryClient.invalidateQueries({
+          queryKey: ["account", accountId],
+        });
+      }
     },
 
     onError: (error) => {
       console.error("Transaction update failed:", error);
-      alert('Error updating transaction. Please try again.');
+      toast.error("Error updating transaction. Please try again.");
     },
   }),
-}
+};

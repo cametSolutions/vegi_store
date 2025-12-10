@@ -64,7 +64,8 @@ const CreateCashTransaction = () => {
 
         <TransactionHeader
           currentTransactionType={currentTransactionType}
-          date={CashtransactionData.transactionDate}
+          date={CashtransactionData.transactionDate
+          }
           updateTransactionField={updateTransactionField}
         />
 

@@ -285,6 +285,7 @@ export const deleteTransaction = async (req, res) => {
  */
 export const editFundTransactionController = async (req, res) => {
   try {
+    
     const { transactionType, transactionId } = req.params;
 
     console.log("Edit request params:", req.params);
@@ -312,6 +313,9 @@ export const editFundTransactionController = async (req, res) => {
       updateData: req.body,
       user: req.user,
     });
+
+    // console.log("result",result);
+    
 
     res.status(200).json({
       success: true,
