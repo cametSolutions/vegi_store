@@ -8,6 +8,8 @@ const ENV = import.meta.env.VITE_ENV;
 
 if (ENV === "development") {
   baseUrl = "http://localhost:5000/api";
+} else if (ENV === "testing") {
+  baseUrl = "https://farm2carttest.camet.in/api";
 } else {
   baseUrl = "https://farm2cart.camet.in/api";
 }
@@ -38,8 +40,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-
 
 // // Generic resource API factory
 // export const createResourceApi = (resourcePath, customEndpoints) => {
