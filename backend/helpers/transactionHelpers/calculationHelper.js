@@ -211,3 +211,54 @@ export const calculateStockDeltas = (originalItems, updatedItems) => {
 };
 
 
+/**
+ * Calculate what changed between original and updated data for receipt/payment transactions
+ */
+export const calculateFundTransactionDeltas = (originalTx, updateData) => {
+  const deltas = {
+    amountChanged: false,
+    amountDelta: 0,
+    oldAmount: originalTx.amount,
+    newAmount: originalTx.amount,
+    paymentModeChanged: false,
+    chequeDetailsChanged: false,
+    narrationChanged: false,
+  };
+
+  // Check amount change
+  if (updateData.amount !== undefined && updateData.amount !== originalTx.amount) {
+    deltas.amountChanged = true;
+    deltas.amountDelta = updateData.amount - originalTx.amount;
+    deltas.newAmount = updateData.amount;
+  }
+
+  // Check payment mode change
+  if (
+    updateData.paymentMode !== undefined &&
+    updateData.paymentMode !== originalTx.paymentMode
+  ) {
+    deltas.paymentModeChanged = true;
+  }
+
+  // Check cheque details change
+  if (
+    (updateData.chequeNumber !== undefined &&
+      updateData.chequeNumber !== originalTx.chequeNumber) ||
+    (updateData.chequeDate !== undefined &&
+      updateData.chequeDate?.toString() !== originalTx.chequeDate?.toString())
+  ) {
+    deltas.chequeDetailsChanged = true;
+  }
+
+  // Check narration change
+  if (
+    updateData.narration !== undefined &&
+    updateData.narration !== originalTx.narration
+  ) {
+    deltas.narrationChanged = true;
+  }
+
+  return deltas;
+};
+
+

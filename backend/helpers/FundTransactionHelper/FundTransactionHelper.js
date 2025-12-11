@@ -294,3 +294,59 @@ export const buildTransactionQuery = (filters) => {
 
   return query;
 };
+
+/**
+ * Validate edit request before processing
+ * Checks:
+ * - Required fields present
+ * - Amount is valid
+ * - Party account cannot be changed
+ * - Transaction date cannot be changed (for now)
+ */
+export const validateEditRequest = async (
+  originalTx,
+  updateData,
+  transactionType,
+  session
+) => {
+  // Check if trying to change party account (not allowed)
+  if (updateData.account && updateData.account.toString() !== originalTx.account.toString()) {
+    throw new Error(
+      "Cannot change party account. Please create a new transaction instead."
+    );
+  }
+
+  // Check if trying to change transaction date (not allowed for now)
+  if (updateData.transactionDate) {
+    const originalDate = new Date(originalTx.transactionDate).toDateString();
+    const newDate = new Date(updateData.transactionDate).toDateString();
+    
+    if (originalDate !== newDate) {
+      throw new Error(
+        "Transaction date editing is currently restricted. Please contact administrator."
+      );
+    }
+  }
+
+  // Validate amount if provided
+  if (updateData.amount !== undefined) {
+    if (typeof updateData.amount !== "number" || updateData.amount <= 0) {
+      throw new Error("Amount must be a positive number");
+    }
+  }
+
+  // Validate payment mode if provided
+  const validPaymentModes = ["cash", "cheque", "dd", "bankTransfer"];
+  if (updateData.paymentMode && !validPaymentModes.includes(updateData.paymentMode)) {
+    throw new Error(
+      `Invalid payment mode. Must be one of: ${validPaymentModes.join(", ")}`
+    );
+  }
+
+  // If cheque mode, validate cheque number
+  if (updateData.paymentMode === "cheque" && !updateData.chequeNumber) {
+    throw new Error("Cheque number is required for cheque payment mode");
+  }
+
+  return true;
+};

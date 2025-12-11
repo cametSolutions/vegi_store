@@ -13,9 +13,10 @@ import { useSelector } from "react-redux";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useTransaction } from "../../hooks/useTransaction";
 
-const TransactionList = ({ onEditTransaction,selectedTransaction }) => {
-  // Accept the prop
+const TransactionList = ({ onEditTransaction, selectedTransaction }) => {
   const location = useLocation();
+  
+  // Get the current transaction type based on the route
   const currentTransactionType = useMemo(
     () => getTransactionType(location),
     [location]
@@ -37,9 +38,6 @@ const TransactionList = ({ onEditTransaction,selectedTransaction }) => {
     getTypeColor,
     handleSearchChange,
   } = useTransactionListActions();
-
-  /// this is form state like data in the form not form api response
-  
 
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY);
 
@@ -70,8 +68,6 @@ const TransactionList = ({ onEditTransaction,selectedTransaction }) => {
     return data.pages.flatMap((page) => page.data);
   }, [data]);
 
-  
-
   return (
     <div className="w-full h-[calc(100vh-110px)] bg-white rounded-xs shadow-sm border flex flex-col">
       <div className="px-1 py-2 border-b flex-shrink-0">
@@ -97,8 +93,9 @@ const TransactionList = ({ onEditTransaction,selectedTransaction }) => {
           fetchNextPage={fetchNextPage}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
-          onEditTransaction={onEditTransaction} // Pass to ListTable
+          onEditTransaction={onEditTransaction}
           editTransactionId={selectedTransaction?._id}
+          currentTransactionType={currentTransactionType} // Pass dynamic transaction type
         />
       </div>
 

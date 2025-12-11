@@ -1,13 +1,18 @@
 import { useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cashtransactionMutations } from "../../../hooks/mutations/cashTransaction.mutation";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { convertStringNumbersToNumbers } from "../Utils/CashTransactionUtils";
 import { toast } from "sonner";
+import { removeTransactionDataFromStore } from "@/store/slices/transactionSlice";
 
-export const useCashTransactionActions = (CashtransactionData, isEditMode = false) => {
+export const useCashTransactionActions = (
+  CashtransactionData,
+  isEditMode = false
+) => {
   const queryClient = useQueryClient();
-  
+  const dispatch = useDispatch();
+
   const company = useSelector(
     (state) => state.companyBranch?.selectedCompany?._id
   );
@@ -15,28 +20,35 @@ export const useCashTransactionActions = (CashtransactionData, isEditMode = fals
     (state) => state.companyBranch?.selectedBranch?._id
   );
   // Initialize both mutations
-  const createMutation = useMutation(cashtransactionMutations.create(queryClient));
-  const updateMutation = useMutation(cashtransactionMutations.update(queryClient));
+  const createMutation = useMutation(
+    cashtransactionMutations.create(queryClient)
+  );
+  const updateMutation = useMutation(
+    cashtransactionMutations.update(queryClient)
+  );
 
   const handleSave = useCallback(async () => {
     try {
-   
-      const convertedData= convertStringNumbersToNumbers(CashtransactionData);
+      const convertedData = convertStringNumbersToNumbers(CashtransactionData);
 
       // Choose mutation based on mode
       if (isEditMode) {
         // Update existing transaction
-        await updateMutation.mutateAsync({
-          id: CashtransactionData.id,
-          formData: CashtransactionData,
-          transactionType: CashtransactionData.transactionType
-        });
+        await updateMutation
+          .mutateAsync({
+            id: CashtransactionData._id,
+            formData: { ...convertedData, company, branch },
+            transactionType: CashtransactionData.transactionType,
+          })
+          .finally(() => {
+            dispatch(removeTransactionDataFromStore());
+          })
       } else {
         // Create new transaction
         await createMutation.mutateAsync({
           formData: { ...convertedData, company, branch },
-         
-          transactionType: CashtransactionData?.transactionType
+
+          transactionType: CashtransactionData?.transactionType,
         });
       }
 
@@ -52,6 +64,6 @@ export const useCashTransactionActions = (CashtransactionData, isEditMode = fals
     isLoading: createMutation.isPending || updateMutation.isPending,
     isSuccess: createMutation.isSuccess || updateMutation.isSuccess,
     isError: createMutation.isError || updateMutation.isError,
-    error: createMutation.error || updateMutation.error
+    error: createMutation.error || updateMutation.error,
   };
 };

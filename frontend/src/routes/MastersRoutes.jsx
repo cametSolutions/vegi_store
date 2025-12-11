@@ -16,6 +16,8 @@ const RateSetting = lazy(() => import("../pages/Master/RateSetting/RateSetting")
 const PriceLevelPanel = lazy(() => import("../pages/Master/PriceLevelMaster/PriceLevelPanel"));
 const AccountMasterPanel = lazy(() => import("../pages/Master/AccountMaster/AccountMasterPanel"));
 
+const CompanyMasterPanel = lazy(() => import("../pages/Master/CompanyMaster/CompanyMasterPanel"));
+const BranchMasterPanel = lazy(() => import("../pages/Master/BranchMaster/BranchMasterPanel"));
 
 export default function MastersRoutes() {
   return (
@@ -31,6 +33,9 @@ export default function MastersRoutes() {
       <Route path="price-level" element={<PriceLevelPanel />} />
       <Route path="rate-setting" element={<RateSetting />} />
       <Route path="account-master" element={<AccountMasterPanel />} />
+      <Route path="company-master" element={<CompanyMasterPanel />} />
+            <Route path="branch-master" element={<BranchMasterPanel />} />
+
       {/* <Route path="price-level" element={<PriceLevel />} />
       <Route path="company" element={<CompanyList />} />
       <Route path="branch" element={<BranchList />} />

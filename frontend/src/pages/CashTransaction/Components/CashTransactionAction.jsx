@@ -1,4 +1,4 @@
-import React,{ useEffect } from "react";
+import React, { useEffect } from "react";
 import { Save, Eye, Trash2, X, FileText } from "lucide-react";
 import { useCashTransactionActions } from "../hooks/useCashTransactionAction";
 import { toast } from "sonner";
@@ -7,28 +7,31 @@ const CashTransactionAction = ({
   CashtransactionData,
   onSave,
   resetCashTransactionData,
-    onLoadingChange,
+  onLoadingChange,
+  handleCancel,
   // onView,
   // onDelete,
   // onCancel,
   // onPrint,
   isEditMode = false,
-
 }) => {
-  const { handleSave, isLoading } = useCashTransactionActions(CashtransactionData, isEditMode);
- useEffect(() => {
+  const { handleSave, isLoading } = useCashTransactionActions(
+    CashtransactionData,
+    isEditMode
+  );
+  useEffect(() => {
     if (onLoadingChange) {
       onLoadingChange(isLoading);
     }
   }, [isLoading, onLoadingChange]);
- const handleSaveClick = async () => {
+  const handleSaveClick = async () => {
+    const { paymentMode, chequeNumber, accountName, account } =
+      CashtransactionData;
+    if (paymentMode === "cheque" && chequeNumber.trim() === "") {
+      toast.error("Enter cheque number");
+      return;
+    }
 
-     const { paymentMode,chequeNumber,accountName,account } = CashtransactionData;
-        if(paymentMode==="cheque" && chequeNumber.trim()===""){
-          toast.error("Enter cheque number");
-          return
-        }
-        
     // Validation
     if (!accountName?.trim() && !account) {
       toast.error("Add a customer");
@@ -71,7 +74,7 @@ const CashTransactionAction = ({
 
         {/* Neutral - Light Blue */}
         <button
-          // onClick={onCancel}
+          onClick={handleCancel}
           className="bg-gray-500 hover:bg-gray-600 text-white px-2 py-2.5 rounded font-bold flex items-center justify-center gap-1 transition-colors text-[9px]"
         >
           <X className="w-3 h-3" />

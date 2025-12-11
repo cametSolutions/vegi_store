@@ -104,6 +104,8 @@ const OutstandingSchema = new mongoose.Schema(
           "overdue",
           "disputed",
           "written_off",
+          "settled",
+          "cancelled",
         ],
         message: "Invalid status",
       },

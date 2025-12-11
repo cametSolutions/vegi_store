@@ -1,4 +1,4 @@
-import { ReceiptModel } from "../../model/FundTransactionMode.js";
+import { PaymentModel, ReceiptModel } from "../../model/FundTransactionMode.js";
 import { PurchaseModel, SalesModel, SalesReturnModel, PurchaseReturnModel } from "../../model/TransactionModel.js";
 
 export const transactionTypeToModelName = (transactionType) => {
@@ -7,6 +7,8 @@ export const transactionTypeToModelName = (transactionType) => {
     purchase: "Purchase",
     sales_return: "SalesReturn",
     purchase_return: "PurchaseReturn",
+    receipt: "Receipt",
+    payment: "Payment",
   };
 
   
@@ -19,6 +21,7 @@ export const getTransactionModel = (transactionType) => {
     sale: SalesModel,
     purchase: PurchaseModel,
     receipt: ReceiptModel,
+    payment: PaymentModel,
     sales_return: SalesReturnModel, // You'll need to create these
     purchase_return: PurchaseReturnModel, // You'll need to create these
   };

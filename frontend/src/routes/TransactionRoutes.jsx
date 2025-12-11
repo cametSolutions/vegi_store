@@ -3,6 +3,7 @@ import { lazy } from "react";
 import ProtectedRoute from "../components/Layout/ProtectedRoute";
 import TransactionPanel from "@/pages/Transactions/TransactionPanel";
 import CashTransactionPanel from "@/pages/CashTransaction/CashTransactionPanel";
+import TransactionPrintPreview from "@/pages/Transactions/components/TransactionList/TransactionPrintPreview";
 
 
 export default function TransactionRoutes() {
@@ -21,6 +22,9 @@ export default function TransactionRoutes() {
       <Route path="sales_return/create" element={<TransactionPanel />} />
       <Route path="receipt/create" element={<CashTransactionPanel />} />
       <Route path="payment/create" element={<CashTransactionPanel />} />
+       <Route path="Print/:transactionId" element={<TransactionPrintPreview />} />
+      
+
       {/* Add more transaction routes here */}
     </Route>
   );

@@ -166,3 +166,117 @@ export const updateItemMonthlyBalances = async (data, session) => {
     throw error;
   }
 };
+
+
+
+
+
+/**
+ * Mark monthly balance records as needing recalculation
+ * 
+ * When a transaction is edited, it affects:
+ * 1. The month of the transaction
+ * 2. ALL subsequent months (because opening balance cascades forward)
+ * 
+ * Only marks EXISTING records - does not create new ones
+ * 
+ * Example: If Jan transaction is edited, mark Jan, Feb, Mar... Dec as dirty (if they exist)
+ * 
+ * @param {Object} params - Parameters
+ * @param {ObjectId} params.accountId - Account ID
+ * @param {Date} params.transactionDate - Transaction date
+ * @param {ObjectId} params.company - Company ID
+ * @param {ObjectId} params.branch - Branch ID
+ * @param {Object} params.session - Mongoose session
+ */
+export const markMonthlyBalanceDirtyForFundTransaction = async ({
+  accountId,
+  transactionDate,
+  company,
+  branch,
+  session,
+}) => {
+  console.log("\n📅 ===== MARKING MONTHLY BALANCES AS DIRTY =====");
+
+  const date = new Date(transactionDate);
+  const editedMonth = date.getMonth() + 1; // 1-12
+  const editedYear = date.getFullYear();
+
+  console.log("Transaction date:", {
+    year: editedYear,
+    month: editedMonth,
+    date: date.toISOString().split('T')[0],
+  });
+
+  // ========================================
+  // Find and update all monthly balance records >= edited month
+  // ========================================
+
+  const query = {
+    company,
+    branch,
+    account: accountId,
+    $or: [
+      // Same year, month >= edited month
+      {
+        year: editedYear,
+        month: { $gte: editedMonth },
+      },
+      // Future years (all months)
+      {
+        year: { $gt: editedYear },
+      },
+    ],
+  };
+
+  console.log("Marking existing monthly balance records as dirty...");
+
+  // Update all matching records
+  const result = await AccountMonthlyBalance.updateMany(
+    query,
+    {
+      $set: {
+        needsRecalculation: true,
+        lastUpdated: new Date(),
+      },
+    },
+    { session }
+  );
+
+  console.log(`✅ Marked ${result.modifiedCount} existing monthly balance record(s) as dirty`);
+
+  // ========================================
+  // Log affected periods for debugging
+  // ========================================
+
+  if (result.modifiedCount > 0) {
+    const affectedRecords = await AccountMonthlyBalance.find(query)
+      .select("periodKey needsRecalculation year month")
+      .sort({ year: 1, month: 1 })
+      .session(session);
+
+    console.log("\n📋 Affected periods marked for recalculation:");
+    affectedRecords.forEach((record) => {
+      console.log(`  - ${record.periodKey}`);
+    });
+
+    console.log("\n✅ ===== MONTHLY BALANCE MARKING COMPLETED =====");
+
+    return {
+      markedCount: result.modifiedCount,
+      affectedPeriods: affectedRecords.map((r) => r.periodKey),
+      startPeriod: `${editedYear}-${String(editedMonth).padStart(2, "0")}`,
+    };
+  } else {
+    console.log("⚠️ No existing monthly balance records found for this period");
+    console.log("Records will be created when night job runs or when new transactions occur");
+    
+    console.log("\n✅ ===== MONTHLY BALANCE MARKING COMPLETED =====");
+
+    return {
+      markedCount: 0,
+      affectedPeriods: [],
+      startPeriod: `${editedYear}-${String(editedMonth).padStart(2, "0")}`,
+    };
+  }
+};
