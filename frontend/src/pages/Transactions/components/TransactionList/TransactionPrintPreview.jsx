@@ -80,8 +80,13 @@ const handlePrint = () => {
               margin: ${isThermal ? "0" : "10mm"};
             }
             
-            body {
+            html, body {
               margin: 0;
+              padding: 0;
+              height: auto;
+            }
+            
+            body {
               padding: ${isThermal ? "16px" : "20px"};
               font-family: 'Courier', monospace;
               width: ${currentSize.width};
@@ -492,9 +497,6 @@ yPos += 8;
             </select>
             </div>
           </div>
-
-          {/* Bottom Row: Print Size Selector */}
-        
         </div>
       </div>
 
@@ -505,7 +507,6 @@ yPos += 8;
           className="bg-white shadow-lg mx-auto print:shadow-none transition-all duration-300"
           style={{
             width: currentSize.width,
-            minHeight: "200mm",
             fontFamily: "Courier, monospace",
           }}
         >
@@ -525,6 +526,12 @@ yPos += 8;
                 : `${currentSize.width} auto`
             };
             margin: ${printSize === "80mm" || printSize === "127mm" ? "0" : "10mm"};
+          }
+
+          html, body {
+            margin: 0;
+            padding: 0;
+            height: auto;
           }
 
           body {
