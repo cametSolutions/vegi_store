@@ -53,9 +53,21 @@ const Navbar = () => {
           label: "Outstanding Report",
           path: "reports/outstanding-report",
         },
-         {
-          label: "sales Report",
-          path: "reports/sales-report",
+           {
+          label: "Sales Summary",
+          path: "/reports/transaction-summary/sale",
+        },
+        {
+          label: "Purchase Summary",
+          path: "/reports/transaction-summary/purchase",
+        },
+        {
+          label: "Sales Return Summary",
+          path: "/reports/transaction-summary/sales_return",
+        },
+        {
+          label: "Purchase Return Summary",
+          path: "/reports/transaction-summary/purchase_return",
         },
 
 
