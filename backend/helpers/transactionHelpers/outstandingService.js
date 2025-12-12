@@ -572,7 +572,7 @@ export const handleAccountTypeChangeOnEdit = async (
       if (closingBalance < 0) {
         existingOutstanding.outstandingType = "cr";
       } else {
-        existingOutstanding.outstandingType = behavior.outstandingType;
+        existingOutstanding.outstandingType = "dr";
       }
 
       await existingOutstanding.save({ session });

@@ -29,7 +29,7 @@ export const cashtransactionMutations = {
       if (transaction?.account) {
         const accountId = transaction.account._id || transaction.account;
         queryClient.invalidateQueries({
-          queryKey: ["account", accountId],
+          queryKey: ["accountMaster"],
         });
       }
     },
@@ -59,7 +59,7 @@ export const cashtransactionMutations = {
       if (transaction?.account) {
         const accountId = transaction.account._id || transaction.account;
         queryClient.invalidateQueries({
-          queryKey: ["account", accountId],
+          queryKey: ["accountMaster"],
         });
       }
     },

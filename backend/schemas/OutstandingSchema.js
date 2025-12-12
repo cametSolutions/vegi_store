@@ -421,6 +421,9 @@ OutstandingSchema.pre("save", function (next) {
 if (this.outstandingType === "cr") {
   this.closingBalanceAmount = -Math.abs(this.closingBalanceAmount);
 }
+if (this.outstandingType === "dr") {
+  this.closingBalanceAmount = Math.abs(this.closingBalanceAmount);
+}
 
 
   next();
