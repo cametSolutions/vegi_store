@@ -17,7 +17,7 @@ export const cashTransactionServices = {
 
   // Custom search method specific to account master
   create: async (formData, transactionType) => {
-    console.log("formdata",transactionType)
+    console.log("formdata", transactionType);
     try {
       const response = await api.post(
         `/transaction/${transactionType}/createFundTransaction`,
@@ -33,14 +33,30 @@ export const cashTransactionServices = {
     }
   },
 
- getAll: async (
+  update: async (id, formData, transactionType) => {
+    try {
+      const response = await api.put(
+        `/transaction/${transactionType}/edit/${id}`,
+        formData
+      );
+
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
+
+  getAll: async (
     transactionType,
     pageParam = 1,
     limit = 25,
     searchTerm = "",
     companyId,
     branchId,
-      sortBy,
+    sortBy,
     sortOrder
   ) => {
     try {
@@ -52,7 +68,7 @@ export const cashTransactionServices = {
           companyId,
           branchId,
           transactionType,
-            sortBy,
+          sortBy,
           sortOrder,
         },
       });

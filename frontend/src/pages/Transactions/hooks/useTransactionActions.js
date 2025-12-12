@@ -42,7 +42,7 @@ export const useTransactionActions = (transactionData, isEditMode = false) => {
             formData: transactionData,
             transactionType: transactionData.transactionType,
           })
-          .then(() => {
+          .finally(() => {
             dispatch(removeTransactionDataFromStore());
           });
       } else {

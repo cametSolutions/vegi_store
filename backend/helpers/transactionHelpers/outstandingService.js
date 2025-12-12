@@ -181,6 +181,8 @@ export const updateOutstandingOnEdit = async (
     existingOutstanding.status = "pending";
   }
 
+  console.log("Updated Outstanding:", existingOutstanding);
+
   await existingOutstanding.save({ session });
 
   return existingOutstanding;
@@ -198,8 +200,8 @@ export const handleAccountTypeChangeOnEdit = async (
   userId,
   session
 ) => {
-  console.log("original",original);
-  
+  console.log("original", original);
+
   const behavior = determineTransactionBehavior(updated.transactionType);
 
   const originalAccountType = original.accountType;
@@ -227,7 +229,7 @@ export const handleAccountTypeChangeOnEdit = async (
       originalAccountType === "supplier") &&
     newAccountType === "cash"
   ) {
-    console.log("📝 Case 1: Customer → Cash");
+    console.log("📝 Case 1: Customer/supplier → Cash");
 
     // Delete existing outstanding
     const deleteResult = await Outstanding.deleteOne({
@@ -245,8 +247,7 @@ export const handleAccountTypeChangeOnEdit = async (
       session,
     });
 
-    console.log("cash or bank",cashBankAccount);
-    
+    console.log("cash or bank", cashBankAccount);
 
     result.cashBankLedger = await createCashBankLedgerEntry({
       transactionId: original._id,
@@ -276,8 +277,11 @@ export const handleAccountTypeChangeOnEdit = async (
   // CASE 2: Cash → Customer
   // Delete cash/bank ledger, Create outstanding
   // ========================================
-  else if (originalAccountType === "cash" && newAccountType === "customer") {
-    console.log("📝 Case 2: Cash → Customer");
+  else if (
+    originalAccountType === "cash" &&
+    (newAccountType === "customer" || newAccountType === "supplier")
+  ) {
+    console.log("📝 Case 2: Cash → Customer/supplier");
 
     // Delete existing cash/bank ledger entry
     const deleteResult = await CashBankLedgerModel.deleteOne({
@@ -321,19 +325,18 @@ export const handleAccountTypeChangeOnEdit = async (
   // Delete old outstanding, Create new outstanding
   // ========================================
   else if (
-    originalAccountType === "customer" &&
-    newAccountType === "customer"
+    (originalAccountType === "customer" && newAccountType === "customer") ||
+    (originalAccountType === "supplier" && newAccountType === "supplier")
   ) {
     if (deltas.accountChanged) {
-      console.log("📝 Case 3: Customer → Another Customer");
+      console.log("📝 Case 3: Customer/supplier → Another Customer/supplier");
 
       // Delete old outstanding
       const deleteResult = await Outstanding.deleteOne({
         sourceTransaction: original._id,
       }).session(session);
 
-      console.log("deleteResult",deleteResult);
-      
+      console.log("deleteResult", deleteResult);
 
       result.outstandingDeleted = deleteResult.deletedCount > 0;
       console.log(`🗑️ Deleted old outstanding: ${result.outstandingDeleted}`);
@@ -365,7 +368,7 @@ export const handleAccountTypeChangeOnEdit = async (
       result.outstandingCreated = true;
       // result.outstandingId = result.outstanding._id.toString();
       // console.log("result",result);
-      
+
       // console.log(`✅ Created new outstanding: ${result.outstandingId}`);
     } else {
       // Same customer, just update outstanding

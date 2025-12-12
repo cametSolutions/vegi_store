@@ -34,24 +34,26 @@ const ListTable = ({
     { key: "discount", label: "Disc", align: "center", width: "w-[14%]" },
     { key: "paid", label: "Paid", align: "center", width: "w-[14%]" },
     { key: "balance", label: "Balance", align: "right", width: "w-[14%]" },
-    { key: "Print", label: "Print", align: "center", width: "w-[12%]" },
+    { key: "Print", label: "Print", align: "right", width: "w-[12%]" },
   ];
 
   // Navigate to print preview
-  const handlePrintClick = (transaction) => {
-    const transactionType = currentTransactionType || transaction?.transactionType || "sale";
-    
-    // Pass state with navigation
-    navigate(`/transactions/Print/${transaction._id}?type=${transactionType}`, {
-      state: {
-        companyId: selectedCompanyFromStore?._id,
-        branchId: selectedBranchFromStore?._id,
-      }
-    });
-  };
+ const handlePrintClick = (transaction) => {
+  const transactionType = currentTransactionType || transaction?.transactionType || "sale";
+  
+  // Get Redux state
+  // Pass state with navigation
+  navigate(`/transactions/Print/${transaction._id}?type=${transactionType}`, {
+    state: {
+      companyId: selectedCompanyFromStore?._id,
+      branchId: selectedBranchFromStore?._id,
+    }
+  });
+};
 
   // Double click handler
   const handleDoubleClick = (transaction) => {
+    
     onEditTransaction(transaction);
   };
 
@@ -154,7 +156,7 @@ const ListTable = ({
                     className={`${
                       editTransactionId === transaction._id
                         ? "bg-[#add4f3]  "
-                        : " bg-slate-200 hover:bg-slate-200 "
+                        : " bg-slate-200 hover:bg-slate-300 "
                     }  transition-colors cursor-pointer`}
                     onDoubleClick={() => handleDoubleClick(transaction)}
                   >
@@ -204,13 +206,11 @@ const ListTable = ({
                     >
                       <button
                         onClick={(e) => {
-                          e.stopPropagation();
                           handlePrintClick(transaction);
                         }}
-                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1 rounded transition-colors inline-flex items-center justify-center"
-                        title="Print"
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-[10px] font-semibold cursor-pointer"
                       >
-                        <Printer className="w-4 h-4" />
+                        <Printer size={12} />
                       </button>
                     </td>
                   </tr>

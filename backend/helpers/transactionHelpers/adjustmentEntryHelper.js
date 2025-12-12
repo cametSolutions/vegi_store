@@ -228,3 +228,92 @@ export const createCashAccountAdjustment = async (
 
   return adjustmentEntry;
 };
+
+// services/adjustmentService.js
+
+export const createFundTransactionAdjustmentEntry = async ({
+  originalTransaction,
+  transactionType,
+  deltas,
+  deletedSettlements,
+  newSettlements,
+  deletedCashBankEntry, // ✅ UPDATED: Changed from reversedCashBankEntry
+  newCashBankEntry,
+  cashBankAccount,
+  editedBy,
+  session,
+}) => {
+  console.log("\n📋 ===== CREATING ADJUSTMENT ENTRY =====");
+
+  const adjustmentNumber = await AdjustmentEntry.generateAdjustmentNumber(
+    originalTransaction.company,
+    originalTransaction.branch,
+    session
+  );
+
+  // Determine adjustment type
+  let adjustmentType = "amount_change";
+  if (
+    deltas.paymentModeChanged ||
+    deltas.chequeDetailsChanged ||
+    deltas.narrationChanged
+  ) {
+    adjustmentType = deltas.amountChanged ? "mixed" : "amount_change";
+  }
+
+  // Prepare settlements summary
+  const settlementsSummary = {
+    oldSettlementsCount: deletedSettlements.length,
+    newSettlementsCount: newSettlements.length,
+    outstandingsReversed: deletedSettlements.map((s) => s.outstandingNumber),
+    outstandingsSettled: newSettlements.map((s) => s.outstandingNumber),
+  };
+
+  // ✅ UPDATED: Track deleted entry instead of reversed
+  const cashBankImpact = {
+    accountId: cashBankAccount.accountId,
+    accountName: cashBankAccount.accountName,
+    reversedLedgerEntry: deletedCashBankEntry._id, // Field name stays same for schema compatibility
+    newLedgerEntry: newCashBankEntry._id,
+  };
+
+  // Build reason text
+  let reason = "Transaction edited";
+  if (deltas.amountChanged) {
+    reason += ` - Amount changed from ₹${deltas.oldAmount} to ₹${deltas.newAmount}`;
+  }
+  if (deltas.paymentModeChanged) {
+    reason += " - Payment mode changed";
+  }
+
+  const adjustmentEntry = new AdjustmentEntry({
+    company: originalTransaction.company,
+    branch: originalTransaction.branch,
+    originalTransaction: originalTransaction._id,
+    originalTransactionModel:
+      transactionType.charAt(0).toUpperCase() + transactionType.slice(1),
+    originalTransactionNumber: originalTransaction.transactionNumber,
+    originalTransactionDate: originalTransaction.transactionDate,
+    adjustmentNumber,
+    adjustmentDate: new Date(),
+    adjustmentType,
+    affectedAccount: originalTransaction.account,
+    affectedAccountName: originalTransaction.accountName,
+    amountDelta: deltas.amountDelta,
+    oldAmount: deltas.oldAmount,
+    newAmount: deltas.newAmount,
+    cashBankImpact,
+    settlementsSummary,
+    reason,
+    notes: `Old cash/bank entry deleted and new entry created`,
+    editedBy,
+    status: "active",
+    isSystemGenerated: true,
+  });
+
+  await adjustmentEntry.save({ session });
+
+  console.log("✅ Adjustment entry created successfully");
+
+  return adjustmentEntry;
+};

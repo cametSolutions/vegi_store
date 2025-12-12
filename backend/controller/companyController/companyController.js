@@ -5,6 +5,7 @@ import OutstandingModel from "../../model/OutstandingModel.js";
 import {PaymentModel,ReceiptModel} from "../../model/FundTransactionMode.js";
 import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
 import {PurchaseModel,SalesModel} from "../../model/TransactionModel.js";
+import {SalesReturnModel,PurchaseReturnModel} from "../../model/TransactionModel.js";
 import BranchModel from "../../model/masters/BranchModel.js";
 import UserModel from "../../model/userModel.js"; // Import the UserModel
 // ✅ Your existing createCompany function
@@ -287,7 +288,10 @@ export const deleteCompany = async (req, res) => {
       { model: PaymentModel, field: "company" },
       { model: PurchaseModel, field: "company" },
       { model: SalesModel, field: "company" },
-      { model: UserModel, field: "company" }, // If users are linked to companies
+      { model: UserModel, field: "company" }, 
+      {model:SalesReturnModel,field:"company"},
+      {model:PurchaseReturnModel,field:"company"},
+      // If users are linked to companies
       // Add more models as needed
     ];
 

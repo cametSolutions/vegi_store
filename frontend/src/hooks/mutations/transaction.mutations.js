@@ -64,7 +64,7 @@ export const transactionMutations = {
 
     onError: (error) => {
       console.error("Transaction update failed:", error);
-      alert("Error updating transaction. Please try again.");
+      toast.error("Error updating transaction. Please try again.");
     },
   }),
 };

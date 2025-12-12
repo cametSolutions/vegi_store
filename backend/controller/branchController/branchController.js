@@ -4,6 +4,7 @@ import AccountMasterModel from "../../model/masters/AccountMasterModel.js";
 import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
 import OutstandingModel from "../../model/OutstandingModel.js";
 import {PaymentModel,ReceiptModel} from "../../model/FundTransactionMode.js";
+import {SalesReturnModel,PurchaseReturnModel} from "../../model/TransactionModel.js";
 import UserModel from "../../model/userModel.js";
 import {PurchaseModel,SalesModel} from "../../model/TransactionModel.js";
 // ✅ Create new branch
@@ -308,6 +309,8 @@ export const deleteBranch = async (req, res) => {
       { model: SalesModel, field: "branch" },
       { model: UserModel, field: "branches" }, // If users are linked to branches
       { model: OutstandingModel, field: "branch" },
+      { model: SalesReturnModel, field: "branch" },
+      { model: PurchaseReturnModel, field: "branch" },
       // Add more models as needed
     ];
 

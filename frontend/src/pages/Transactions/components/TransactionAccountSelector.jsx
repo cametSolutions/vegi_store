@@ -43,7 +43,6 @@ const TransactionAccountSelector = ({
   company,
   modifyOnPriceLevelChange,
 }) => {
-
   // ============================================================================
   // CONSTANTS
   // ============================================================================
@@ -84,7 +83,11 @@ const TransactionAccountSelector = ({
   // ============================================================================
   // Query for customer search
   const supplierTransactionTypes = ["purchase", "purchase_return"];
-  const accountTypeForSearch = supplierTransactionTypes.includes(transactionType) ? "supplier" : "customer";
+  const accountTypeForSearch = supplierTransactionTypes.includes(
+    transactionType
+  )
+    ? "supplier"
+    : "customer";
   const {
     data: apiResponse,
     isLoading,
@@ -108,9 +111,9 @@ const TransactionAccountSelector = ({
 
   // Query for "Cash" account when "cash" is selected
   const { data: cashAccountResponse } = useQuery({
-    ...accountMasterQueries.search("Cash", company, branch, "cash", 1,{
-        withOutstanding: true, // or false, or omit
-      }),
+    ...accountMasterQueries.search("Cash", company, branch, "cash", 1, {
+      withOutstanding: true, // or false, or omit
+    }),
     enabled: !!(company && accountType === "cash" && !account),
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -134,9 +137,8 @@ const TransactionAccountSelector = ({
   const accounts = apiResponse?.data || [];
   const totalCount = apiResponse?.totalCount || 0;
   const hasMore = apiResponse?.hasMore || false;
-  const isPriceLevelNeeded=transactionType === "sale"  || transactionType === "sales_return";
-
-
+  const isPriceLevelNeeded =
+    transactionType === "sale" || transactionType === "sales_return";
 
   // Extract price levels from API response and filter by branch
   const allPriceLevels = priceLevelsResponse?.data || [];
@@ -281,6 +283,7 @@ const TransactionAccountSelector = ({
       updateTransactionData({
         accountName: account?.accountName,
         account: account?._id,
+        accountType: account?.accountType,
         openingBalance: account?.outstandingNet || 0,
         previousBalanceAmount: account?.outstandingDr || 0,
         // netAmount: 0,
@@ -580,7 +583,9 @@ const TransactionAccountSelector = ({
           value={priceLevel || ""}
           disabled={!isPriceLevelNeeded}
           onChange={handlePriceLevelChange}
-          className={` ${!isPriceLevelNeeded ? "bg-slate-200" : ""}  w-full px-2 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500
+          className={` ${
+            !isPriceLevelNeeded ? "bg-slate-200" : ""
+          }  w-full px-2 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500
           
           `}
         >

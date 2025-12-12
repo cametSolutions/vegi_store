@@ -4,45 +4,6 @@ import AccountMasterModel from "../../model/masters/AccountMasterModel.js";
 import OutstandingSettlementModel from "../../model/OutstandingSettlementModel.js";
 
 /**
- * Update account outstanding balance after receipt/payment
- */
-// export const updateAccountOutstanding = async ({
-//   accountId,
-//   amount,
-//   transactionType,
-//   session
-// }) => {
-//   console.log("\n💰 Updating account outstanding balance...");
-  
-//   const account = await AccountMasterModel.findById(accountId).session(session);
-
-//   console.log("accountggggg",account);
-  
-  
-//   if (!account) {
-//     throw new Error('Account not found');
-//   }
-//  const normalizedType = transactionType.toLowerCase();
-//    const isReceipt = normalizedType === 'receipt';
-  
-//    console.log("📊 Current balance:", {
-//     outstandingDr: account.outstandingDr || 0,
-//     outstandingCr: account.outstandingCr || 0
-//   });
-
-//   if (transactionType === 'receipt') {
-//     account.outstandingDr = Math.max(0, (account.outstandingDr || 0) - amount);
-//     console.log(`✅ Reduced DR by ${amount}, new DR: ${account.outstandingDr}`);
-//   } else if (transactionType === 'payment') {
-//     account.outstandingCr = Math.max(0, (account.outstandingCr || 0) - amount);
-//     console.log(`✅ Reduced CR by ${amount}, new CR: ${account.outstandingCr}`);
-//   }
-
-//   await account.save({ session });
-//   console.log("💾 Account balance updated successfully");
-// };
-
-/**
  * Settle outstanding items for an account using FIFO method
  */
 export const settleOutstandingFIFO = async ({
@@ -55,7 +16,7 @@ export const settleOutstandingFIFO = async ({
   company,
   branch,
   createdBy,
-  session
+  session,
 }) => {
   console.log("\n🔄 ===== STARTING FIFO SETTLEMENT =====");
   console.log("parameters:", {
@@ -64,7 +25,7 @@ export const settleOutstandingFIFO = async ({
     type,
     transactionId,
     transactionNumber,
-    createdBy // Log to verify
+    createdBy, // Log to verify
   });
 
   if (amount <= 0) {
@@ -73,16 +34,18 @@ export const settleOutstandingFIFO = async ({
   }
 
   const normalizedType = type.toLowerCase();
-  
+
   const outstandingType = normalizedType === "receipt" ? "dr" : "cr";
-  const appliedField = normalizedType === "receipt" ? "appliedReceipts" : "appliedPayments";
- 
-  const transactionModel = normalizedType.charAt(0).toUpperCase() + normalizedType.slice(1);
+  const appliedField =
+    normalizedType === "receipt" ? "appliedReceipts" : "appliedPayments";
+
+  const transactionModel =
+    normalizedType.charAt(0).toUpperCase() + normalizedType.slice(1);
   console.log("🎯 Settlement Type:", {
-     type: normalizedType,
+    type: normalizedType,
     outstandingType,
     appliedField,
-    transactionModel
+    transactionModel,
   });
 
   const query = {
@@ -92,15 +55,17 @@ export const settleOutstandingFIFO = async ({
     // closingBalanceAmount: { $gt: 0 }
   };
 
-  if(normalizedType === "receipt") {
+  if (normalizedType === "receipt") {
     query.closingBalanceAmount = { $gt: 0 };
-  }else if(normalizedType === "payment") {
+  } else if (normalizedType === "payment") {
     query.closingBalanceAmount = { $lt: 0 };
   }
 
   const unpaidOutstandings = await OutstandingModel.find(query)
-    .sort({ dueDate: 1, transactionDate: 1 })
+    .sort({ dueDate: 1, transactionDate: 1, createdAt: 1 })
     .session(session);
+
+  console.log("unpaidOutstandings", unpaidOutstandings);
 
   console.log(`📊 Found ${unpaidOutstandings.length} unpaid outstanding(s)`);
 
@@ -120,9 +85,10 @@ export const settleOutstandingFIFO = async ({
   let validCreatedBy = null;
   if (createdBy) {
     if (mongoose.Types.ObjectId.isValid(createdBy)) {
-      validCreatedBy = createdBy instanceof mongoose.Types.ObjectId 
-        ? createdBy 
-        : new mongoose.Types.ObjectId(createdBy);
+      validCreatedBy =
+        createdBy instanceof mongoose.Types.ObjectId
+          ? createdBy
+          : new mongoose.Types.ObjectId(createdBy);
     } else {
       console.warn("⚠️ Invalid createdBy value:", createdBy);
     }
@@ -137,37 +103,39 @@ export const settleOutstandingFIFO = async ({
     }
 
     // Determine amount to settle based on outstanding type
-  const toSettle = normalizedType === "payment"
-    // For payments, closingBalanceAmount is negative, so use absolute value for correct settlement calculation
-    ? Math.min(Math.abs(outstanding.closingBalanceAmount), remainingAmount)
-    // For receipts, closingBalanceAmount is positive and settled normally
-    : Math.min(outstanding.closingBalanceAmount, remainingAmount);
+    const toSettle =
+      normalizedType === "payment"
+        ? // For payments, closingBalanceAmount is negative, so use absolute value for correct settlement calculation
+          Math.min(Math.abs(outstanding.closingBalanceAmount), remainingAmount)
+        : // For receipts, closingBalanceAmount is positive and settled normally
+          Math.min(outstanding.closingBalanceAmount, remainingAmount);
 
-  const previousBalance = outstanding.closingBalanceAmount;
+    const previousBalance = outstanding.closingBalanceAmount;
 
-  console.log(`\n🔧 Settling outstanding ${outstanding.transactionNumber}:`, {
-    closingBalance: outstanding.closingBalanceAmount,
-    remainingAmount,
-    toSettle
-  });
+    console.log(`\n🔧 Settling outstanding ${outstanding.transactionNumber}:`, {
+      closingBalance: outstanding.closingBalanceAmount,
+      remainingAmount,
+      toSettle,
+    });
 
-  // Update paidAmount and closingBalanceAmount based on type
-  // For payments, add to closingBalanceAmount (negative), reducing its magnitude
-  // For receipts, subtract from closingBalanceAmount (positive)
-  outstanding.paidAmount += toSettle;
-  if (normalizedType === "payment") {
-    outstanding.closingBalanceAmount += toSettle;  // reduce negative balance
-  } else {
-    outstanding.closingBalanceAmount -= toSettle;  // reduce positive balance
-  }
-
+    // Update paidAmount and closingBalanceAmount based on type
+    // For payments, add to closingBalanceAmount (negative), reducing its magnitude
+    // For receipts, subtract from closingBalanceAmount (positive)
+    outstanding.paidAmount += toSettle;
+    if (normalizedType === "payment") {
+      outstanding.closingBalanceAmount += toSettle; // reduce negative balance
+    } else {
+      outstanding.closingBalanceAmount -= toSettle; // reduce positive balance
+    }
 
     if (outstanding.closingBalanceAmount === 0) {
       outstanding.status = "paid";
       console.log("✅ Outstanding fully paid");
     } else {
       outstanding.status = "partial";
-      console.log(`⏳ Partial payment - remaining: ${outstanding.closingBalanceAmount}`);
+      console.log(
+        `⏳ Partial payment - remaining: ${outstanding.closingBalanceAmount}`
+      );
     }
 
     if (!Array.isArray(outstanding[appliedField])) {
@@ -178,11 +146,10 @@ export const settleOutstandingFIFO = async ({
       transaction: transactionId,
       settledAmount: toSettle,
       transactionNumber,
-      date: transactionDate || new Date()
+      date: transactionDate || new Date(),
     });
 
-    console.log("outstanding",outstanding);
-    
+    console.log("outstanding", outstanding);
 
     await outstanding.save({ session });
     console.log("💾 Outstanding saved successfully");
@@ -193,25 +160,27 @@ export const settleOutstandingFIFO = async ({
       branch: branch || outstanding.branch,
       account: accountId,
       accountName,
-      
+
       transaction: transactionId,
       transactionModel,
       transactionNumber: transactionNumber,
       transactionDate: transactionDate || new Date(),
       transactionType: normalizedType,
-      
+
       outstanding: outstanding._id,
       outstandingNumber: outstanding.transactionNumber,
-      outstandingDate: outstanding.transactionDate, 
+      outstandingDate: outstanding.transactionDate,
       outstandingType: outstanding.outstandingType,
-      
+
       previousOutstandingAmount: Math.abs(previousBalance || 0),
       settledAmount: toSettle,
-      remainingOutstandingAmount: Math.abs(outstanding.closingBalanceAmount || 0),
-      
+      remainingOutstandingAmount: Math.abs(
+        outstanding.closingBalanceAmount || 0
+      ),
+
       settlementDate: transactionDate || new Date(),
       settlementStatus: "active",
-      createdBy: validCreatedBy // ✅ Use validated ObjectId or null
+      createdBy: validCreatedBy, // ✅ Use validated ObjectId or null
     });
 
     await settlementLink.save({ session });
@@ -224,7 +193,7 @@ export const settleOutstandingFIFO = async ({
       previousOutstanding: previousBalance,
       settledAmount: toSettle,
       remainingOutstanding: outstanding.closingBalanceAmount,
-      settlementDate: transactionDate || new Date()
+      settlementDate: transactionDate || new Date(),
     });
 
     remainingAmount -= toSettle;
@@ -236,7 +205,7 @@ export const settleOutstandingFIFO = async ({
     totalSettled: amount - remainingAmount,
     outstandingsSettled: settlements.length,
     linkTableEntriesCreated: settlementLinkEntries.length,
-    remainingUnsettled: remainingAmount
+    remainingUnsettled: remainingAmount,
   });
 
   if (remainingAmount > 0) {
@@ -247,83 +216,136 @@ export const settleOutstandingFIFO = async ({
 };
 
 /**
- * Reverse outstanding settlement
+ * Delete all outstanding settlements for a transaction and restore outstanding records
+ *
+ * Process:
+ * 1. Find all OutstandingSettlement entries for this transaction
+ * 2. For each settlement, restore the outstanding record to pre-settlement state
+ * 3. DELETE settlement link entries (not mark as reversed)
+ * 4. Remove transaction from outstanding's appliedReceipts/appliedPayments array
+ *
+ * @returns Array of deleted settlement details (for adjustment entry tracking)
  */
-export const reverseOutstandingSettlement = async ({
+export const deleteOutstandingSettlements = async ({
   transactionId,
-  settlementDetails,
+  transactionType,
+  transactionNumber,
   accountId,
   amount,
-  transactionType,
-  userId,
-  session
+  session,
 }) => {
-  console.log("\n🔄 ===== REVERSING OUTSTANDING SETTLEMENT =====");
-  console.log("📋 Reversing transaction:", transactionId);
+  console.log("\n🔄 ===== DELETING OUTSTANDING SETTLEMENTS =====");
+  console.log("Transaction:", transactionNumber);
+  console.log("Type:", transactionType);
 
-  if (!settlementDetails || settlementDetails.length === 0) {
-    console.log("ℹ️ No settlements to reverse");
-    return;
+  const normalizedType = transactionType.toLowerCase();
+  const appliedField =
+    normalizedType === "receipt" ? "appliedReceipts" : "appliedPayments";
+
+  // Find all settlement link entries for this transaction
+  const settlementLinks = await OutstandingSettlementModel.find({
+    transaction: transactionId,
+    settlementStatus: "active",
+  }).session(session);
+
+  console.log(`📊 Found ${settlementLinks.length} settlement(s) to delete`);
+
+  if (settlementLinks.length === 0) {
+    console.log("⚠️ No settlements found to delete");
+    return [];
   }
 
-  const appliedField = transactionType === "receipt" ? "appliedReceipts" : "appliedPayments";
+  const deletedSettlements = [];
 
-  for (const settlement of settlementDetails) {
+  for (const link of settlementLinks) {
+    console.log(
+      `\n🔧 Processing settlement for outstanding: ${link.outstandingNumber}`
+    );
+
+    // Find the outstanding record
     const outstanding = await OutstandingModel.findById(
-      settlement.outstandingTransaction
+      link.outstanding
     ).session(session);
 
     if (!outstanding) {
-      console.warn(`⚠️ Outstanding ${settlement.outstandingTransaction} not found`);
+      console.warn(
+        `⚠️ Outstanding ${link.outstandingNumber} not found, skipping...`
+      );
       continue;
     }
 
-    console.log(`\n🔧 Reversing settlement for ${outstanding.transactionNumber}:`, {
-      settledAmount: settlement.settledAmount,
-      currentPaidAmount: outstanding.paidAmount,
-      currentBalance: outstanding.closingBalanceAmount
+    // Calculate reversal amounts
+    const settledAmount = link.settledAmount;
+    const previousBalance = link.previousOutstandingAmount;
+
+    console.log("Settlement details:", {
+      settledAmount,
+      previousBalance,
+      currentBalance: outstanding.closingBalanceAmount,
     });
 
-    outstanding.paidAmount = Math.max(0, outstanding.paidAmount - settlement.settledAmount);
-    outstanding.closingBalanceAmount += settlement.settledAmount;
+    // ========================================
+    // RESTORE OUTSTANDING RECORD
+    // ========================================
 
-    if (outstanding.paidAmount === 0) {
+    // Reverse the settlement amounts in outstanding record
+    outstanding.paidAmount -= settledAmount;
+
+    // Restore closingBalanceAmount based on type
+    if (normalizedType === "payment") {
+      // For payments: subtract from closingBalanceAmount (make it more negative for CR type)
+      outstanding.closingBalanceAmount -= settledAmount;
+    } else {
+      // For receipts: add to closingBalanceAmount (restore the DR amount)
+      outstanding.closingBalanceAmount += settledAmount;
+    }
+
+    // Update status based on new balance
+    if (outstanding.closingBalanceAmount === 0) {
+      outstanding.status = "paid";
+    } else if (outstanding.paidAmount === 0) {
       outstanding.status = "pending";
-    } else if (outstanding.closingBalanceAmount > 0) {
+    } else {
       outstanding.status = "partial";
     }
 
-    if (Array.isArray(outstanding[appliedField])) {
-      outstanding[appliedField] = outstanding[appliedField].filter(
-        applied => applied.transaction.toString() !== transactionId.toString()
-      );
-    }
+    // // Remove this transaction from appliedReceipts/appliedPayments array
+    // if (Array.isArray(outstanding[appliedField])) {
+    //   outstanding[appliedField] = outstanding[appliedField].filter(
+    //     (app) => app.transaction.toString() !== transactionId.toString()
+    //   );
+    // }
 
     await outstanding.save({ session });
-    console.log("✅ Settlement reversed");
+    console.log("✅ Outstanding restored:", {
+      newBalance: outstanding.closingBalanceAmount,
+      newStatus: outstanding.status,
+      newPaidAmount: outstanding.paidAmount,
+    });
+
+    // ========================================
+    // STORE INFO BEFORE DELETION (for adjustment tracking)
+    // ========================================
+    deletedSettlements.push({
+      settlementLinkId: link._id,
+      outstandingId: outstanding._id,
+      outstandingNumber: outstanding.transactionNumber,
+      settledAmount,
+      previousBalance: link.previousOutstandingAmount,
+      restoredBalance: outstanding.closingBalanceAmount,
+    });
+
+    // ========================================
+    // DELETE SETTLEMENT LINK (not mark as reversed)
+    // ========================================
+    await OutstandingSettlementModel.deleteOne({ _id: link._id }, { session });
+    console.log("✅ Settlement link deleted:", link._id);
   }
 
-  console.log("\n🔗 Reversing link table entries...");
-  const reversedCount = await OutstandingSettlementModel.reverseAllForTransaction(
-    transactionId,
-    userId,
-    "transaction deleted"
-  );
-  console.log(`✅ Reversed ${reversedCount} link table entries`);
+  console.log("\n✅ ===== DELETION COMPLETED =====");
+  console.log(`Total deleted: ${deletedSettlements.length} settlement(s)`);
 
-  const account = await AccountMasterModel.findById(accountId).session(session);
-  if (account) {
-    if (transactionType === 'receipt') {
-      account.outstandingDr = (account.outstandingDr || 0) + amount;
-      console.log(`✅ Restored DR by ${amount}, new DR: ${account.outstandingDr}`);
-    } else if (transactionType === 'payment') {
-      account.outstandingCr = (account.outstandingCr || 0) + amount;
-      console.log(`✅ Restored CR by ${amount}, new CR: ${account.outstandingCr}`);
-    }
-    await account.save({ session });
-  }
-
-  console.log("✅ ===== SETTLEMENT REVERSAL COMPLETED =====");
+  return deletedSettlements;
 };
 
 /**
@@ -334,7 +356,7 @@ export const getUnsettledBalance = async (accountId, outstandingType) => {
     account: accountId,
     outstandingType,
     status: { $ne: "paid" },
-    closingBalanceAmount: { $gt: 0 }
+    closingBalanceAmount: { $gt: 0 },
   }).sort({ dueDate: 1, transactionDate: 1 });
 
   const outstandingsWithPending = [];
@@ -344,7 +366,7 @@ export const getUnsettledBalance = async (accountId, outstandingType) => {
     // Get all settlements for this outstanding
     const settlements = await OutstandingSettlementModel.find({
       outstanding: outstanding._id,
-      settlementStatus: "active"
+      settlementStatus: "active",
     });
 
     // Calculate total receipts and payments from settlements
@@ -361,7 +383,7 @@ export const getUnsettledBalance = async (accountId, outstandingType) => {
 
     // Calculate pending based on outstanding type
     let pending;
-    
+
     if (outstandingType === "dr") {
       // DR vouchers (Sale/Purchase Return): Pending = Bill Amount - Receipts + Payments
       pending = outstanding.totalAmount - totalReceipts + totalPayments;
@@ -383,15 +405,18 @@ export const getUnsettledBalance = async (accountId, outstandingType) => {
       payments: totalPayments,
       pending: pending,
       dueDate: outstanding.dueDate,
-      status: outstanding.status
+      status: outstanding.status,
     });
   }
 
   return {
     count: unsettledOutstandings.length,
-    totalAmount: unsettledOutstandings.reduce((sum, o) => sum + o.totalAmount, 0),
+    totalAmount: unsettledOutstandings.reduce(
+      (sum, o) => sum + o.totalAmount,
+      0
+    ),
     totalPending: totalPending,
-    outstandings: outstandingsWithPending
+    outstandings: outstandingsWithPending,
   };
 };
 
@@ -399,19 +424,20 @@ export const getUnsettledBalance = async (accountId, outstandingType) => {
  * Get settlement history for a transaction
  */
 export const getSettlementHistory = async (transactionId, type) => {
-  const appliedField = type === "receipt" ? "appliedReceipts" : "appliedPayments";
-  
+  const appliedField =
+    type === "receipt" ? "appliedReceipts" : "appliedPayments";
+
   const outstandings = await OutstandingModel.find({
     [appliedField]: {
-      $elemMatch: { transaction: transactionId }
-    }
+      $elemMatch: { transaction: transactionId },
+    },
   });
 
-  return outstandings.map(outstanding => {
+  return outstandings.map((outstanding) => {
     const applied = outstanding[appliedField].find(
-      a => a.transaction.toString() === transactionId.toString()
+      (a) => a.transaction.toString() === transactionId.toString()
     );
-    
+
     return {
       outstandingId: outstanding._id,
       transactionNumber: outstanding.transactionNumber,
@@ -419,7 +445,7 @@ export const getSettlementHistory = async (transactionId, type) => {
       settledAmount: applied?.settledAmount || 0,
       settlementDate: applied?.date,
       totalAmount: outstanding.totalAmount,
-      remainingBalance: outstanding.closingBalanceAmount
+      remainingBalance: outstanding.closingBalanceAmount,
     };
   });
 };

@@ -2,8 +2,9 @@ import { isMasterReferenced } from "../../helpers/MasterHelpers/masterHelper.js"
 
 import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
 import {SalesModel,PurchaseModel} from "../../model/TransactionModel.js";
+import {SalesReturnModel,PurchaseReturnModel} from "../../model/TransactionModel.js";
 import OutstandingModel from "../../model/OutstandingModel.js";
-import {PaymentModel,ReceiptModel} from "../../model/FundTransactionMode.js";
+// import {PaymentModel,ReceiptModel} from "../../model/FundTransactionMode.js";
 export const create = async (req, res) => {
   try {
     const item = await ItemMasterModel.create(req.body);
@@ -136,8 +137,8 @@ export const deleteItem = async (req, res) => {
     const referencesToCheck = [
       { model: SalesModel, field: "items.item" },
       { model: PurchaseModel, field: "items.item" },
-         { model: ReceiptModel, field: "items.item" },
-            { model: PaymentModel, field: "items.item" },
+         { model: SalesReturnModel, field: "items.item" },
+            { model: PurchaseReturnModel, field: "items.item" },
             
       // Add other transaction models and fields here
     ];
