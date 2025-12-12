@@ -180,7 +180,7 @@ const TransactionAccountSelector = ({
             label: "Retry",
             onClick: () => refetchPriceLevels(),
           },
-          duration: 5000,
+          duration: 4000,
         });
       }
     }
