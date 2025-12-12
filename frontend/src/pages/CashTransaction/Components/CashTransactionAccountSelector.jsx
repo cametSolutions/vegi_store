@@ -47,8 +47,8 @@ const CashTransactionAccountSelector = ({
   const isSearchEnabled = !!(
     company &&
     debouncedSearchTerm?.trim() &&
-    debouncedSearchTerm.trim().length >= MIN_SEARCH_LENGTH &&
-    !account
+    debouncedSearchTerm.trim().length >= MIN_SEARCH_LENGTH 
+    // !account
   );
 
   // ============================================================================
@@ -170,6 +170,7 @@ const CashTransactionAccountSelector = ({
       console.log("Transaction Type:", transactionType); // Add this for debugging
       console.log("Outstanding Dr:", account.outstandingDr);
       console.log("Outstanding Cr:", account.outstandingCr);
+      console.log("Outstanding Cr:", transactionType);
 
       // Select previous balance based on transaction type
       const previousBalance =

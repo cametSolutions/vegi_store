@@ -38,7 +38,7 @@ const CashTransactionAction = ({
       return false;
     }
     await handleSave(); // save using your hook
-    if (resetCashTransactionData) resetCashTransactionData(); // 👈 reset after success
+    if (resetCashTransactionData) resetCashTransactionData(CashtransactionData.transactionType); // 👈 reset after success
   };
   console.log("transaction actions component renders");
 
