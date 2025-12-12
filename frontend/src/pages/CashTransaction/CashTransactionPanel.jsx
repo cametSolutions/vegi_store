@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from "react";
 import CreateCashTransaction from "./CreateCashTransaction";
 import CashTRansactionList from "./Components/CashTranactionList/CashTRansactionList";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Edit } from "lucide-react";
 import EditCashTransaction from "./EditCashTransaction";
+import { removeTransactionDataFromStore } from "@/store/slices/transactionSlice";
 
 const CashTransactionPanel = () => {
   const isEditMode = useSelector((state) => state.transaction.isEditMode);
   const [editMode, setEditMode] = useState(isEditMode);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const dispatch = useDispatch();
 
   // Handler to switch to edit mode
   const handleEditTransaction = (transaction) => {
@@ -23,6 +25,7 @@ const CashTransactionPanel = () => {
     
     setEditMode(false);
     setSelectedTransaction(null);
+     dispatch(removeTransactionDataFromStore());
   };
 
   //// Sync local editMode state with Redux store

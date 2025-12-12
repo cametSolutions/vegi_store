@@ -15,15 +15,17 @@ export const useCashTransaction = (initialData = null) => {
   }, []);
 
   const resetCashTransactionData = useCallback((transactionType) => {
-    setCashtransactionData(createEmptyTransaction(), transactionType);
+    
+    setCashtransactionData(createEmptyTransaction(transactionType));
   }, []);
+
+  
 
   return {
     CashtransactionData,
     updateCashtransactionData,
     updateTransactionField,
     resetCashTransactionData,
-
     setCashtransactionData,
   };
 };

@@ -470,7 +470,7 @@ const TransactionAccountSelector = ({
               type="radio"
               name="accountType"
               value="customer"
-              checked={accountType === "customer"}
+              checked={accountType === "customer" || accountType==="supplier"}
               onChange={(e) => handleAccountTypeChange(e.target.value)}
               className="mr-1 text-blue-600 scale-75 cursor-pointer"
             />
