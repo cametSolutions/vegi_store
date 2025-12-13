@@ -10,10 +10,10 @@ import {
   ChevronRight,
   Search,
 } from "lucide-react";
-import { formatDate } from "../../../../../shared/utils/date";
+import { DATE_FILTERS, formatDate, getDateRange } from "../../../../../shared/utils/date";
 import { formatINR } from "../../../../../shared/utils/currency";
 import CustomMoonLoader from "@/components/loaders/CustomMoonLoader";
-import DateFilter, { DATE_FILTERS, getDateRange } from "../../../components/DateFilterComponent/DateFilter";
+import DateFilter from "../../../components/DateFilterComponent/DateFilter";
 
 // Transaction type configuration
 const TRANSACTION_CONFIG = {
@@ -94,7 +94,10 @@ const TransactionSummary = () => {
       startDate,
       endDate,
       search: searchTerm,
-    })
+    },
+    
+  )
+
   );
 
   const transactions = data?.data?.transactions || [];
@@ -145,12 +148,12 @@ const TransactionSummary = () => {
   }
 
   return (
-    <div className="h-[calc(100vh-35px)] flex flex-col bg-gray-50">
+    <div className="h-[calc(100vh-99px)] flex flex-col bg-gray-50">
       {/* Fixed Header - No Scrolling */}
       <div className="flex-none bg-white shadow-sm border-b p-3">
         <div className="flex items-center justify-between gap-4">
           {/* Left: Bold Title */}
-          <h1 className="text-xl font-extrabold text-gray-900 whitespace-nowrap">
+          <h1 className="text-base font-extrabold text-gray-900 whitespace-nowrap">
             {config.title}
           </h1>
 
@@ -197,8 +200,8 @@ const TransactionSummary = () => {
      
 
       {/* Scrollable Table Area */}
-      <div className="flex-1 px-2 pb-2 overflow-hidden">
-        <div className="bg-white shadow-sm rounded-lg h-full flex flex-col">
+      <div className="flex-1  pb-2 overflow-hidden">
+        <div className="bg-white shadow-sm  h-full flex flex-col">
           {isLoading ? (
             <div className="flex items-center justify-center flex-1">
               <CustomMoonLoader />
@@ -220,7 +223,7 @@ const TransactionSummary = () => {
           ) : (
             <>
               {/* Fixed Table Header */}
-              <div className="flex-none">
+              <div className="flex-none px-2" >
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b">
                     <tr>
@@ -251,7 +254,7 @@ const TransactionSummary = () => {
               </div>
 
               {/* Scrollable Table Body */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto px-2">
                 <table className="w-full">
                   <tbody className="bg-white divide-y divide-gray-200">
                     {transactions.map((transaction, index) => (
@@ -268,7 +271,7 @@ const TransactionSummary = () => {
                         <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900">
                           {formatDate(transaction.transactionDate)}
                         </td>
-                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900">
+                        <td className=" truncate px-2 py-1.5 whitespace-nowrap text-xs text-gray-900">
                           {transaction.accountName}
                         </td>
                         <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900">
@@ -308,7 +311,7 @@ const TransactionSummary = () => {
               </div>
 
               {/* Fixed Footer with Action Buttons */}
-              <div className="flex-none flex items-center justify-between px-2 py-1.5 border-t bg-gray-50">
+              <div className="flex-none flex items-center justify-between px-2 py-2 border-t bg-gray-50">
                 {/* Left: Action Buttons */}
                 <div className="flex items-center gap-1.5">
                   <button
@@ -333,6 +336,8 @@ const TransactionSummary = () => {
                     Print
                   </button>
                 </div>
+
+                <div className="flex items-center gap-4">
 
                 {/* Center: Record Count */}
                 <div className="text-xs text-gray-700">
@@ -361,6 +366,8 @@ const TransactionSummary = () => {
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
+                </div>
+
               </div>
             </>
           )}

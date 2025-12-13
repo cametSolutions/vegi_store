@@ -24,6 +24,8 @@ export const transactionSummaryQueries = {
         ),
       enabled: Boolean(companyId && branchId && transactionType),
       staleTime: 5 * 60 * 1000, // 30 seconds
+      refetchOnWindowFocus: false,
+      
       placeholderData: (previousData) => previousData,
     }),
 
