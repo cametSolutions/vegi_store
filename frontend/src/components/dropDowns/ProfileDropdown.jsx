@@ -435,7 +435,7 @@ const ProfileDropdown = () => {
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="w-56">
               {loggedUser?.access?.find(
-                (access) => access.company._id === selectedCompany?._id
+                (access) => access.company?._id === selectedCompany?._id
               )?.branches?.length > 0 ? (
                 loggedUser.access
                   .find((access) => access.company._id === selectedCompany?._id)

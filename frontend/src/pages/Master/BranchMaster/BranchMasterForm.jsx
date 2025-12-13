@@ -105,240 +105,243 @@ const BranchMasterForm = ({ editingId, editData, onClearEdit }) => {
   };
 
   return (
-    <div className="relative">
+    <div className="h-full min-h-[400px] flex flex-col">
       {isLoading && (
         <div className="absolute inset-0 bg-white/60 z-50 flex items-center justify-center">
           <CustomMoonLoader />
         </div>
       )}
-      <h2 className="text-sm font-bold shadow-lg p-2 px-4 mb-4">
+      <h2 className="text-sm font-bold shadow-lg p-2 px-4 mb-1">
         {editingId ? "Edit Branch" : "Create Branch"}
       </h2>
-      <div className="max-w-3xl mx-auto bg-white px-6 py-2 rounded-lg shadow-md space-y-2 !text-xs">
-        {/* Company Dropdown */}
-        <div>
-          <label className="block text-gray-700 font-semibold mb-1">
-            Company *
-          </label>
-          <select
-            {...register("companyId", {
-              required: "Company is required",
-            })}
-            className="w-full border border-gray-300 rounded-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            disabled={isLoading || companiesLoading || editingId}
-          >
-            <option value="">Select Company</option>
-            {companies.map((company) => (
-              <option key={company._id} value={company._id}>
-                {company.companyName}
-              </option>
-            ))}
-          </select>
-          {errors.companyId && (
-            <p className="text-red-600 mt-1">{errors.companyId.message}</p>
-          )}
-          {companiesLoading && (
-            <p className="text-gray-500 text-xs mt-1">Loading companies...</p>
-          )}
-        </div>
-
-        {/* Branch Name */}
-        <div>
-          <label className="block text-gray-700 font-semibold mb-1">
-            Branch Name *
-          </label>
-          <input
-            {...register("branchName", {
-              required: "Branch name is required",
-              maxLength: 100,
-            })}
-            type="text"
-            className="w-full border border-gray-300 rounded-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            disabled={isLoading}
-          />
-          {errors.branchName && (
-            <p className="text-red-600 mt-1">{errors.branchName.message}</p>
-          )}
-        </div>
-
-        {/* Address */}
-        <div>
-          <label className="block text-gray-700 font-semibold mb-1">
-            Address *
-          </label>
-          <textarea
-            {...register("address", {
-              required: "Address is required",
-            })}
-            className="w-full border border-gray-300 rounded-xs p-2 h-20 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            disabled={isLoading}
-          />
-          {errors.address && (
-            <p className="text-red-600 mt-1">{errors.address.message}</p>
-          )}
-        </div>
-
-        {/* City and State */}
-        <div className="grid grid-cols-2 gap-4">
+      <div className="flex flex-col flex-1 bg-white shadow p-6">
+        {/* Form fields as flex-1 section */}
+        <div className="flex-1 space-y-6">
+          {/* Company Dropdown */}
           <div>
-            <label className="block text-gray-700 font-semibold mb-1">
-              City *
+            <label className="block font-medium mb-1 text-xs">
+              Company *
+            </label>
+            <select
+              {...register("companyId", {
+                required: "Company is required",
+              })}
+              className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
+              disabled={isLoading || companiesLoading || editingId}
+            >
+              <option value="">Select Company</option>
+              {companies.map((company) => (
+                <option key={company._id} value={company._id}>
+                  {company.companyName}
+                </option>
+              ))}
+            </select>
+            {errors.companyId && (
+              <p className="text-red-500 text-xs mt-1">{errors.companyId.message}</p>
+            )}
+            {companiesLoading && (
+              <p className="text-gray-500 text-xs mt-1">Loading companies...</p>
+            )}
+          </div>
+
+          {/* Branch Name */}
+          <div>
+            <label className="block font-medium mb-1 text-xs">
+              Branch Name *
             </label>
             <input
-              {...register("city", {
-                required: "City is required",
+              {...register("branchName", {
+                required: "Branch name is required",
+                maxLength: 100,
               })}
               type="text"
-              className="w-full border border-gray-300 rounded-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
               disabled={isLoading}
             />
-            {errors.city && (
-              <p className="text-red-600 mt-1">{errors.city.message}</p>
+            {errors.branchName && (
+              <p className="text-red-500 text-xs mt-1">{errors.branchName.message}</p>
             )}
           </div>
+
+          {/* Address */}
           <div>
-            <label className="block text-gray-700 font-semibold mb-1">
-              State *
+            <label className="block font-medium mb-1 text-xs">
+              Address *
+            </label>
+            <textarea
+              {...register("address", {
+                required: "Address is required",
+              })}
+              className="w-full border text-xs rounded px-3 py-2 h-20 resize-none outline-none focus:ring focus:border-blue-400"
+              disabled={isLoading}
+            />
+            {errors.address && (
+              <p className="text-red-500 text-xs mt-1">{errors.address.message}</p>
+            )}
+          </div>
+
+          {/* City and State */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block font-medium mb-1 text-xs">
+                City *
+              </label>
+              <input
+                {...register("city", {
+                  required: "City is required",
+                })}
+                type="text"
+                className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
+                disabled={isLoading}
+              />
+              {errors.city && (
+                <p className="text-red-500 text-xs mt-1">{errors.city.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block font-medium mb-1 text-xs">
+                State *
+              </label>
+              <input
+                {...register("state", {
+                  required: "State is required",
+                })}
+                type="text"
+                className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
+                disabled={isLoading}
+              />
+              {errors.state && (
+                <p className="text-red-500 text-xs mt-1">{errors.state.message}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Country and Pincode */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block font-medium mb-1 text-xs">
+                Country *
+              </label>
+              <input
+                {...register("country", {
+                  required: "Country is required",
+                })}
+                type="text"
+                className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
+                disabled={isLoading}
+              />
+              {errors.country && (
+                <p className="text-red-500 text-xs mt-1">{errors.country.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block font-medium mb-1 text-xs">
+                Pincode *
+              </label>
+              <input
+                {...register("pincode", {
+                  required: "Pincode is required",
+                  pattern: {
+                    value: /^[0-9]{6}$/,
+                    message: "Please enter a valid 6-digit pincode",
+                  },
+                })}
+                type="text"
+                className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
+                disabled={isLoading}
+              />
+              {errors.pincode && (
+                <p className="text-red-500 text-xs mt-1">{errors.pincode.message}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Email and Mobile */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block font-medium mb-1 text-xs">
+                Email *
+              </label>
+              <input
+                {...register("email", {
+                  required: "Email is required",
+                  pattern: {
+                    value: /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+                    message: "Please enter a valid email address",
+                  },
+                })}
+                type="email"
+                className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
+                disabled={isLoading}
+              />
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block font-medium mb-1 text-xs">
+                Mobile *
+              </label>
+              <input
+                {...register("mobile", {
+                  required: "Mobile number is required",
+                  pattern: {
+                    value: /^[6-9]\d{9}$/,
+                    message: "Please enter a valid 10-digit mobile number",
+                  },
+                })}
+                type="text"
+                className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
+                disabled={isLoading}
+              />
+              {errors.mobile && (
+                <p className="text-red-500 text-xs mt-1">{errors.mobile.message}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Landline */}
+          <div>
+            <label className="block font-medium mb-1 text-xs">
+              Landline
             </label>
             <input
-              {...register("state", {
-                required: "State is required",
-              })}
+              {...register("landline")}
               type="text"
-              className="w-full border border-gray-300 rounded-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
               disabled={isLoading}
             />
-            {errors.state && (
-              <p className="text-red-600 mt-1">{errors.state.message}</p>
-            )}
           </div>
-        </div>
 
-        {/* Country and Pincode */}
-        <div className="grid grid-cols-2 gap-4">
+          {/* Status */}
           <div>
-            <label className="block text-gray-700 font-semibold mb-1">
-              Country *
+            <label className="block font-medium mb-1 text-xs">
+              Status *
             </label>
-            <input
-              {...register("country", {
-                required: "Country is required",
-              })}
-              type="text"
-              className="w-full border border-gray-300 rounded-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            <select
+              {...register("status")}
+              className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
               disabled={isLoading}
-            />
-            {errors.country && (
-              <p className="text-red-600 mt-1">{errors.country.message}</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-gray-700 font-semibold mb-1">
-              Pincode *
-            </label>
-            <input
-              {...register("pincode", {
-                required: "Pincode is required",
-                pattern: {
-                  value: /^[0-9]{6}$/,
-                  message: "Please enter a valid 6-digit pincode",
-                },
-              })}
-              type="text"
-              className="w-full border border-gray-300 rounded-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              disabled={isLoading}
-            />
-            {errors.pincode && (
-              <p className="text-red-600 mt-1">{errors.pincode.message}</p>
-            )}
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
           </div>
         </div>
 
-        {/* Email and Mobile */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-gray-700 font-semibold mb-1">
-              Email *
-            </label>
-            <input
-              {...register("email", {
-                required: "Email is required",
-                pattern: {
-                  value: /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-                  message: "Please enter a valid email address",
-                },
-              })}
-              type="email"
-              className="w-full border border-gray-300 rounded-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              disabled={isLoading}
-            />
-            {errors.email && (
-              <p className="text-red-600 mt-1">{errors.email.message}</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-gray-700 font-semibold mb-1">
-              Mobile *
-            </label>
-            <input
-              {...register("mobile", {
-                required: "Mobile number is required",
-                pattern: {
-                  value: /^[6-9]\d{9}$/,
-                  message: "Please enter a valid 10-digit mobile number",
-                },
-              })}
-              type="text"
-              className="w-full border border-gray-300 rounded-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              disabled={isLoading}
-            />
-            {errors.mobile && (
-              <p className="text-red-600 mt-1">{errors.mobile.message}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Landline */}
-        <div>
-          <label className="block text-gray-700 font-semibold mb-1">
-            Landline
-          </label>
-          <input
-            {...register("landline")}
-            type="text"
-            className="w-full border border-gray-300 rounded-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            disabled={isLoading}
-          />
-        </div>
-
-        {/* Status */}
-        <div>
-          <label className="block text-gray-700 font-semibold mb-1">
-            Status *
-          </label>
-          <select
-            {...register("status")}
-            className="w-full border border-gray-300 rounded-xs p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            disabled={isLoading}
-          >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-
-        {/* Buttons */}
-        <div className="flex space-x-4 mt-6">
+        {/* Buttons aligned at form bottom */}
+        <div className="mt-6 flex flex-col gap-2">
           <button
             disabled={isLoading}
             onClick={handleFormSubmit}
-            className="bg-indigo-600 w-full cursor-pointer font-bold text-sm text-white rounded-xs px-6 py-2 hover:bg-indigo-700 transition"
+            className="w-full bg-blue-600 cursor-pointer font-bold text-white text-xs py-3 rounded hover:bg-blue-700 transition"
           >
             {editingId ? "Update" : "Create"}
           </button>
           {editingId && (
             <button
               type="button"
-              className="bg-gray-300 cursor-pointer w-full font-bold text-sm text-gray-700 rounded-xs px-6 py-2 hover:bg-gray-400 transition"
+              className="w-full font-bold cursor-pointer bg-gray-200 text-gray-700 text-xs py-3 rounded hover:bg-gray-300 transition"
               onClick={() => {
                 reset();
                 onClearEdit();

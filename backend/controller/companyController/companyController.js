@@ -1,5 +1,13 @@
 import CompanyModel from "../../model/masters/CompanyModel.js";
-
+import mongoose from "mongoose";
+import AccountMasterModel from "../../model/masters/AccountMasterModel.js";
+import OutstandingModel from "../../model/OutstandingModel.js";
+import {PaymentModel,ReceiptModel} from "../../model/FundTransactionMode.js";
+import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
+import {PurchaseModel,SalesModel} from "../../model/TransactionModel.js";
+import {SalesReturnModel,PurchaseReturnModel} from "../../model/TransactionModel.js";
+import BranchModel from "../../model/masters/BranchModel.js";
+import UserModel from "../../model/userModel.js"; // Import the UserModel
 // ✅ Your existing createCompany function
 export const createCompany = async (req, res) => {
   try {
@@ -242,25 +250,87 @@ export const updateCompany = async (req, res) => {
 };
 
 // ✅ NEW: Delete company
+const isCompanyReferenced = async (referencesToCheck, companyId) => {
+  for (const ref of referencesToCheck) {
+    const count = await ref.model.countDocuments({
+      [ref.field]: companyId,
+    });
+    if (count > 0) {
+      return true;
+    }
+  }
+  return false;
+};
+
 export const deleteCompany = async (req, res) => {
+  const session = await mongoose.startSession();
   try {
+    session.startTransaction();
     const { id } = req.params;
 
+    // Check if company exists
     const company = await CompanyModel.findById(id);
     if (!company) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({
         success: false,
         message: "Company not found",
       });
     }
 
-    await CompanyModel.findByIdAndDelete(id);
+    // Collections and fields to check for company references
+    const referencesToCheck = [
+      { model: BranchModel, field: "companyId" },
+      { model: AccountMasterModel, field: "company" },
+      { model: ItemMasterModel, field: "company" },
+      { model: ReceiptModel, field: "company" },
+      { model: PaymentModel, field: "company" },
+      { model: PurchaseModel, field: "company" },
+      { model: SalesModel, field: "company" },
+      { model: UserModel, field: "company" }, 
+      {model:SalesReturnModel,field:"company"},
+      {model:PurchaseReturnModel,field:"company"},
+      // If users are linked to companies
+      // Add more models as needed
+    ];
+
+    // Check if company is referenced in any collection
+    const inUse = await isCompanyReferenced(referencesToCheck, id);
+    if (inUse) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({
+        success: false,
+        message: "Company is used in branches, accounts, transactions or other records and cannot be deleted.",
+      });
+    }
+
+    // Delete the company
+    const result = await CompanyModel.findByIdAndDelete(id, { session });
+    if (!result) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      });
+    }
+
+    // Optionally: Delete related data if needed
+    // await BranchModel.deleteMany({ company: id }, { session });
+    // await AccountMasterModel.deleteMany({ company: id }, { session });
+
+    await session.commitTransaction();
+    session.endSession();
 
     return res.status(200).json({
       success: true,
       message: "Company deleted successfully",
     });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error("Error deleting company:", error);
     return res.status(500).json({
       success: false,

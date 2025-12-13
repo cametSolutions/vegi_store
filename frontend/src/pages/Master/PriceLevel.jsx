@@ -20,7 +20,7 @@ const PriceLevel= () => {
     try {
       // Replace with your API Gateway endpoint
       const response = await axios.post(
-        "http://localhost:5000/api/pricelevel/createpricelevel",
+        "http://localhost:4000/api/pricelevel/createpricelevel",
         { priceLevelName }
       )
       if (response.status === 201) {

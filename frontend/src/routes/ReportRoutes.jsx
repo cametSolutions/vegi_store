@@ -9,6 +9,8 @@ import AccountLedgerDashboard from "@/pages/Reports/accountReports/AccountLedger
 import AccountMonthlyBalanceDashboard from "@/pages/Reports/accountReports/AccountMonthlyBalanceDashboard";
 import OutstandingReport from "@/pages/Reports/outstandingReports/OutstandingReport";
 
+import TransactionSummary from "@/pages/Reports/TransactionSummary/TransactionSummary";
+
 export default function TransactionRoutes() {
   return (
     <Route
@@ -30,6 +32,7 @@ export default function TransactionRoutes() {
       <Route path="account-report" element={<AccountLedgerDashboard />} />
       <Route path="account-monthly-report" element={<AccountMonthlyBalanceDashboard />} />
       <Route path="outstanding-report" element={<OutstandingReport />} />
+  <Route path="transaction-summary/:transactionType" element={<TransactionSummary />} />
 
       {/* Add more transaction routes here */}
     </Route>

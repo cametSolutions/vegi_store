@@ -113,8 +113,13 @@ const TransactionPrintPreview = () => {
               margin: ${isThermal ? "0" : "10mm"};
             }
             
-            body {
+            html, body {
               margin: 0;
+              padding: 0;
+              height: auto;
+            }
+            
+            body {
               padding: ${isThermal ? "16px" : "20px"};
               font-family: 'Courier', monospace;
               width: ${currentSize.width};
@@ -729,6 +734,12 @@ if (isError || !transaction) {
             margin: ${
               printSize === "80mm" || printSize === "127mm" ? "0" : "10mm"
             };
+          }
+
+          html, body {
+            margin: 0;
+            padding: 0;
+            height: auto;
           }
 
           body {
