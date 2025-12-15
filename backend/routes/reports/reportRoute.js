@@ -3,11 +3,14 @@ import { getItemLedgerReport, getItemMonthlyReport } from "../../controller/repo
 import { getAccountLedgerReport, getAccountMonthlySummary } from "../../controller/reportController/accountReportController.js"
 import { getOutstandingReport, getOutstandingSummary } from "../../controller/reportController/outstandingReportController.js"
 import {getTransactionSummary} from "../../controller/reportController/saleReportController.js"
+import { getItemSummaryReport } from "../../controller/reportController/itemSummaryController.js"
 const router=express.Router()
 
 /// Item Reports
 router.get("/item-ledger",getItemLedgerReport)
 router.get("/item-monthly-summary",getItemMonthlyReport)
+router.get("/item-summary",getItemSummaryReport)
+
 
 /// Account Reports
 router.get("/account-ledger",getAccountLedgerReport)
