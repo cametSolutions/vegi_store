@@ -156,6 +156,8 @@ export const getOutstandingSummary = async (req, res) => {
 
 
 
+
+
 /**
  * Get all customers with outstanding balances
  * @route GET /api/reports/getOutstandingCustomers/:companyId/:branchId
@@ -163,7 +165,7 @@ export const getOutstandingSummary = async (req, res) => {
 export const getOutstandingCustomers = async (req, res) => {
   try {
     const { companyId, branchId } = req.params;
-    const { search, minAmount, accountType = 'customer' } = req.query;
+    const { search, minAmount, accountType = 'customer', startDate, endDate } = req.query;
 
     const companyObjectId = new mongoose.Types.ObjectId(companyId);
     const branchObjectId = new mongoose.Types.ObjectId(branchId);
@@ -174,6 +176,14 @@ export const getOutstandingCustomers = async (req, res) => {
       accountType: accountType,
       status: { $nin: ['paid', 'cancelled', 'written_off'] }
     };
+
+    // Add date filter
+    if (startDate && endDate) {
+      matchConditions.transactionDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
 
     const outstandingCustomers = await Outstanding.aggregate([
       { $match: matchConditions },
@@ -364,22 +374,16 @@ export const getOutstandingCustomers = async (req, res) => {
                 }
               }
             }
-          }
-        }
-      },
-
-      // Sort by absolute value of totalOutstanding
-      { 
-        $addFields: {
+          },
           absOutstanding: { $abs: '$totalOutstanding' }
         }
       },
+
       { $sort: { absOutstanding: -1 } },
 
       {
         $project: {
           _id: 0,
-          absOutstanding: 0, // Remove helper field
           customerId: 1,
           customerName: 1,
           customerEmail: 1,
@@ -463,14 +467,10 @@ export const getOutstandingCustomers = async (req, res) => {
   }
 };
 
-/**
- * Get outstanding details for a specific customer
- * @route GET /api/reports/getCustomerOutstandingDetails/:companyId/:branchId/:customerId
- */
 export const getCustomerOutstandingDetails = async (req, res) => {
   try {
     const { companyId, branchId, customerId } = req.params;
-    const { outstandingType } = req.query;
+    const { outstandingType, startDate, endDate, page = 1, limit = 20 } = req.query;
 
     const companyObjectId = new mongoose.Types.ObjectId(companyId);
     const branchObjectId = new mongoose.Types.ObjectId(branchId);
@@ -487,6 +487,21 @@ export const getCustomerOutstandingDetails = async (req, res) => {
     if (outstandingType && ['dr', 'cr'].includes(outstandingType)) {
       matchConditions.outstandingType = outstandingType;
     }
+
+    // Add date filter
+    if (startDate && endDate) {
+      matchConditions.transactionDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Get total count for pagination
+    const totalCount = await Outstanding.countDocuments(matchConditions);
 
     const customerOutstanding = await Outstanding.aggregate([
       { $match: matchConditions },
@@ -519,6 +534,8 @@ export const getCustomerOutstandingDetails = async (req, res) => {
       },
 
       { $sort: { transactionDate: -1 } },
+      { $skip: skip },
+      { $limit: limitNum },
 
       {
         $project: {
@@ -541,18 +558,40 @@ export const getCustomerOutstandingDetails = async (req, res) => {
       }
     ]);
 
-    const totalOutstanding = customerOutstanding.reduce(
-      (sum, txn) => sum + txn.closingBalanceAmount,
-      0
-    );
+    // Calculate totals without pagination
+    const totalsAggregate = await Outstanding.aggregate([
+      { $match: matchConditions },
+      {
+        $group: {
+          _id: null,
+          totalOutstanding: { $sum: '$closingBalanceAmount' },
+          totalDr: {
+            $sum: {
+              $cond: [
+                { $eq: ['$outstandingType', 'dr'] },
+                '$closingBalanceAmount',
+                0
+              ]
+            }
+          },
+          totalCr: {
+            $sum: {
+              $cond: [
+                { $eq: ['$outstandingType', 'cr'] },
+                '$closingBalanceAmount',
+                0
+              ]
+            }
+          }
+        }
+      }
+    ]);
 
-    const totalDr = customerOutstanding
-      .filter(txn => txn.outstandingType === 'dr')
-      .reduce((sum, txn) => sum + txn.closingBalanceAmount, 0);
-
-    const totalCr = customerOutstanding
-      .filter(txn => txn.outstandingType === 'cr')
-      .reduce((sum, txn) => sum + txn.closingBalanceAmount, 0);
+    const totals = totalsAggregate[0] || {
+      totalOutstanding: 0,
+      totalDr: 0,
+      totalCr: 0
+    };
 
     res.status(200).json({
       success: true,
@@ -562,10 +601,13 @@ export const getCustomerOutstandingDetails = async (req, res) => {
           email: customerOutstanding[0].customerEmail,
           phone: customerOutstanding[0].customerPhone
         } : null,
-        totalOutstanding: Math.round(totalOutstanding * 100) / 100,
-        totalDr: Math.round(totalDr * 100) / 100,
-        totalCr: Math.round(Math.abs(totalCr) * 100) / 100,
-        netOutstanding: Math.round((totalDr + totalCr) * 100) / 100,
+        totalOutstanding: Math.round(totals.totalOutstanding * 100) / 100,
+        totalDr: Math.round(totals.totalDr * 100) / 100,
+        totalCr: Math.round(Math.abs(totals.totalCr) * 100) / 100,
+        netOutstanding: Math.round((totals.totalDr + totals.totalCr) * 100) / 100,
+        totalCount: totalCount,
+        currentPage: pageNum,
+        totalPages: Math.ceil(totalCount / limitNum),
         transactionCount: customerOutstanding.length,
         transactions: customerOutstanding
       }
@@ -580,3 +622,4 @@ export const getCustomerOutstandingDetails = async (req, res) => {
     });
   }
 };
+

@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
-import { Filter, ChevronDown } from "lucide-react";
-import { formatDate } from "../../../../../shared/utils/date";
+import { Filter, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { formatDate, DATE_FILTERS, getDateRange } from "../../../../../shared/utils/date";
 import { formatINR } from "../../../../../shared/utils/currency";
 import CustomMoonLoader from "@/components/loaders/CustomMoonLoader";
-
-// You'll need to create these query functions
 import { outstandingQueries } from "../../../hooks/queries/outstandingQueries ";
+import DateFilter from "../../../components/DateFilterComponent/DateFilter";
 
 const OutstandingSummary = () => {
   const selectedCompany = useSelector(
@@ -21,34 +20,66 @@ const OutstandingSummary = () => {
   const branchId = selectedBranch?._id;
 
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [outstandingTypeFilter, setOutstandingTypeFilter] = useState("all"); // 'all', 'dr', 'cr'
+  const [outstandingTypeFilter, setOutstandingTypeFilter] = useState("all");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.THIS_MONTH);
+  const [customDateRange, setCustomDateRange] = useState(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
 
-  // Fetch all customers with outstanding
+  // Get date range based on selected filter
+  const dateRange = customDateRange || getDateRange(dateFilter);
+
   const { data: customersData, isLoading: isLoadingCustomers } = useQuery(
-    outstandingQueries.customersList(companyId, branchId)
+    outstandingQueries.customersList(companyId, branchId, dateRange)
   );
 
-const { data: detailsData, isLoading: isLoadingDetails } = useQuery({
-  ...outstandingQueries.customerDetails(
-    companyId,
-    branchId,
-    selectedCustomer?._id,
-    outstandingTypeFilter
-  ),
-  enabled: !!selectedCustomer,
-});
+  const { data: detailsData, isLoading: isLoadingDetails } = useQuery({
+    ...outstandingQueries.customerDetails(
+      companyId,
+      branchId,
+      selectedCustomer?.customerId,
+      outstandingTypeFilter,
+      dateRange,
+      currentPage,
+      pageSize
+    ),
+    enabled: !!selectedCustomer,
+  });
 
   const customers = customersData?.data?.customers || [];
   const transactions = detailsData?.data?.transactions || [];
   const totalOutstanding = detailsData?.data?.totalOutstanding || 0;
+  const totalPages = detailsData?.data?.totalPages || 0;
+  const totalCount = detailsData?.data?.totalCount || 0;
 
-  // Auto-select first customer if none selected
   useEffect(() => {
     if (customers.length > 0 && !selectedCustomer) {
       setSelectedCustomer(customers[0]);
     }
   }, [customers, selectedCustomer]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCustomer, outstandingTypeFilter, dateFilter]);
+
+  const handleDateFilterChange = (filterType) => {
+    setDateFilter(filterType);
+    if (filterType !== DATE_FILTERS.CUSTOM) {
+      setCustomDateRange(null);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  };
 
   if (!companyId || !branchId) {
     return (
@@ -74,15 +105,11 @@ const { data: detailsData, isLoading: isLoadingDetails } = useQuery({
     <div className="h-[calc(100vh-99px)] flex bg-gray-50">
       {/* Left Section - Customer List (1/4 width) */}
       <div className="w-1/4 bg-white border-r flex flex-col">
-        {/* Header */}
         <div className="flex-none p-3 border-b bg-gray-50">
           <h2 className="text-sm font-bold text-gray-900">Outstanding Customers</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Total: {customers.length} customers
-          </p>
+        
         </div>
 
-        {/* Customer List */}
         <div className="flex-1 overflow-y-auto">
           {isLoadingCustomers ? (
             <div className="flex items-center justify-center h-full">
@@ -96,32 +123,24 @@ const { data: detailsData, isLoading: isLoadingDetails } = useQuery({
             <div className="divide-y">
               {customers.map((customer) => (
                 <div
-                  key={customer._id}
+                  key={customer.customerId}
                   onClick={() => setSelectedCustomer(customer)}
                   className={`p-3 cursor-pointer transition hover:bg-gray-50 ${
-                    selectedCustomer?._id === customer._id
+                    selectedCustomer?.customerId === customer.customerId
                       ? "bg-blue-50 border-l-4 border-blue-600"
                       : ""
                   }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <p className="text-xs font-semibold text-gray-900 truncate">
-                        {customer.accountName}
-                      </p>
-                      <p className="text-[10px] text-gray-500 mt-0.5">
-                        {customer.phone || "No phone"}
+                      <p className="text-xs font-bold text-gray-900 truncate">
+                        {customer.customerName}
                       </p>
                     </div>
                     <div className="ml-2 text-right">
-                      <p
-                        className={`text-xs font-bold ${getOutstandingColor(
-                          customer.outstandingType
-                        )}`}
-                      >
+                      <p className="text-xs font-bold text-gray-900">
                         {formatINR(customer.totalOutstanding)}
                       </p>
-                      {getOutstandingBadge(customer.outstandingType)}
                     </div>
                   </div>
                 </div>
@@ -133,90 +152,86 @@ const { data: detailsData, isLoading: isLoadingDetails } = useQuery({
 
       {/* Right Section - Transaction Details (3/4 width) */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
+        {/* Fixed Header - No Scrolling */}
         <div className="flex-none bg-white shadow-sm border-b p-3">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-base font-extrabold text-gray-900">
-                {selectedCustomer?.accountName || "Select a Customer"}
+              <h1 className="text-base font-bold text-gray-900">
+                {selectedCustomer?.customerName || "Select a Customer"}
               </h1>
-              {selectedCustomer && (
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Total Outstanding:{" "}
-                  <span
-                    className={`font-bold ${getOutstandingColor(
-                      selectedCustomer.outstandingType
-                    )}`}
-                  >
-                    {formatINR(totalOutstanding)}
-                  </span>
-                </p>
-              )}
             </div>
 
-            {/* Filter Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition"
-              >
-                <Filter className="w-3.5 h-3.5" />
-                Filter:{" "}
-                {outstandingTypeFilter === "all"
-                  ? "All"
-                  : outstandingTypeFilter.toUpperCase()}
-                <ChevronDown className="w-3 h-3" />
-              </button>
+            <div className="flex items-center gap-2">
+              {/* Date Filter */}
+              <DateFilter
+                selectedFilter={dateFilter}
+                onFilterChange={handleDateFilterChange}
+              />
 
-              {showFilterDropdown && (
-                <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-10">
-                  <button
-                    onClick={() => {
-                      setOutstandingTypeFilter("all");
-                      setShowFilterDropdown(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 ${
-                      outstandingTypeFilter === "all"
-                        ? "bg-blue-50 text-blue-700 font-semibold"
-                        : ""
-                    }`}
-                  >
-                    All
-                  </button>
-                  <button
-                    onClick={() => {
-                      setOutstandingTypeFilter("dr");
-                      setShowFilterDropdown(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 ${
-                      outstandingTypeFilter === "dr"
-                        ? "bg-blue-50 text-blue-700 font-semibold"
-                        : ""
-                    }`}
-                  >
-                    DR (Receivable)
-                  </button>
-                  <button
-                    onClick={() => {
-                      setOutstandingTypeFilter("cr");
-                      setShowFilterDropdown(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 ${
-                      outstandingTypeFilter === "cr"
-                        ? "bg-blue-50 text-blue-700 font-semibold"
-                        : ""
-                    }`}
-                  >
-                    CR (Payable)
-                  </button>
-                </div>
-              )}
+              {/* Outstanding Type Filter */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                  className="flex items-center gap-2 px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition"
+                >
+                  <Filter className="w-3.5 h-3.5" />
+                  Filter:{" "}
+                  {outstandingTypeFilter === "all"
+                    ? "All"
+                    : outstandingTypeFilter.toUpperCase()}
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+
+                {showFilterDropdown && (
+                  <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-10">
+                    <button
+                      onClick={() => {
+                        setOutstandingTypeFilter("all");
+                        setShowFilterDropdown(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 ${
+                        outstandingTypeFilter === "all"
+                          ? "bg-blue-50 text-blue-700 font-semibold"
+                          : ""
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => {
+                        setOutstandingTypeFilter("dr");
+                        setShowFilterDropdown(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 ${
+                        outstandingTypeFilter === "dr"
+                          ? "bg-blue-50 text-blue-700 font-semibold"
+                          : ""
+                      }`}
+                    >
+                      DR (Receivable)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setOutstandingTypeFilter("cr");
+                        setShowFilterDropdown(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 ${
+                        outstandingTypeFilter === "cr"
+                          ? "bg-blue-50 text-blue-700 font-semibold"
+                          : ""
+                      }`}
+                    >
+                      CR (Payable)
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Transaction Table */}
-        <div className="flex-1 overflow-hidden p-2">
+        {/* Scrollable Table Area */}
+        <div className="flex-1 overflow-hidden pb-2">
           <div className="bg-white shadow-sm h-full flex flex-col">
             {!selectedCustomer ? (
               <div className="flex items-center justify-center flex-1">
@@ -234,7 +249,7 @@ const { data: detailsData, isLoading: isLoadingDetails } = useQuery({
               </div>
             ) : (
               <>
-                {/* Table Header */}
+                {/* Fixed Table Header */}
                 <div className="flex-none px-2">
                   <table className="w-full table-fixed">
                     <thead className="bg-gray-50 border-b">
@@ -286,7 +301,7 @@ const { data: detailsData, isLoading: isLoadingDetails } = useQuery({
                   </table>
                 </div>
 
-                {/* Table Body */}
+                {/* Scrollable Table Body */}
                 <div className="flex-1 overflow-y-auto px-2">
                   <table className="w-full table-fixed">
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -299,7 +314,7 @@ const { data: detailsData, isLoading: isLoadingDetails } = useQuery({
                             className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 text-center"
                             style={{ width: "50px" }}
                           >
-                            {index + 1}
+                            {(currentPage - 1) * pageSize + index + 1}
                           </td>
                           <td
                             className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 font-medium text-center"
@@ -347,7 +362,7 @@ const { data: detailsData, isLoading: isLoadingDetails } = useQuery({
                   </table>
                 </div>
 
-                {/* Table Footer */}
+                {/* Fixed Table Footer (Total) */}
                 <div className="flex-none border-t-2 px-2">
                   <table className="w-full table-fixed">
                     <tfoot className="bg-gray-50">
@@ -364,9 +379,7 @@ const { data: detailsData, isLoading: isLoadingDetails } = useQuery({
                           Total Outstanding
                         </td>
                         <td
-                          className={`px-2 py-1.5 text-xs font-bold text-center ${getOutstandingColor(
-                            selectedCustomer?.outstandingType
-                          )}`}
+                          className="px-2 py-1.5 text-xs font-bold text-center text-gray-900"
                           style={{ width: "130px" }}
                         >
                           {formatINR(totalOutstanding)}
@@ -374,6 +387,36 @@ const { data: detailsData, isLoading: isLoadingDetails } = useQuery({
                       </tr>
                     </tfoot>
                   </table>
+                </div>
+
+                {/* Fixed Footer with Pagination */}
+                <div className="flex-none flex items-center justify-between px-2 py-2 border-t bg-gray-50">
+                  {/* Left: Record Count */}
+                  <div className="text-xs text-gray-700">
+                    Showing {(currentPage - 1) * pageSize + 1}-
+                    {Math.min(currentPage * pageSize, totalCount)} of {totalCount}
+                  </div>
+
+                  {/* Right: Pagination Controls */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={handlePreviousPage}
+                      disabled={currentPage === 1}
+                      className="p-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-xs text-gray-700 px-2">
+                      {currentPage} / {totalPages}
+                    </span>
+                    <button
+                      onClick={handleNextPage}
+                      disabled={currentPage === totalPages}
+                      className="p-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </>
             )}

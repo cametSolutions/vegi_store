@@ -13,6 +13,8 @@ export const outstandingService = {
             ...(params.search && { search: params.search }),
             ...(params.minAmount && { minAmount: params.minAmount }),
             ...(params.accountType && { accountType: params.accountType }),
+            ...(params.startDate && { startDate: params.startDate }),
+            ...(params.endDate && { endDate: params.endDate }),
           },
         }
       );
@@ -39,6 +41,10 @@ export const outstandingService = {
             ...(params.outstandingType && params.outstandingType !== 'all' && { 
               outstandingType: params.outstandingType 
             }),
+            ...(params.startDate && { startDate: params.startDate }),
+            ...(params.endDate && { endDate: params.endDate }),
+            ...(params.page && { page: params.page }),
+            ...(params.limit && { limit: params.limit }),
           },
         }
       );
@@ -93,6 +99,8 @@ export const outstandingService = {
           companyId,
           branchId,
           ...(params.accountType && { accountType: params.accountType }),
+          ...(params.startDate && { startDate: params.startDate }),
+          ...(params.endDate && { endDate: params.endDate }),
         },
       });
       return response.data;
@@ -108,7 +116,7 @@ export const outstandingService = {
     }
   },
 
-  // Export to Excel (if needed in future)
+  // Export to Excel
   exportToExcel: async (companyId, branchId, customerId, params = {}) => {
     try {
       const response = await api.get(
@@ -122,6 +130,20 @@ export const outstandingService = {
           responseType: "blob",
         }
       );
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `outstanding_${customerId}_${new Date().toISOString().split('T')[0]}.xlsx`
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -134,7 +156,7 @@ export const outstandingService = {
     }
   },
 
-  // Export to PDF (if needed in future)
+  // Export to PDF
   exportToPDF: async (companyId, branchId, customerId, params = {}) => {
     try {
       const response = await api.get(
@@ -148,6 +170,20 @@ export const outstandingService = {
           responseType: "blob",
         }
       );
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `outstanding_${customerId}_${new Date().toISOString().split('T')[0]}.pdf`
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
