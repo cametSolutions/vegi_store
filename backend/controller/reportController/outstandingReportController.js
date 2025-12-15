@@ -1,7 +1,160 @@
-
-import OutstandingModel from "../../model/OutstandingModel.js";
-
+import Outstanding from "../../model/OutstandingModel.js";
 import mongoose from "mongoose";
+
+
+export const getOutstandingReport = async (req, res) => {
+  try {
+    const {
+      companyId,
+      branchId,
+      accountId,
+      accountType,
+      outstandingType,
+      startDate,
+      endDate,
+      status,
+      page = 1,
+      limit = 200,
+    } = req.query;
+
+    // Build match conditions
+    const matchConditions = {};
+
+    if (companyId) matchConditions.company =new  mongoose.Types.ObjectId(companyId);
+    if (branchId) matchConditions.branch =new  mongoose.Types.ObjectId(branchId);
+    if (accountId) matchConditions.account = new mongoose.Types.ObjectId(accountId);
+    if (accountType) matchConditions.accountType = accountType;
+    if (outstandingType) matchConditions.outstandingType = outstandingType;
+    if (status) matchConditions.status = status;
+
+    // Date range filter
+    if (startDate || endDate) {
+      matchConditions.transactionDate = {};
+      if (startDate) matchConditions.transactionDate.$gte = new Date(startDate);
+      if (endDate) matchConditions.transactionDate.$lte = new Date(endDate);
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Query with sorting by account first, then by transaction date
+    const outstandingData = await Outstanding.find(matchConditions)
+      .populate("account", "accountName phoneNo")
+      .populate("branch", "name")
+      .sort({ account: 1, transactionDate: -1 }) // Sort by account first, then by date
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    // Get total count for pagination
+    const totalCount = await Outstanding.countDocuments(matchConditions);
+
+    // Format the response
+    const formattedData = outstandingData.map((item) => ({
+      _id: item._id,
+      accountName: item.accountName,
+      accountPhone: item.account?.phoneNo || "",
+      accountType: item.accountType,
+      branchName: item.branch?.name || "",
+      transactionType: item.transactionType,
+      transactionNumber: item.transactionNumber,
+      transactionDate: item.transactionDate,
+      outstandingType: item.outstandingType,
+      totalAmount: item.totalAmount,
+      paidAmount: item.paidAmount,
+      closingBalanceAmount: item.closingBalanceAmount,
+      dueDate: item.dueDate,
+      status: item.status,
+      isOverdue: new Date() > item.dueDate && item.closingBalanceAmount !== 0,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: formattedData,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalCount / parseInt(limit)),
+        totalRecords: totalCount,
+        limit: parseInt(limit),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching outstanding report:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching outstanding report",
+      error: error.message,
+    });
+  }
+};
+
+// Get outstanding summary
+export const getOutstandingSummary = async (req, res) => {
+  try {
+    const { companyId, branchId, accountType } = req.query;
+
+    const matchConditions = { status: { $ne: "paid" } };
+    if (companyId) matchConditions.company =new mongoose.Types.ObjectId(companyId);
+    if (branchId) matchConditions.branch = new mongoose.Types.ObjectId(branchId);
+    if (accountType) matchConditions.accountType = accountType;
+
+    const summary = await Outstanding.aggregate([
+      { $match: matchConditions },
+      {
+        $group: {
+          _id: "$outstandingType",
+          totalOutstanding: { $sum: "$closingBalanceAmount" },
+          totalAmount: { $sum: "$totalAmount" },
+          totalPaid: { $sum: "$paidAmount" },
+          count: { $sum: 1 },
+          overdueCount: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $lt: ["$dueDate", new Date()] },
+                    { $ne: ["$closingBalanceAmount", 0] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          overdueAmount: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $lt: ["$dueDate", new Date()] },
+                    { $ne: ["$closingBalanceAmount", 0] },
+                  ],
+                },
+                "$closingBalanceAmount",
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: summary,
+    });
+  } catch (error) {
+    console.error("Error fetching outstanding summary:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching outstanding summary",
+      error: error.message,
+    });
+  }
+};
+
+
+
 
 /**
  * Get all customers with outstanding balances
@@ -15,19 +168,16 @@ export const getOutstandingCustomers = async (req, res) => {
     const companyObjectId = new mongoose.Types.ObjectId(companyId);
     const branchObjectId = new mongoose.Types.ObjectId(branchId);
 
-    // Build match conditions for OutstandingModel collection
     const matchConditions = {
       company: companyObjectId,
       branch: branchObjectId,
-      accountType: accountType, // 'customer' or 'supplier'
+      accountType: accountType,
       status: { $nin: ['paid', 'cancelled', 'written_off'] }
     };
 
-    // Aggregation pipeline
-    const outstandingCustomers = await OutstandingModel.aggregate([
+    const outstandingCustomers = await Outstanding.aggregate([
       { $match: matchConditions },
 
-      // Lookup account details
       {
         $lookup: {
           from: 'accountmasters',
@@ -38,7 +188,6 @@ export const getOutstandingCustomers = async (req, res) => {
       },
       { $unwind: '$accountDetails' },
 
-      // Search filter
       ...(search ? [{
         $match: {
           $or: [
@@ -50,7 +199,6 @@ export const getOutstandingCustomers = async (req, res) => {
         }
       }] : []),
 
-      // Calculate days overdue
       {
         $addFields: {
           daysOverdue: {
@@ -68,11 +216,10 @@ export const getOutstandingCustomers = async (req, res) => {
         }
       },
 
-      // Group by account
       {
         $group: {
           _id: '$account',
-          customerId: { $first: '$accountDetails._id' },
+          customerId: { $first: '$account' },
           customerName: { $first: '$accountName' },
           customerEmail: { $first: '$accountDetails.email' },
           customerPhone: { $first: '$accountDetails.phoneNo' },
@@ -100,7 +247,6 @@ export const getOutstandingCustomers = async (req, res) => {
           newestTransactionDate: { $max: '$transactionDate' },
           maxDaysOverdue: { $max: '$daysOverdue' },
           
-          // Collect all outstanding transactions
           transactions: {
             $push: {
               transactionId: '$_id',
@@ -119,14 +265,12 @@ export const getOutstandingCustomers = async (req, res) => {
         }
       },
 
-      // Filter by minimum amount if provided
       ...(minAmount ? [{
         $match: {
           totalOutstanding: { $gte: parseFloat(minAmount) }
         }
       }] : []),
 
-      // Calculate aging buckets
       {
         $addFields: {
           aging: {
@@ -224,17 +368,18 @@ export const getOutstandingCustomers = async (req, res) => {
         }
       },
 
-      // Sort by absolute outstanding amount (highest first)
+      // Sort by absolute value of totalOutstanding
       { 
-        $sort: { 
-          totalOutstanding: -1 
-        } 
+        $addFields: {
+          absOutstanding: { $abs: '$totalOutstanding' }
+        }
       },
+      { $sort: { absOutstanding: -1 } },
 
-      // Project final output
       {
         $project: {
           _id: 0,
+          absOutstanding: 0, // Remove helper field
           customerId: 1,
           customerName: 1,
           customerEmail: 1,
@@ -253,31 +398,11 @@ export const getOutstandingCustomers = async (req, res) => {
             days31_60: { $round: ['$aging.days31_60', 2] },
             days61_90: { $round: ['$aging.days61_90', 2] },
             days90Plus: { $round: ['$aging.days90Plus', 2] }
-          },
-          transactions: {
-            $map: {
-              input: '$transactions',
-              as: 'txn',
-              in: {
-                transactionId: '$$txn.transactionId',
-                transactionNumber: '$$txn.transactionNumber',
-                transactionDate: '$$txn.transactionDate',
-                transactionType: '$$txn.transactionType',
-                dueDate: '$$txn.dueDate',
-                totalAmount: { $round: ['$$txn.totalAmount', 2] },
-                paidAmount: { $round: ['$$txn.paidAmount', 2] },
-                closingBalanceAmount: { $round: ['$$txn.closingBalanceAmount', 2] },
-                outstandingType: '$$txn.outstandingType',
-                daysOverdue: { $round: ['$$txn.daysOverdue', 0] },
-                status: '$$txn.status'
-              }
-            }
           }
         }
       }
     ]);
 
-    // Calculate summary totals
     const summary = {
       totalCustomers: outstandingCustomers.length,
       totalOutstandingAmount: outstandingCustomers.reduce(
@@ -345,7 +470,7 @@ export const getOutstandingCustomers = async (req, res) => {
 export const getCustomerOutstandingDetails = async (req, res) => {
   try {
     const { companyId, branchId, customerId } = req.params;
-    const { outstandingType } = req.query; // 'dr', 'cr', or undefined for all
+    const { outstandingType } = req.query;
 
     const companyObjectId = new mongoose.Types.ObjectId(companyId);
     const branchObjectId = new mongoose.Types.ObjectId(branchId);
@@ -363,10 +488,9 @@ export const getCustomerOutstandingDetails = async (req, res) => {
       matchConditions.outstandingType = outstandingType;
     }
 
-    const customerOutstanding = await OutstandingModel.aggregate([
+    const customerOutstanding = await Outstanding.aggregate([
       { $match: matchConditions },
 
-      // Lookup account details
       {
         $lookup: {
           from: 'accountmasters',
@@ -377,7 +501,6 @@ export const getCustomerOutstandingDetails = async (req, res) => {
       },
       { $unwind: '$accountDetails' },
 
-      // Calculate days overdue
       {
         $addFields: {
           daysOverdue: {
@@ -395,7 +518,6 @@ export const getCustomerOutstandingDetails = async (req, res) => {
         }
       },
 
-      // Sort by transaction date (newest first)
       { $sort: { transactionDate: -1 } },
 
       {
@@ -430,7 +552,7 @@ export const getCustomerOutstandingDetails = async (req, res) => {
 
     const totalCr = customerOutstanding
       .filter(txn => txn.outstandingType === 'cr')
-      .reduce((sum, txn) => sum + Math.abs(txn.closingBalanceAmount), 0);
+      .reduce((sum, txn) => sum + txn.closingBalanceAmount, 0);
 
     res.status(200).json({
       success: true,
@@ -442,8 +564,8 @@ export const getCustomerOutstandingDetails = async (req, res) => {
         } : null,
         totalOutstanding: Math.round(totalOutstanding * 100) / 100,
         totalDr: Math.round(totalDr * 100) / 100,
-        totalCr: Math.round(totalCr * 100) / 100,
-        netOutstanding: Math.round((totalDr - totalCr) * 100) / 100,
+        totalCr: Math.round(Math.abs(totalCr) * 100) / 100,
+        netOutstanding: Math.round((totalDr + totalCr) * 100) / 100,
         transactionCount: customerOutstanding.length,
         transactions: customerOutstanding
       }
