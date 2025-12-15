@@ -20,7 +20,7 @@ import userRoute from "./routes/user/userRoute.js";
 import pricelevelRoute from "./routes/pricelevel/pricelevelRoute.js";
 import acccountmasterRoute from "./routes/accountmaster/accountMasterRoute.js";
 import itemRoute from "./routes/itemmaster/itemRoute.js";
-import fundTransactionRoutes from "./routes/";
+import fundTransactionRoutes from "./routes/FundTransactionRoutes/fundTransactionRoutes.js";
 import saleRoutes from "./routes/transactions/saleRoutes.js";
 import devRoutes from "./routes/devRoutes/devRoutes.js";
 import jobRoutes from "./routes/job/jobRoutes.js";
