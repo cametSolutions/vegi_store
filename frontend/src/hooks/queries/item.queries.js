@@ -49,4 +49,21 @@ export const itemMasterQueries = {
       enabled: !!id,
       staleTime: 5 * 60 * 1000,
     }),
+
+    getItemSummary: (itemId, companyId, branchId, options = {}) =>
+    queryOptions({
+      queryKey: [
+        ...itemMasterQueries.all(),
+        "item-summary",
+        itemId,
+        companyId,
+        branchId,
+      ],
+      queryFn: () =>
+        itemServices.getItemSummary(itemId, companyId, branchId),
+      enabled: !!itemId && !!companyId && !!branchId,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000,
+      ...options,
+    }),
 };

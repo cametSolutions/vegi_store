@@ -69,6 +69,10 @@ const Navbar = () => {
           label: "Purchase Return Summary",
           path: "/reports/transaction-summary/purchase_return",
         },
+        {
+          label: "Items Summary",
+          path: "/reports/items-summary",
+        },
 
 
       ],

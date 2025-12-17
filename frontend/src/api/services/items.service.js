@@ -74,4 +74,18 @@ export const itemServices = {
     );
     return response.data;
   },
+
+  getItemSummary: async (companyId, branchId,itemId,startDate,endDate,page,limit) => {
+    try {
+      const response = await api.get("/reports/items-summary", {
+        params: { companyId, branchId,itemId,startDate,endDate,page,limit },
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
 };
