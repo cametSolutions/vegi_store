@@ -16,26 +16,16 @@ export const getOpeningBalance = async (company, branch, itemObj, selectedDate) 
   const branchId = branch;
   const itemId = itemObj;
 
-  console.log("\n🚀 ========== OPENING BALANCE CALCULATION START ==========");
-  console.log("📥 Input:", {
-    company: companyId.toString().slice(-4),
-    branch: branchId.toString().slice(-4),
-    item: itemId.toString().slice(-4),
-    selectedDate: selectedDate?.toISOString?.().split("T")[0],
-  });
-
   if (!selectedDate || isNaN(selectedDate.getTime())) {
-    console.error("❌ Invalid selectedDate");
     return 0;
   }
 
   const BASE_START_DATE = new Date("2025-04-01T00:00:00.000Z");
   if (selectedDate < BASE_START_DATE) {
-    console.log("⚠️ Selected date before base start (Apr 1 2025) → opening = 0");
     return 0;
   }
 
-  // 1️⃣ Previous month
+  // Previous month of selectedDate
   const prevMonthDate = new Date(
     selectedDate.getFullYear(),
     selectedDate.getMonth() - 1,
@@ -43,13 +33,8 @@ export const getOpeningBalance = async (company, branch, itemObj, selectedDate) 
   );
   const prevYear = prevMonthDate.getFullYear();
   const prevMonthNum = prevMonthDate.getMonth() + 1;
-  console.log(
-    "\n📅 STEP 1: Previous month:",
-    `${prevYear}-${String(prevMonthNum).padStart(2, "0")}`
-  );
 
-  // 2️⃣ Last clean monthly
-  console.log("\n🔍 STEP 2: Find last clean monthly balance...");
+  // Last clean monthly <= previous month
   const lastCleanMonthly = await ItemMonthlyBalance.findOne({
     company: companyId,
     branch: branchId,
@@ -73,15 +58,8 @@ export const getOpeningBalance = async (company, branch, itemObj, selectedDate) 
       lastCleanMonthly.month,
       1
     );
-    console.log("  ✅ Clean month found:");
-    console.log("     periodKey:", lastCleanMonthly.periodKey);
-    console.log("     closingStock:", baseQuantity, "kg");
-    console.log(
-      "     dirty period starts from:",
-      dirtyPeriodStartDate.toISOString().split("T")[0]
-    );
   } else {
-    console.log("  ❌ No clean month found, using ItemMaster fallback...");
+    // ItemMaster fallback
     const itemMaster = await ItemMasterModel.findOne({
       _id: itemId,
       company: companyId,
@@ -93,33 +71,14 @@ export const getOpeningBalance = async (company, branch, itemObj, selectedDate) 
         (s) => s.branch.toString() === branchId.toString()
       );
       baseQuantity = branchStock?.openingStock || 0;
-      console.log("  ✅ ItemMaster found:");
-      console.log("     openingStock:", baseQuantity, "kg");
-    } else {
-      console.log("  ⚠️ No ItemMaster found → baseQuantity = 0");
     }
-
     dirtyPeriodStartDate = new Date("2025-04-01T00:00:00.000Z");
-    console.log(
-      "     dirty period starts from BASE:",
-      dirtyPeriodStartDate.toISOString().split("T")[0]
-    );
   }
 
-  // 3️⃣ Dirty period end
   const dirtyPeriodEnd = new Date(selectedDate);
   dirtyPeriodEnd.setHours(0, 0, 0, 0);
 
-  console.log("\n📊 STEP 3: Dirty period range");
-  console.log(
-    "     from",
-    dirtyPeriodStartDate.toISOString().split("T")[0],
-    "to",
-    dirtyPeriodEnd.toISOString().split("T")[0]
-  );
-
-  // 4️⃣ Original ledgers with movement sign
-  console.log("\n💾 STEP 4: Original ledgers (movement-aware)");
+  // Original ledgers in dirty period (movement-aware)
   const originalLedgers = await ItemLedger.aggregate([
     {
       $match: {
@@ -146,30 +105,13 @@ export const getOpeningBalance = async (company, branch, itemObj, selectedDate) 
       $group: {
         _id: null,
         totalSignedQuantity: { $sum: "$signedQuantity" },
-        count: { $sum: 1 },
-        totalIn: {
-          $sum: {
-            $cond: [{ $eq: ["$movementType", "in"] }, "$quantity", 0],
-          },
-        },
-        totalOut: {
-          $sum: {
-            $cond: [{ $eq: ["$movementType", "out"] }, "$quantity", 0],
-          },
-        },
       },
     },
   ]);
 
   const origSignedQty = originalLedgers[0]?.totalSignedQuantity || 0;
-  console.log("  ledgers count:", originalLedgers[0]?.count || 0);
-  console.log("  totalIn:", originalLedgers[0]?.totalIn || 0, "kg");
-  console.log("  totalOut:", originalLedgers[0]?.totalOut || 0, "kg");
-  console.log("  totalSignedQuantity:", origSignedQty, "kg");
 
-  // 5️⃣ Adjustments with correct movement logic
-  console.log("\n⚙️ STEP 5: Adjustments (movement-aware)");
-
+  // Adjustments in dirty period (movement-aware)
   const adjustments = await AdjustmentEntry.aggregate([
     {
       $match: {
@@ -186,33 +128,8 @@ export const getOpeningBalance = async (company, branch, itemObj, selectedDate) 
     },
     { $unwind: "$itemAdjustments" },
     { $match: { "itemAdjustments.item": itemId } },
-
     {
       $addFields: {
-        movementType: {
-          $switch: {
-            branches: [
-              {
-                case: { $eq: ["$originalTransactionModel", "Sale"] },
-                then: "out",
-              },
-              {
-                case: { $eq: ["$originalTransactionModel", "PurchaseReturn"] },
-                then: "out",
-              },
-              {
-                case: { $eq: ["$originalTransactionModel", "Purchase"] },
-                then: "in",
-              },
-              {
-                case: { $eq: ["$originalTransactionModel", "SalesReturn"] },
-                then: "in",
-              },
-            ],
-            default: "in",
-          },
-        },
-
         signedQuantityDelta: {
           $multiply: [
             "$itemAdjustments.quantityDelta",
@@ -245,47 +162,17 @@ export const getOpeningBalance = async (company, branch, itemObj, selectedDate) 
         },
       },
     },
-
     {
       $group: {
         _id: null,
         totalSignedQtyDelta: { $sum: "$signedQuantityDelta" },
-        count: { $sum: 1 },
-        breakdown: {
-          $push: {
-            txnModel: "$originalTransactionModel",
-            txnNum: "$originalTransactionNumber",
-            rawDelta: "$itemAdjustments.quantityDelta",
-            movementType: "$movementType",
-            signedDelta: "$signedQuantityDelta",
-          },
-        },
       },
     },
   ]);
 
   const adjSignedQty = adjustments[0]?.totalSignedQtyDelta || 0;
-  console.log("  adjustments count:", adjustments[0]?.count || 0);
-  console.log("  totalSignedQtyDelta:", adjSignedQty, "kg");
-  if (adjustments[0]?.breakdown?.length) {
-    console.log(
-      "  breakdown:",
-      JSON.stringify(adjustments[0].breakdown, null, 2)
-    );
-  }
-
-  // 6️⃣ Final opening
-  console.log("\n🧮 STEP 6: Final opening calculation");
-  console.log("  baseQuantity:", baseQuantity, "kg");
-  console.log("  + origSignedQty:", origSignedQty, "kg");
-  console.log("  + adjSignedQty:", adjSignedQty, "kg");
 
   const openingQuantity = baseQuantity + origSignedQty + adjSignedQty;
-
-  console.log("👉 FINAL OPENING:", openingQuantity, "kg");
-  console.log(
-    "🔚 ========== OPENING BALANCE CALCULATION END ==========\n"
-  );
 
   return openingQuantity;
 };
@@ -301,16 +188,23 @@ export const getAdjustedItemLedger = async ({
   startDate,
   endDate,
   openingQuantity,
+  transactionType = null, // 'sale' | 'purchase' | null
 }) => {
+  const baseMatch = {
+    company: companyId,
+    branch: branchId,
+    item: itemId,
+    transactionDate: { $gte: startDate, $lte: endDate },
+  };
+
+  if (transactionType === "sale") {
+    baseMatch.transactionType = { $in: ["sale", "sales_return"] };
+  } else if (transactionType === "purchase") {
+    baseMatch.transactionType = { $in: ["purchase", "purchase_return"] };
+  }
+
   const ledgers = await ItemLedger.aggregate([
-    {
-      $match: {
-        company: companyId,
-        branch: branchId,
-        item: itemId,
-        transactionDate: { $gte: startDate, $lte: endDate },
-      },
-    },
+    { $match: baseMatch },
 
     {
       $lookup: {
@@ -465,6 +359,8 @@ export const getAdjustedItemLedger = async ({
   let runningQty = openingQuantity;
   let totalIn = 0;
   let totalOut = 0;
+  let amountIn = 0;
+  let amountOut = 0;
 
   const enriched = ledgers.map((doc) => {
     const movementSign = doc.movementType === "out" ? -1 : 1;
@@ -473,8 +369,10 @@ export const getAdjustedItemLedger = async ({
 
     if (movementSign === 1) {
       totalIn += doc.effectiveQuantity;
+      amountIn += doc.effectiveAmountAfterTax;
     } else {
       totalOut += doc.effectiveQuantity;
+      amountOut += doc.effectiveAmountAfterTax;
     }
 
     return {
@@ -491,6 +389,8 @@ export const getAdjustedItemLedger = async ({
     summary: {
       totalIn,
       totalOut,
+      amountIn,
+      amountOut,
       closingQuantity: runningQty,
       transactionCount: enriched.length,
     },
@@ -498,54 +398,68 @@ export const getAdjustedItemLedger = async ({
 };
 
 /* =========================================================================
-   3️⃣ refoldLedgersWithAdjustments – item summary using the above
+   3️⃣ Generic multi-item refold (service-level, no view shaping)
    ========================================================================= */
 
 export const refoldLedgersWithAdjustments = async ({
-  company: companyIdStr,
-  branch: branchIdStr,
-  item: itemIdStr = null,
+  company,
+  branch,
   startDate,
   endDate,
-  groupBy = "item", // for now only 'item' is supported
+  item = null,
+  transactionType = null, // 'sale' | 'purchase' | null
+  page = 1,
+  limit = 50,
 }) => {
-  const companyId = toObjectId(companyIdStr);
-  const branchId = toObjectId(branchIdStr);
-  const itemFilter = itemIdStr ? toObjectId(itemIdStr) : null;
+  const companyId = toObjectId(company);
+  const branchId = toObjectId(branch);
+  const itemFilter = item ? toObjectId(item) : null;
 
-  const match = {
+  const baseMatch = {
     company: companyId,
     branch: branchId,
     transactionDate: { $gte: startDate, $lte: endDate },
   };
-  if (itemFilter) match.item = itemFilter;
+  if (itemFilter) baseMatch.item = itemFilter;
 
-  console.log("🔍 refoldLedgersWithAdjustments match:", match);
+  if (transactionType === "sale") {
+    baseMatch.transactionType = { $in: ["sale", "sales_return"] };
+  } else if (transactionType === "purchase") {
+    baseMatch.transactionType = { $in: ["purchase", "purchase_return"] };
+  }
 
-  // 1️⃣ Get raw ledgers in range
-  const rawLedgers = await ItemLedger.aggregate([
-    { $match: match },
+  // Distinct item list (for pagination)
+  const itemFacet = await ItemLedger.aggregate([
+    { $match: baseMatch },
     {
-      $project: {
-        item: 1,
-        itemName: 1,
-        itemCode: 1,
-      },
-    },
-    { $group: {
+      $group: {
         _id: "$item",
         itemName: { $first: "$itemName" },
         itemCode: { $first: "$itemCode" },
-      }
+        unit: { $first: "$unit" },
+      },
+    },
+    {
+      $sort: { itemName: 1, itemCode: 1 },
+    },
+    {
+      $facet: {
+        meta: [{ $count: "totalItems" }],
+        data: [
+          { $skip: (page - 1) * limit },
+          { $limit: limit },
+        ],
+      },
     },
   ]);
 
-  console.log("📊 Distinct items in range:", rawLedgers.length);
+  const totalItems = itemFacet[0]?.meta[0]?.totalItems || 0;
+  const itemsPage = itemFacet[0]?.data || [];
 
-  const result = [];
+  const ledgersPerItem = [];
 
-  // 2️⃣ Process per item (could be parallel with Promise.all if needed)
-  for (const row of rawLedgers) {
+  // Process only paginated items
+  for (const row of itemsPage) {
     const itemId = row._id;
 
     const openingQty = await getOpeningBalance(
@@ -562,25 +476,34 @@ export const refoldLedgersWithAdjustments = async ({
       startDate,
       endDate,
       openingQuantity: openingQty,
+      transactionType,
     });
 
-    result.push({
+    ledgersPerItem.push({
       _id: itemId,
       itemName: row.itemName,
       itemCode: row.itemCode,
-      openingBalance: adjusted.openingQuantity,
-      transactions: adjusted.transactions,
+      unit: row.unit,
+      openingQuantity: adjusted.openingQuantity,
       summary: adjusted.summary,
+      transactions: adjusted.transactions, // controller can omit if not needed
     });
   }
 
   return {
-    ledgers: result,
-    debug: {
-      itemCount: result.length,
+    items: ledgersPerItem,
+    pagination: {
+      page,
+      limit,
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit) || 1,
+    },
+    filters: {
+      company,
+      branch,
       startDate,
       endDate,
+      transactionType: transactionType || "all",
     },
-    timestamp: new Date(),
   };
 };
