@@ -370,158 +370,286 @@ const isPeriodDirty = async (company, branch, item, startDate) => {
 
 export const getOpeningBalance = async (company, branch, itemObj, selectedDate) => {
   const companyId = company;
-  const branchId = branch; 
+  const branchId = branch;
   const itemId = itemObj;
 
-  if (!selectedDate || isNaN(selectedDate.getTime())) return 0;
+  console.log("\n🚀 ========== OPENING BALANCE CALCULATION START ==========");
+  console.log("📥 Input:", {
+    company: companyId.toString().slice(-4),
+    branch: branchId.toString().slice(-4),
+    item: itemId.toString().slice(-4),
+    selectedDate: selectedDate?.toISOString?.().split("T")[0],
+  });
+
+  // 0️⃣ Basic validation
+  if (!selectedDate || isNaN(selectedDate.getTime())) {
+    console.error("❌ Invalid selectedDate");
+    return 0;
+  }
 
   const BASE_START_DATE = new Date("2025-04-01T00:00:00.000Z");
-  if (selectedDate < BASE_START_DATE) return 0;
+  if (selectedDate < BASE_START_DATE) {
+    console.log("⚠️ Selected date before base start (Apr 1 2025) → opening = 0");
+    return 0;
+  }
 
-  // 1️⃣ Previous month (unchanged)
-  const prevMonthDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1);
+  // 1️⃣ Previous month
+  const prevMonthDate = new Date(
+    selectedDate.getFullYear(),
+    selectedDate.getMonth() - 1,
+    1
+  );
   const prevYear = prevMonthDate.getFullYear();
   const prevMonthNum = prevMonthDate.getMonth() + 1;
+  console.log(
+    "\n📅 STEP 1: Previous month:",
+    `${prevYear}-${String(prevMonthNum).padStart(2, "0")}`
+  );
 
-  // 2️⃣ Last clean monthly (FIXED: only past months)
+  // 2️⃣ Last clean monthly
+  console.log("\n🔍 STEP 2: Find last clean monthly balance...");
   const lastCleanMonthly = await ItemMonthlyBalance.findOne({
-    company: companyId, branch: branchId, item: itemId,
+    company: companyId,
+    branch: branchId,
+    item: itemId,
     needsRecalculation: false,
     $or: [
       { year: { $lt: prevYear } },
-      { year: prevYear, month: { $lte: prevMonthNum } }
-    ]
+      { year: prevYear, month: { $lte: prevMonthNum } },
+    ],
   })
-  .sort({ year: -1, month: -1 })
-  .lean();
+    .sort({ year: -1, month: -1 })
+    .lean();
 
   let baseQuantity = 0;
-  let adjustmentStartDate = new Date("2025-04-01T00:00:00.000Z");
+  let dirtyPeriodStartDate = new Date("2025-04-01T00:00:00.000Z");
 
   if (lastCleanMonthly) {
     baseQuantity = lastCleanMonthly.closingStock || 0;
-    // adjustmentStartDate = new Date(lastCleanMonthly.year, lastCleanMonthly.month, 1);
-    console.log("✅ Using monthly:", lastCleanMonthly.periodKey, baseQuantity);
+    dirtyPeriodStartDate = new Date(
+      lastCleanMonthly.year,
+      lastCleanMonthly.month,
+      1
+    );
+    console.log("  ✅ Clean month found:");
+    console.log("     periodKey:", lastCleanMonthly.periodKey);
+    console.log("     closingStock:", baseQuantity, "kg");
+    console.log(
+      "     dirty period starts from:",
+      dirtyPeriodStartDate.toISOString().split("T")[0]
+    );
   } else {
-
+    console.log("  ❌ No clean month found, using ItemMaster fallback...");
     const itemMaster = await ItemMasterModel.findOne({
       _id: itemId,
       company: companyId,
-      "stock.branch": branchId
+      "stock.branch": branchId,
     }).lean();
 
     if (itemMaster) {
-      const branchStock = itemMaster.stock.find(s => 
-        s.branch.toString() === branchId.toString()
+      const branchStock = itemMaster.stock.find(
+        (s) => s.branch.toString() === branchId.toString()
       );
       baseQuantity = branchStock?.openingStock || 0;
-      console.log("✅ Using ItemMaster fallback:", baseQuantity);
+      console.log("  ✅ ItemMaster found:");
+      console.log("     openingStock:", baseQuantity, "kg");
     } else {
-      console.log("⚠️ No ItemMaster found, base=0");
+      console.log("  ⚠️ No ItemMaster found → baseQuantity = 0");
     }
-    
-    // ItemMaster fallback → start adjustments from BASE date
-    adjustmentStartDate = new Date("2025-04-01T00:00:00.000Z");
+
+    dirtyPeriodStartDate = new Date("2025-04-01T00:00:00.000Z");
+    console.log(
+      "     dirty period starts from BASE:",
+      dirtyPeriodStartDate.toISOString().split("T")[0]
+    );
   }
 
-  // 3️⃣ Dirty period calculations (unchanged from previous fix)
+  // 3️⃣ Dirty period end
   const dirtyPeriodEnd = new Date(selectedDate);
   dirtyPeriodEnd.setHours(0, 0, 0, 0);
 
+  console.log("\n📊 STEP 3: Dirty period range");
+  console.log(
+    "     from",
+    dirtyPeriodStartDate.toISOString().split("T")[0],
+    "to",
+    dirtyPeriodEnd.toISOString().split("T")[0]
+  );
 
-  console.log("sd",adjustmentStartDate);
-  
-  // Original ledgers with movement sign
+  // 4️⃣ Original ledgers with movement sign
+  console.log("\n💾 STEP 4: Original ledgers (movement-aware)");
   const originalLedgers = await ItemLedger.aggregate([
-    { $match: {
-      company: companyId, branch: branchId, item: itemId,
-      transactionDate: { 
-        $gte: adjustmentStartDate,
-         $lt: dirtyPeriodEnd
-         }
-    }},
+    {
+      $match: {
+        company: companyId,
+        branch: branchId,
+        item: itemId,
+        transactionDate: {
+          $gte: dirtyPeriodStartDate,
+          $lt: dirtyPeriodEnd,
+        },
+      },
+    },
     {
       $addFields: {
         signedQuantity: {
-          $multiply: ["$quantity", { $cond: [{ $eq: ["$movementType", "out"] }, -1, 1] }]
-        }
-      }
+          $multiply: [
+            "$quantity",
+            { $cond: [{ $eq: ["$movementType", "out"] }, -1, 1] },
+          ],
+        },
+      },
     },
-    { $group: { _id: null, totalSignedQuantity: { $sum: "$signedQuantity" } }}
+    {
+      $group: {
+        _id: null,
+        totalSignedQuantity: { $sum: "$signedQuantity" },
+        count: { $sum: 1 },
+        totalIn: {
+          $sum: {
+            $cond: [{ $eq: ["$movementType", "in"] }, "$quantity", 0],
+          },
+        },
+        totalOut: {
+          $sum: {
+            $cond: [{ $eq: ["$movementType", "out"] }, "$quantity", 0],
+          },
+        },
+      },
+    },
   ]);
 
-  // console.log("all",originalLedgers);
-  
-  
   const origSignedQty = originalLedgers[0]?.totalSignedQuantity || 0;
+  console.log("  ledgers count:", originalLedgers[0]?.count || 0);
+  console.log("  totalIn:", originalLedgers[0]?.totalIn || 0, "kg");
+  console.log("  totalOut:", originalLedgers[0]?.totalOut || 0, "kg");
+  console.log("  totalSignedQuantity:", origSignedQty, "kg");
 
-  // Adjustments with movement sign (using previous $switch fix)
+  // 5️⃣ Adjustments with correct movement logic
+  console.log("\n⚙️ STEP 5: Adjustments (movement-aware)");
+
   const adjustments = await AdjustmentEntry.aggregate([
-    { $match: {
-      company: companyId, branch: branchId,
-      status: "active", isReversed: false,
-      originalTransactionDate: { $gte: adjustmentStartDate, $lt: dirtyPeriodEnd },
-      "itemAdjustments.item": itemId
-    }},
+    {
+      $match: {
+        company: companyId,
+        branch: branchId,
+        status: "active",
+        isReversed: false,
+        originalTransactionDate: {
+          $gte: dirtyPeriodStartDate,
+          $lt: dirtyPeriodEnd,
+        },
+        "itemAdjustments.item": itemId,
+      },
+    },
     { $unwind: "$itemAdjustments" },
     { $match: { "itemAdjustments.item": itemId } },
+
+    // Map transaction model -> movement type
     {
       $addFields: {
-        originalTransactionType: {
+        movementType: {
           $switch: {
             branches: [
-              { case: { $eq: ["$originalTransactionModel", "Sale"] }, then: "sale" },
-              { case: { $eq: ["$originalTransactionModel", "Purchase"] }, then: "purchase" },
-              { case: { $eq: ["$originalTransactionModel", "SalesReturn"] }, then: "sales_return" },
-              { case: { $eq: ["$originalTransactionModel", "PurchaseReturn"] }, then: "purchase_return" }
+              // OUT: sale, purchase return
+              {
+                case: { $eq: ["$originalTransactionModel", "Sale"] },
+                then: "out",
+              },
+              {
+                case: { $eq: ["$originalTransactionModel", "PurchaseReturn"] },
+                then: "out",
+              },
+              // IN: purchase, sales return
+              {
+                case: { $eq: ["$originalTransactionModel", "Purchase"] },
+                then: "in",
+              },
+              {
+                case: { $eq: ["$originalTransactionModel", "SalesReturn"] },
+                then: "in",
+              },
             ],
-            default: "unknown"
-          }
-        }
-      }
-    },
-    {
-      $lookup: {
-        from: "itemsledgers",
-        let: { txnNum: "$originalTransactionNumber", txnType: "$originalTransactionType" },
-        pipeline: [{
-          $match: {
-            $expr: {
-              $and: [
-                { $eq: ["$transactionNumber", "$$txnNum"] },
-                { $eq: ["$transactionType", "$$txnType"] },
-                { $eq: ["$company", companyId] },
-                { $eq: ["$branch", branchId] },
-                { $eq: ["$item", itemId] }
-              ]
-            }
-          }
-        }],
-        as: "originalLedger"
-      }
-    },
-    { $unwind: { path: "$originalLedger", preserveNullAndEmptyArrays: true } },
-    {
-      $addFields: {
+            default: "in",
+          },
+        },
+
+        // Apply your rule:
+        // - Sale / PurchaseReturn: reduce stock → signedDelta = -quantityDelta
+        // - Purchase / SalesReturn: increase stock → signedDelta = +quantityDelta
         signedQuantityDelta: {
           $multiply: [
             "$itemAdjustments.quantityDelta",
-            { $cond: [{ $eq: ["$originalLedger.movementType", "out"] }, -1, 1] }
-          ]
-        }
-      }
+            {
+              $switch: {
+                branches: [
+                  {
+                    case: {
+                      $in: [
+                        "$originalTransactionModel",
+                        ["Sale", "PurchaseReturn"],
+                      ],
+                    },
+                    then: -1,
+                  }, // OUT
+                  {
+                    case: {
+                      $in: [
+                        "$originalTransactionModel",
+                        ["Purchase", "SalesReturn"],
+                      ],
+                    },
+                    then: 1,
+                  }, // IN
+                ],
+                default: 1,
+              },
+            },
+          ],
+        },
+      },
     },
-    { $group: { _id: null, totalSignedQtyDelta: { $sum: "$signedQuantityDelta" } }}
+
+    {
+      $group: {
+        _id: null,
+        totalSignedQtyDelta: { $sum: "$signedQuantityDelta" },
+        count: { $sum: 1 },
+        breakdown: {
+          $push: {
+            txnModel: "$originalTransactionModel",
+            txnNum: "$originalTransactionNumber",
+            rawDelta: "$itemAdjustments.quantityDelta",
+            movementType: "$movementType",
+            signedDelta: "$signedQuantityDelta",
+          },
+        },
+      },
+    },
   ]);
 
   const adjSignedQty = adjustments[0]?.totalSignedQtyDelta || 0;
+  console.log("  adjustments count:", adjustments[0]?.count || 0);
+  console.log("  totalSignedQtyDelta:", adjSignedQty, "kg");
+  if (adjustments[0]?.breakdown?.length) {
+    console.log(
+      "  breakdown:",
+      JSON.stringify(adjustments[0].breakdown, null, 2)
+    );
+  }
+
+  // 6️⃣ Final opening
+  console.log("\n🧮 STEP 6: Final opening calculation");
+  console.log("  baseQuantity:", baseQuantity, "kg");
+  console.log("  + origSignedQty:", origSignedQty, "kg");
+  console.log("  + adjSignedQty:", adjSignedQty, "kg");
 
   const openingQuantity = baseQuantity + origSignedQty + adjSignedQty;
 
-  console.log("📊 COMPLETE Opening:", {
-    source: lastCleanMonthly ? "Monthly" : "ItemMaster",
-    baseQuantity, origSignedQty, adjSignedQty, total: openingQuantity
-  });
+  console.log("👉 FINAL OPENING:", openingQuantity, "kg");
+  console.log(
+    "🔚 ========== OPENING BALANCE CALCULATION END ==========\n"
+  );
 
   return openingQuantity;
 };
