@@ -200,8 +200,7 @@ export const getAdjustedItemLedger = async ({
   if (transactionType === "sale") {
     baseMatch.transactionType = { $in: ["sale", "sales_return"] };
   } else if (transactionType === "purchase") {
-    baseMatch.transactionType = { $in: ["purchase", "purchase_return"] };
-  }
+    baseMatch.transactionType = { $in: ["purchase", "purchase_return"] };}
 
   const ledgers = await ItemLedger.aggregate([
     { $match: baseMatch },

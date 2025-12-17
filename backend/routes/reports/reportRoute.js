@@ -9,7 +9,7 @@ const router=express.Router()
 /// Item Reports
 router.get("/item-ledger",getItemLedgerReport)
 router.get("/item-monthly-summary",getItemMonthlyReport)
-router.get("/item-summary",getItemSummaryReport)
+router.get("/items-summary",getItemSummaryReport)
 
 
 /// Account Reports
