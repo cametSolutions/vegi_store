@@ -470,7 +470,7 @@ export const getOutstandingCustomers = async (req, res) => {
 export const getCustomerOutstandingDetails = async (req, res) => {
   try {
     const { companyId, branchId, customerId } = req.params;
-    const { outstandingType, startDate, endDate, page = 1, limit = 20 } = req.query;
+    const { outstandingType, startDate, endDate, page = 1, limit = 10 } = req.query;
 
 
 
@@ -629,7 +629,7 @@ export const getCustomerOutstandingDetails = async (req, res) => {
 export const getOutstandingParties = async (req, res) => {
   try {
     const { companyId, branchId } = req.params;
-    const { search, minAmount, page = 1, limit = 20 } = req.query;
+    const { search, minAmount, page = 1, limit = 5 } = req.query;
 
     const companyObjectId = new mongoose.Types.ObjectId(companyId);
     const branchObjectId = new mongoose.Types.ObjectId(branchId);
