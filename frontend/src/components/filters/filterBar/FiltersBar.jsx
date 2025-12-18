@@ -107,11 +107,11 @@ const FiltersBar = ({
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 ">
       {/* Transaction type (configurable) */}
       {showTransactionType && (
         <div className="flex items-center gap-1">
-          <FilterIcon className="w-3 h-3 text-gray-500" />
+          <FilterIcon className="w-3 h-3 text-gray-500 mr-1" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

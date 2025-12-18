@@ -59,6 +59,7 @@ export const itemMasterQueries = {
       transactionType,
       page = 1,
       limit = 50,
+      search
     } = {}
   ) =>
     
@@ -73,6 +74,7 @@ export const itemMasterQueries = {
         transactionType,
         page,
         limit,
+        search,
       ],
       queryFn: () =>
         itemServices.getItemSummary(
@@ -83,6 +85,7 @@ export const itemMasterQueries = {
           transactionType,
           page,
           limit,
+          search
         ),
       enabled: !!companyId && !!branchId && !!startDate && !!endDate,
       staleTime: 5 * 60 * 1000,
