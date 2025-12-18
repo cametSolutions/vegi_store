@@ -1,0 +1,183 @@
+// src/api/services/outstanding.service.js
+import axios from "axios";
+import { api } from "../client/apiClient.js";
+
+export const outstandingService = {
+  // Get combined parties list (customers + suppliers netted)
+    getPartiesList: async (companyId, branchId, params = {}) => {
+    try {
+      const response = await api.get(
+        `/reports/getOutstandingParties/${companyId}/${branchId}`,
+        {
+          params: {
+            ...(params.search && { search: params.search }),
+            ...(params.minAmount && { minAmount: params.minAmount }),
+            ...(params.partyType && { partyType: params.partyType }),
+            ...(params.startDate && { startDate: params.startDate }),
+            ...(params.endDate && { endDate: params.endDate }),
+            ...(params.page && { page: params.page }),
+            ...(params.limit && { limit: params.limit }),
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(
+          error.response?.data?.message ||
+            error.message ||
+            "Failed to fetch outstanding parties"
+        );
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
+
+  // Get party details (works for both customers and suppliers)
+  getPartyDetails: async (companyId, branchId, partyId, params = {}) => {
+    try {
+      const response = await api.get(
+        `/reports/getCustomerOutstandingDetails/${companyId}/${branchId}/${partyId}`,
+        {
+          params: {
+            ...(params.outstandingType &&
+              params.outstandingType !== "all" && {
+                outstandingType: params.outstandingType,
+              }),
+            ...(params.startDate && { startDate: params.startDate }),
+            ...(params.endDate && { endDate: params.endDate }),
+            ...(params.page && { page: params.page }),
+            ...(params.limit && { limit: params.limit }),
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(
+          error.response?.data?.message ||
+            error.message ||
+            "Failed to fetch party outstanding details"
+        );
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
+
+
+  // Get all customers with outstanding balances (OLD - separate view)
+  getCustomersList: async (companyId, branchId, params = {}) => {
+    try {
+      const response = await api.get(
+        `/reports/getOutstandingCustomers/${companyId}/${branchId}`,
+        {
+          params: {
+            ...(params.search && { search: params.search }),
+            ...(params.minAmount && { minAmount: params.minAmount }),
+            ...(params.accountType && { accountType: params.accountType }),
+            ...(params.startDate && { startDate: params.startDate }),
+            ...(params.endDate && { endDate: params.endDate }),
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(
+          error.response?.data?.message || 
+          error.message || 
+          "Failed to fetch outstanding customers"
+        );
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
+
+  // Get outstanding details for a specific customer (OLD)
+  getCustomerDetails: async (companyId, branchId, customerId, params = {}) => {
+    try {
+      const response = await api.get(
+        `/reports/getCustomerOutstandingDetails/${companyId}/${branchId}/${customerId}`,
+        {
+          params: {
+            ...(params.outstandingType && params.outstandingType !== 'all' && { 
+              outstandingType: params.outstandingType 
+            }),
+            ...(params.startDate && { startDate: params.startDate }),
+            ...(params.endDate && { endDate: params.endDate }),
+            ...(params.page && { page: params.page }),
+            ...(params.limit && { limit: params.limit }),
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(
+          error.response?.data?.message || 
+          error.message || 
+          "Failed to fetch customer outstanding details"
+        );
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
+
+  // Get outstanding report
+  getReport: async (companyId, branchId, params = {}) => {
+    try {
+      const response = await api.get(`/reports/outstanding-report`, {
+        params: {
+          companyId,
+          branchId,
+          ...(params.accountId && { accountId: params.accountId }),
+          ...(params.accountType && { accountType: params.accountType }),
+          ...(params.outstandingType && { outstandingType: params.outstandingType }),
+          ...(params.startDate && { startDate: params.startDate }),
+          ...(params.endDate && { endDate: params.endDate }),
+          ...(params.status && { status: params.status }),
+          ...(params.page && { page: params.page }),
+          ...(params.limit && { limit: params.limit }),
+        },
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(
+          error.response?.data?.message || 
+          error.message || 
+          "Failed to fetch outstanding report"
+        );
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
+
+  // Get outstanding summary
+  getSummary: async (companyId, branchId, params = {}) => {
+    try {
+      const response = await api.get(`/reports/outstanding-summary`, {
+        params: {
+          companyId,
+          branchId,
+          ...(params.accountType && { accountType: params.accountType }),
+          ...(params.startDate && { startDate: params.startDate }),
+          ...(params.endDate && { endDate: params.endDate }),
+        },
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(
+          error.response?.data?.message || 
+          error.message || 
+          "Failed to fetch outstanding summary"
+        );
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
+
+  // Export to Excel
+
+};
