@@ -53,6 +53,10 @@ const Navbar = () => {
           label: "Outstanding Report",
           path: "reports/outstanding-report",
         },
+        {
+          label: "Outstanding Summary",
+          path: "/reports/outstanding-summary",
+        },
            {
           label: "Sales Summary",
           path: "/reports/transaction-summary/sale",
@@ -68,6 +72,10 @@ const Navbar = () => {
         {
           label: "Purchase Return Summary",
           path: "/reports/transaction-summary/purchase_return",
+        },
+        {
+          label: "Items Summary",
+          path: "/reports/items-summary",
         },
 
 

@@ -224,28 +224,28 @@ const TransactionSummary = () => {
             <>
               {/* Fixed Table Header */}
               <div className="flex-none px-2" >
-                <table className="w-full">
+                <table className="w-full table-fixed">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider w-12">
+                      <th className="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider" style={{width: '50px'}}>
                         #
                       </th>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider" style={{width: '120px'}}>
                         Ref. No.
                       </th>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider" style={{width: '120px'}}>
                         Date
                       </th>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider" style={{width: '180px'}}>
                         {config.accountLabel}
                       </th>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider" style={{width: '130px'}}>
                         Phone
                       </th>
-                      <th className="px-2 py-1.5 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider" style={{width: '200px'}}>
                         Email
                       </th>
-                      <th className="px-2 py-1.5 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider" style={{width: '130px'}}>
                         Net Amount
                       </th>
                     </tr>
@@ -255,34 +255,32 @@ const TransactionSummary = () => {
 
               {/* Scrollable Table Body */}
               <div className="flex-1 overflow-y-auto px-2">
-                <table className="w-full">
+                <table className="w-full table-fixed">
                   <tbody className="bg-white divide-y divide-gray-200">
                     {transactions.map((transaction, index) => (
                       <tr
                         key={transaction._id}
                         className="hover:bg-gray-50 transition"
                       >
-                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 w-12">
+                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 text-center" style={{width: '50px'}}>
                           {(currentPage - 1) * pageSize + index + 1}
                         </td>
-                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 font-medium">
-                          {transaction.transactionNumber}
+                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 font-medium text-center" style={{width: '120px'}}>
+                          {transaction.transactionNumber || ""}
                         </td>
-                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900">
-                          {formatDate(transaction.transactionDate)}
+                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 text-center" style={{width: '120px'}}>
+                          {transaction.transactionDate ? formatDate(transaction.transactionDate) : ""}
                         </td>
-                        <td className=" truncate px-2 py-1.5 whitespace-nowrap text-xs text-gray-900">
-                          {transaction.accountName}
+                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 text-center" style={{width: '180px'}}>
+                          {transaction.accountName || ""}
                         </td>
-                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900">
-                          {transaction.phone || "-"}
+                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 text-center" style={{width: '130px'}}>
+                          {transaction.phone || ""}
                         </td>
-                        <td className="px-2 py-1.5 text-xs text-gray-900">
-                          <span className="truncate max-w-[150px] inline-block">
-                            {transaction.email || "-"}
-                          </span>
+                        <td className="px-2 py-1.5 text-xs text-gray-900 text-center truncate" style={{width: '200px'}}>
+                          {transaction.email || ""}
                         </td>
-                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 text-right font-semibold">
+                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 text-center font-semibold" style={{width: '130px'}}>
                           {formatINR(transaction.netAmount)}
                         </td>
                       </tr>
@@ -292,17 +290,24 @@ const TransactionSummary = () => {
               </div>
 
               {/* Fixed Table Footer (Total) */}
-              <div className="flex-none border-t-2">
-                <table className="w-full">
+              <div className="flex-none border-t-2 px-2">
+                <table className="w-full table-fixed">
                   <tfoot className="bg-gray-50">
                     <tr>
-                      <td
-                        colSpan="6"
-                        className="px-2 py-1.5 text-xs font-bold text-gray-900"
-                      >
+                      <td className="px-2 py-1.5 text-xs font-bold text-gray-900" style={{width: '50px'}}>
+                      </td>
+                      <td className="px-2 py-1.5 text-xs font-bold text-gray-900" style={{width: '120px'}}>
+                      </td>
+                      <td className="px-2 py-1.5 text-xs font-bold text-gray-900" style={{width: '120px'}}>
+                      </td>
+                      <td className="px-2 py-1.5 text-xs font-bold text-gray-900" style={{width: '180px'}}>
+                      </td>
+                      <td className="px-2 py-1.5 text-xs font-bold text-gray-900" style={{width: '130px'}}>
+                      </td>
+                      <td className="px-2 py-1.5 text-xs font-bold text-gray-900" style={{width: '200px'}}>
                         Total
                       </td>
-                      <td className="px-2 py-1.5 text-xs font-bold text-gray-900 text-right">
+                      <td className="px-2 py-1.5 text-xs font-bold text-gray-900 text-center" style={{width: '130px'}}>
                         {formatINR(totalAmount)}
                       </td>
                     </tr>

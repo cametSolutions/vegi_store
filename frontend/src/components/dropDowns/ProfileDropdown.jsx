@@ -7,6 +7,7 @@ import {
   Database,
   Power,
   RefreshCcw,
+  CodeXml,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -321,8 +322,16 @@ const ProfileDropdown = () => {
   // Navigation items configuration
   const masterMenuItems = useMemo(
     () => [
-      { path: "/master/company-master", label: "Company Master", icon: Building2 },
-      { path: "/master/branch-master", label: "Branch Master", icon: GitBranch },
+      {
+        path: "/master/company-master",
+        label: "Company Master",
+        icon: Building2,
+      },
+      {
+        path: "/master/branch-master",
+        label: "Branch Master",
+        icon: GitBranch,
+      },
       { path: "/masters/user", label: "User Master", icon: User },
     ],
     []
@@ -484,6 +493,27 @@ const ProfileDropdown = () => {
                   {label}
                 </DropdownMenuItem>
               ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="flex items-center gap-2">
+              <CodeXml className="w-4 h-4" />
+              <span className="ml-2">Developer</span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-48">
+              <DropdownMenuItem
+                onClick={() => handleNavigate("/developer/item-ledger")}
+              >
+                <CodeXml className="w-4 h-4 mr-2 opacity-50" />
+                Item Ledger
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleNavigate("/developer/account-ledger")}
+              >
+                <CodeXml className="w-4 h-4 mr-2 opacity-50" />
+                Account Ledger
+              </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
 

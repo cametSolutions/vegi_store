@@ -49,4 +49,43 @@ export const itemMasterQueries = {
       enabled: !!id,
       staleTime: 5 * 60 * 1000,
     }),
+
+   getItemSummary: (
+    companyId,
+    branchId,
+    {
+      startDate,
+      endDate,
+      transactionType,
+      page = 1,
+      limit = 50,
+    } = {}
+  ) =>
+    
+    queryOptions({
+      queryKey: [
+        ...itemMasterQueries.all(),
+        "item-summary",
+        companyId,
+        branchId,
+        startDate,
+        endDate,
+        transactionType,
+        page,
+        limit,
+      ],
+      queryFn: () =>
+        itemServices.getItemSummary(
+          companyId,
+          branchId,
+          startDate,
+          endDate,
+          transactionType,
+          page,
+          limit,
+        ),
+      enabled: !!companyId && !!branchId,
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    }),
 };

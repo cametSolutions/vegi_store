@@ -165,6 +165,7 @@ ItemMasterSchema.methods.getBranchStock = function (branchId) {
 
 
 
+
 // Reduce stock for a branch
 ItemMasterSchema.methods.reduceStock = async function (branchId, qty) {
   const stockEntry = this.getBranchStock(branchId);

@@ -14,10 +14,16 @@ export const itemServices = {
   ...itemMasterApi,
 
   // Custom search method specific to account master
-  search: async (searchTerm, companyId, branchId, limit,exactMatch=false) => {
+  search: async (
+    searchTerm,
+    companyId,
+    branchId,
+    limit,
+    exactMatch = false
+  ) => {
     try {
       const response = await api.get("/item/searchItem", {
-        params: { searchTerm, companyId, branchId, limit,exactMatch },
+        params: { searchTerm, companyId, branchId, limit, exactMatch },
       });
 
       return response.data;
@@ -68,10 +74,50 @@ export const itemServices = {
   },
 
   updateRate: async (itemId, priceLevelId, rate) => {
-    const response = await api.patch(
-      `/item/${itemId}/rate`,
-      { priceLevelId, rate }
-    );
+    const response = await api.patch(`/item/${itemId}/rate`, {
+      priceLevelId,
+      rate,
+    });
     return response.data;
+  },
+
+  getItemSummary: async (
+    companyId,
+    branchId,
+    startDate,
+    endDate,
+    transactionType="sale",
+    page,
+    limit
+  ) => {
+    console.log({
+      companyId,
+    branchId,
+    startDate,
+    endDate,
+    transactionType:"sale",
+    page,
+    limit
+    });
+
+    try {
+      const response = await api.get("/reports/items-summary", {
+        params: {
+          company: companyId,
+          branch: branchId,
+          startDate,
+          endDate,
+          transactionType,
+          page,
+          limit,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("An unexpected error occurred");
+    }
   },
 };
