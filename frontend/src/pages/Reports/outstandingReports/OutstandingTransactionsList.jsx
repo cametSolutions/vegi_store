@@ -10,7 +10,6 @@ import {
   formatDate,
 } from "../../../../../shared/utils/date";
 import { formatINR } from "../../../../../shared/utils/currency";
-import CustomMoonLoader from "@/components/loaders/CustomMoonLoader";
 import ErrorDisplay from "@/components/errors/ErrorDisplay";
 import { outstandingQueries } from "../../../hooks/queries/outstandingQueries";
 import FiltersBar from "@/components/filters/filterBar/FiltersBar";
@@ -25,13 +24,13 @@ const OutstandingTransactionsList = ({
   const filters = useSelector((state) => state.filters);
 
   // Redux filter keys (used only here, but stored globally for consistency)
-  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.TODAY);
+  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.THIS_MONTH);
   const startDate = filters.startDate;
   const endDate = filters.endDate;
   const outstandingTypeFilter = filters.outstandingType || "all";
 
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 20;
 
   // Ensure defaults for this page
   useEffect(() => {
@@ -197,7 +196,7 @@ const OutstandingTransactionsList = ({
                         Paid Amount
                       </th>
                       <th
-                        className="px-2 py-3 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                        className=" py-3 px-4 text-end text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                         style={{ width: "150px" }}
                       >
                         Closing Balance
@@ -217,19 +216,19 @@ const OutstandingTransactionsList = ({
                         className="hover:bg-blue-100 bg-blue-50 transition"
                       >
                         <td
-                          className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 text-center"
+                          className="px-2 py-3 whitespace-nowrap text-xs text-gray-900 text-center"
                           style={{ width: "50px" }}
                         >
                           {(currentPage - 1) * pageSize + index + 1}
                         </td>
                         <td
-                          className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 font-medium text-center"
+                          className="px-2 py-3 whitespace-nowrap text-xs text-gray-900 font-medium text-center"
                           style={{ width: "120px" }}
                         >
                           {transaction.transactionNumber || ""}
                         </td>
                         <td
-                          className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 text-center"
+                          className="px-2 py-3 whitespace-nowrap text-xs text-gray-900 text-center"
                           style={{ width: "120px" }}
                         >
                           {transaction.transactionDate
@@ -237,22 +236,22 @@ const OutstandingTransactionsList = ({
                             : ""}
                         </td>
                         <td
-                          className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 text-center font-semibold"
+                          className="px-2 py-3 whitespace-nowrap text-xs text-gray-900 text-center font-semibold"
                           style={{ width: "130px" }}
                         >
                           {formatINR(transaction.totalAmount)}
                         </td>
                         <td
-                          className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 text-center"
+                          className="px-2 py-3 whitespace-nowrap text-xs text-gray-900 text-center"
                           style={{ width: "130px" }}
                         >
                           {formatINR(transaction.paidAmount)}
                         </td>
                         <td
-                          className="px-2 py-1.5 whitespace-nowrap text-xs text-center font-bold"
+                          className="py-3  px-2 whitespace-nowrap text-xs text-center font-bold"
                           style={{ width: "150px" }}
                         >
-                          <div className="flex items-center justify-center gap-1">
+                          <div className="flex items-center justify-end gap-1">
                             <span
                               className={getOutstandingColor(
                                 transaction.outstandingType
@@ -270,7 +269,7 @@ const OutstandingTransactionsList = ({
               </div>
 
               {/* Fixed Table Footer (Total) */}
-              <div className="flex-none border-t-2 px-2">
+              <div className="flex-none border-t-2 ">
                 <table className="w-full table-fixed">
                   <tfoot className="bg-gray-50">
                     <tr>
@@ -279,16 +278,25 @@ const OutstandingTransactionsList = ({
                       <td style={{ width: "120px" }}></td>
                       <td style={{ width: "130px" }}></td>
                       <td
-                        className="px-2 py-1.5 text-xs font-bold text-gray-900 text-center"
+                        className="px-2 py-2 text-xs font-bold text-gray-900 text-center"
                         style={{ width: "130px" }}
                       >
                         Total Outstanding
                       </td>
                       <td
-                        className="px-2 py-1.5 text-xs font-bold text-center text-gray-900"
+                        className="px-2 py-1.5 text-xs font-bold text-end pr-6 text-gray-900"
                         style={{ width: "150px" }}
                       >
-                        {formatINR(totalOutstanding)}
+                        <span>
+                        {formatINR(Math.abs(totalOutstanding))}
+                        </span>
+
+                         <span>
+                        {totalOutstanding >= 0
+                          ? getOutstandingBadge("dr")
+                          : getOutstandingBadge("cr")}
+                        </span>
+                       
                       </td>
                     </tr>
                   </tfoot>
@@ -296,7 +304,7 @@ const OutstandingTransactionsList = ({
               </div>
 
               {/* Fixed Footer with Pagination */}
-              <div className="flex-none flex items-center justify-between px-1 py-1 border-t bg-gray-50">
+              <div className="flex-none flex items-center justify-between px-1 py-3 border-t bg-gray-50">
                 <div className="text-xs text-gray-700">
                   {totalCount > 0
                     ? `Showing ${(currentPage - 1) * pageSize + 1}-${Math.min(

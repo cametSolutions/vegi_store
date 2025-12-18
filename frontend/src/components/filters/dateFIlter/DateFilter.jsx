@@ -61,6 +61,10 @@ const DateFilter = ({
 
   const isCustom = selectedFilter === DATE_FILTERS.CUSTOM;
 
+  console.log(getFilterLabel(selectedFilter));
+  console.log(selectedFilter);
+  
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger

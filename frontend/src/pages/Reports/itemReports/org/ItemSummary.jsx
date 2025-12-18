@@ -223,7 +223,7 @@ const ItemSummaryPage = () => {
 
         {/* Bottom pagination bar (fixed to bottom of page section) */}
         {pagination.totalPages > 0 && (
-          <div className="border-t bg-gray-50 text-xs flex items-center justify-end px-3 py-1 gap-2">
+          <div className="border-t bg-gray-50 text-xs flex items-center justify-end px-3 py-4 gap-2">
             <span className="text-gray-600">
               Showing{" "}
               <span className="font-medium">

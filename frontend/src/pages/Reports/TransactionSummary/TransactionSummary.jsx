@@ -12,6 +12,7 @@ import {
   FileSpreadsheet,
   FileText,
   X,
+  LoaderCircle,
 } from "lucide-react";
 import { DATE_FILTERS, formatDate, getDateRange } from "../../../../../shared/utils/date";
 import { formatINR } from "../../../../../shared/utils/currency";
@@ -179,7 +180,7 @@ const TransactionSummary = () => {
   }
 
   return (
-    <div className="h-[calc(100vh-99px)] flex flex-col bg-gray-50">
+    <div className="h-[calc(100vh-109px)] flex flex-col bg-gray-50">
       {/* Fixed Header */}
       <div className="flex-none bg-white shadow-sm border-b px-4 py-2">
         <div className="flex items-center justify-between gap-4">
@@ -237,15 +238,15 @@ const TransactionSummary = () => {
       <div className="flex-1 overflow-hidden">
         <div className="bg-white shadow-sm h-full flex flex-col">
           {isLoading ? (
-            <div className="flex items-center justify-center flex-1">
-              <CustomMoonLoader />
-            </div>
+          <div className="flex items-center justify-center h-[calc(100vh-250px)]">
+            <LoaderCircle className="animate-spin w-8 h-8 text-slate-500" />
+          </div>
           ) : isError ? (
             <div className="flex flex-col items-center justify-center flex-1">
-              <p className="text-red-500 text-sm mb-2">{error?.message}</p>
+              <p className="text-gray-500 text-sm mb-2">!Oops...Unable to fetch data</p>
               <button
                 onClick={() => refetch()}
-                className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                className=" text-sm px-3 py-1  bg-blue-600 text-white rounded hover:bg-blue-700"
               >
                 Retry
               </button>
@@ -269,7 +270,7 @@ const TransactionSummary = () => {
           ) : (
             <>
               {/* Fixed Table Header */}
-              <div className="flex-none px-2">
+              <div className="flex-none ">
                 <table className="w-full table-fixed">
                   <thead className="bg-gray-300 border-b">
                     <tr className="h-10">
@@ -291,7 +292,7 @@ const TransactionSummary = () => {
                       <th className="px-2 text-center text-[10px] font-semibold text-gray-600 uppercase tracking-wider" style={{width: '200px'}}>
                         Email
                       </th>
-                      <th className="px-2 text-center text-[10px] font-semibold text-gray-600 uppercase tracking-wider" style={{width: '130px'}}>
+                      <th className="px-2 text-end pr-3 text-[10px] font-semibold text-gray-600 uppercase tracking-wider" style={{width: '130px'}}>
                         Net Amount
                       </th>
                     </tr>
@@ -300,13 +301,13 @@ const TransactionSummary = () => {
               </div>
 
               {/* Scrollable Table Body */}
-              <div className="flex-1 overflow-y-auto px-2">
+              <div className="flex-1 overflow-y-auto ">
                 <table className="w-full table-fixed">
                   <tbody className="bg-blue-100 divide-y divide-gray-100">
                     {transactions.map((transaction, index) => (
                       <tr
                         key={transaction._id}
-                        className="h-8 hover:bg-gray-50 transition"
+                        className="h-12 hover:bg-gray-50 transition"
                       >
                         <td className="px-2 whitespace-nowrap text-xs text-gray-500 text-center" style={{width: '50px'}}>
                           {(currentPage - 1) * pageSize + index + 1}
@@ -326,7 +327,7 @@ const TransactionSummary = () => {
                         <td className="px-2 text-xs text-gray-900 text-center truncate" style={{width: '200px'}}>
                           {transaction.email || ""}
                         </td>
-                        <td className="px-2 whitespace-nowrap text-xs text-gray-900 text-center font-semibold" style={{width: '130px'}}>
+                        <td className="px-2 pr-4 whitespace-nowrap text-xs text-gray-900 text-end font-semibold" style={{width: '130px'}}>
                           {formatINR(transaction.netAmount)}
                         </td>
                       </tr>
@@ -336,7 +337,7 @@ const TransactionSummary = () => {
               </div>
 
               {/* Fixed Table Footer (Total) */}
-              <div className="flex-none border-t-2 px-2">
+              <div className="flex-none border-t-2 ">
                 <table className="w-full table-fixed">
                   <tfoot className="bg-gray-50">
                     <tr className="h-8">
@@ -348,7 +349,7 @@ const TransactionSummary = () => {
                       <td className="px-2 text-xs font-bold text-gray-900 text-center" style={{width: '200px'}}>
                         Total
                       </td>
-                      <td className="px-2 text-xs font-bold text-gray-900 text-center" style={{width: '130px'}}>
+                      <td className="px-2 text-xs  font-bold text-gray-900 text-end pr-4" style={{width: '130px'}}>
                         {formatINR(totalAmount)}
                       </td>
                     </tr>
@@ -357,7 +358,7 @@ const TransactionSummary = () => {
               </div>
 
               {/* Fixed Footer with Action Buttons */}
-              <div className="flex-none flex items-center justify-between px-3 py-1 border-t bg-gray-50">
+              <div className="flex-none flex items-center justify-between px-3 py-4 border-t bg-gray-50">
                 {/* Left: Action Buttons */}
                 <div className="flex items-center gap-1.5">
                   <Button
@@ -365,7 +366,7 @@ const TransactionSummary = () => {
                     variant="outline"
                     onClick={() => handleExport("excel")}
                     disabled={isExporting}
-                    className="h-7 text-xs"
+                    className="h-7 text-xs  bg-green-500 text-white border rounded-sm"
                   >
                     {isExporting ? (
                       <div className="w-3 h-3 border-2 border-gray-600 border-t-transparent rounded-full animate-spin mr-1" />
@@ -379,7 +380,7 @@ const TransactionSummary = () => {
                     variant="outline"
                     onClick={() => handleExport("pdf")}
                     disabled={isExporting}
-                    className="h-7 text-xs"
+                     className="h-7 text-xs  bg-red-500 text-white border rounded-sm"
                   >
                     {isExporting ? (
                       <div className="w-3 h-3 border-2 border-gray-600 border-t-transparent rounded-full animate-spin mr-1" />
@@ -392,7 +393,7 @@ const TransactionSummary = () => {
                     size="sm"
                     variant="outline"
                     onClick={handlePrint}
-                    className="h-7 text-xs"
+                     className="h-7 text-xs  bg-blue-500 text-white border rounded-sm"
                   >
                     <Printer className="w-3 h-3 mr-1" />
                     Print

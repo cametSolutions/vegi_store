@@ -19,7 +19,7 @@ const OutstandingPartiesList = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const pageSize = 20;
 
   // debounce search
   useEffect(() => {
@@ -190,7 +190,7 @@ const OutstandingPartiesList = ({
       </div>
 
       {/* Pagination */}
-      <div className="flex-none flex items-center justify-between px-3 py-2 border-t bg-gray-50">
+      <div className="flex-none flex items-center justify-between px-3 py-4 border-t bg-gray-50">
         <div className="text-xs text-gray-700">
           {totalCount > 0
             ? `${(currentPage - 1) * pageSize + 1}-${Math.min(
