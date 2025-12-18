@@ -3,11 +3,14 @@ import companyBranchReducer from "./slices/companyBranchSlice";
 import LoaderReducer from "./slices/loaderSlice";
 import transactionSlice from "./slices/transactionSlice";
 import revaluationLoaderReducer from "./slices/revaluationLoaderSlice";
+import filtersSliceReducer from "./slices/filtersSlice";
+
 export const store = configureStore({
   reducer: {
     companyBranch: companyBranchReducer,
     loader: LoaderReducer,
     transaction: transactionSlice,
     revaluationLoader: revaluationLoaderReducer,
+    filters: filtersSliceReducer,
   },
 });

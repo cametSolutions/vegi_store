@@ -84,7 +84,7 @@ export const itemMasterQueries = {
           page,
           limit,
         ),
-      enabled: !!companyId && !!branchId,
+      enabled: !!companyId && !!branchId && !!startDate && !!endDate,
       staleTime: 5 * 60 * 1000,
       refetchOnWindowFocus: false,
     }),
