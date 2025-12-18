@@ -42,36 +42,14 @@ const Navbar = () => {
       path: "/transactions/payment/create",
       hasDropdown: true,
       dropdownItems: [
-        { label: "Item Report", path: "reports/item-report" },
-        { label: "Item Monthly Report", path: "reports/item-monthly-report" },
-        { label: "Account Report", path: "reports/account-report" },
-        {
-          label: "Account Monthly Report",
-          path: "reports/account-monthly-report",
-        },
-        {
-          label: "Outstanding Report",
-          path: "reports/outstanding-report",
-        },
+       
         {
           label: "Outstanding Summary",
           path: "/reports/outstanding-summary",
         },
            {
-          label: "Sales Summary",
-          path: "/reports/transaction-summary/sale",
-        },
-        {
-          label: "Purchase Summary",
-          path: "/reports/transaction-summary/purchase",
-        },
-        {
-          label: "Sales Return Summary",
-          path: "/reports/transaction-summary/sales_return",
-        },
-        {
-          label: "Purchase Return Summary",
-          path: "/reports/transaction-summary/purchase_return",
+          label: "Transaction Summary",
+          path: "/reports/transaction-summary",
         },
         {
           label: "Items Summary",

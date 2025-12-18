@@ -39,10 +39,7 @@ export default function TransactionRoutes() {
       />
       <Route path="outstanding-report" element={<OutstandingReport />} />
       <Route path="outstanding-summary" element={<OutstandingSummary />} />
-      <Route
-        path="transaction-summary/:transactionType"
-        element={<TransactionSummary />}
-      />
+       <Route path="transaction-summary" element={<TransactionSummary />} />
 
       {/* Add more transaction routes here */}
     </Route>
