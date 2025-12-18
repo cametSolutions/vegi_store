@@ -11,7 +11,7 @@ import OutstandingReport from "@/pages/Reports/outstandingReports/OutstandingRep
 
 import TransactionSummary from "@/pages/Reports/TransactionSummary/TransactionSummary";
 import ItemSummary from "@/pages/Reports/itemReports/org/ItemSummary";
-import OutstandingSummary from "@/pages/Reports/outstandingReports/OutstandingSummary ";
+import OutstandingSummary from "@/pages/Reports/outstandingReports/OutstandingSummary";
 
 export default function TransactionRoutes() {
   return (
@@ -39,10 +39,7 @@ export default function TransactionRoutes() {
       />
       <Route path="outstanding-report" element={<OutstandingReport />} />
       <Route path="outstanding-summary" element={<OutstandingSummary />} />
-      <Route
-        path="transaction-summary/:transactionType"
-        element={<TransactionSummary />}
-      />
+       <Route path="transaction-summary" element={<TransactionSummary />} />
 
       {/* Add more transaction routes here */}
     </Route>

@@ -1,6 +1,7 @@
 import axios from "axios";
 import { api } from "../client/apiClient";
 import { createResourceApi } from "../client/apiFactory";
+import { se } from "date-fns/locale";
 export const itemMasterApi = createResourceApi("item", {
   create: "create", //POST route
   getAll: "getall", //GET route
@@ -86,20 +87,11 @@ export const itemServices = {
     branchId,
     startDate,
     endDate,
-    transactionType="sale",
+    transactionType = "sale",
     page,
-    limit
+    limit,
+    search
   ) => {
-    console.log({
-      companyId,
-    branchId,
-    startDate,
-    endDate,
-    transactionType:"sale",
-    page,
-    limit
-    });
-
     try {
       const response = await api.get("/reports/items-summary", {
         params: {
@@ -110,6 +102,7 @@ export const itemServices = {
           transactionType,
           page,
           limit,
+          searchTerm: search,
         },
       });
       return response.data;

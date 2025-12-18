@@ -38,7 +38,7 @@ const AppliedFilters = () => {
   };
 
   return (
-    <div className="flex items-center justify-between gap-2  p-2 px-4 ">
+    <div className="flex items-center justify-between gap-2  p-2 px-4 shadow-sm ">
       <div className="flex flex-wrap gap-2 text-xs">
         {activeEntries.map(([key, value]) => (
           <button

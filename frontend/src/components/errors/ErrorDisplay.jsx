@@ -17,7 +17,7 @@ const ErrorDisplay = ({
 
   return (
     <div 
-      className={`flex flex-col items-center justify-center bg-red-50 border border-red-200 rounded-lg p-6 ${
+      className={`flex flex-col items-center justify-center  border border-red-200 p-6 w-full ${
         fullHeight ? 'h-full' : 'min-h-[200px]'
       }`}
     >
@@ -25,18 +25,15 @@ const ErrorDisplay = ({
         <AlertCircle className="w-8 h-8 text-red-600" />
       </div>
       
-      <h3 className="text-lg font-semibold text-red-900 mb-2">
+      <h3 className="text-sm font-semibold text-red-900 mb-2">
         {title}
       </h3>
-      
-      <p className="text-sm text-red-700 text-center mb-4 max-w-md">
-        {getErrorMessage(error)}
-      </p>
+    
       
       {onRetry && (
         <button
           onClick={onRetry}
-          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-xs"
         >
           <RefreshCw className="w-4 h-4" />
           Try Again

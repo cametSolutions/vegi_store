@@ -25,7 +25,6 @@ export const getOpeningBalance = async (company, branch, itemObj, selectedDate) 
     return 0;
   }
 
-  // Previous month of selectedDate
   const prevMonthDate = new Date(
     selectedDate.getFullYear(),
     selectedDate.getMonth() - 1,
@@ -34,7 +33,6 @@ export const getOpeningBalance = async (company, branch, itemObj, selectedDate) 
   const prevYear = prevMonthDate.getFullYear();
   const prevMonthNum = prevMonthDate.getMonth() + 1;
 
-  // Last clean monthly <= previous month
   const lastCleanMonthly = await ItemMonthlyBalance.findOne({
     company: companyId,
     branch: branchId,
@@ -59,7 +57,6 @@ export const getOpeningBalance = async (company, branch, itemObj, selectedDate) 
       1
     );
   } else {
-    // ItemMaster fallback
     const itemMaster = await ItemMasterModel.findOne({
       _id: itemId,
       company: companyId,
@@ -78,7 +75,6 @@ export const getOpeningBalance = async (company, branch, itemObj, selectedDate) 
   const dirtyPeriodEnd = new Date(selectedDate);
   dirtyPeriodEnd.setHours(0, 0, 0, 0);
 
-  // Original ledgers in dirty period (movement-aware)
   const originalLedgers = await ItemLedger.aggregate([
     {
       $match: {
@@ -111,7 +107,6 @@ export const getOpeningBalance = async (company, branch, itemObj, selectedDate) 
 
   const origSignedQty = originalLedgers[0]?.totalSignedQuantity || 0;
 
-  // Adjustments in dirty period (movement-aware)
   const adjustments = await AdjustmentEntry.aggregate([
     {
       $match: {
@@ -200,7 +195,8 @@ export const getAdjustedItemLedger = async ({
   if (transactionType === "sale") {
     baseMatch.transactionType = { $in: ["sale", "sales_return"] };
   } else if (transactionType === "purchase") {
-    baseMatch.transactionType = { $in: ["purchase", "purchase_return"] };}
+    baseMatch.transactionType = { $in: ["purchase", "purchase_return"] };
+  }
 
   const ledgers = await ItemLedger.aggregate([
     { $match: baseMatch },
@@ -397,7 +393,7 @@ export const getAdjustedItemLedger = async ({
 };
 
 /* =========================================================================
-   3️⃣ Generic multi-item refold (service-level, no view shaping)
+   3️⃣ Generic multi-item refold with pagination + searchTerm
    ========================================================================= */
 
 export const refoldLedgersWithAdjustments = async ({
@@ -409,6 +405,7 @@ export const refoldLedgersWithAdjustments = async ({
   transactionType = null, // 'sale' | 'purchase' | null
   page = 1,
   limit = 50,
+  searchTerm = null,      // optional string
 }) => {
   const companyId = toObjectId(company);
   const branchId = toObjectId(branch);
@@ -427,7 +424,16 @@ export const refoldLedgersWithAdjustments = async ({
     baseMatch.transactionType = { $in: ["purchase", "purchase_return"] };
   }
 
-  // Distinct item list (for pagination)
+  // Optional search on itemName / itemCode
+  let searchStage = {};
+  if (searchTerm) {
+    const regex = new RegExp(searchTerm, "i");
+    searchStage = {
+      $or: [{ itemName: regex }, { itemCode: regex }],
+    };
+  }
+
+  // Distinct items with pagination + optional search
   const itemFacet = await ItemLedger.aggregate([
     { $match: baseMatch },
     {
@@ -438,9 +444,9 @@ export const refoldLedgersWithAdjustments = async ({
         unit: { $first: "$unit" },
       },
     },
-    {
-      $sort: { itemName: 1, itemCode: 1 },
-    },
+    // Apply searchTerm here
+    ...(searchTerm ? [{ $match: searchStage }] : []),
+    { $sort: { itemName: 1, itemCode: 1 } },
     {
       $facet: {
         meta: [{ $count: "totalItems" }],
@@ -457,7 +463,6 @@ export const refoldLedgersWithAdjustments = async ({
 
   const ledgersPerItem = [];
 
-  // Process only paginated items
   for (const row of itemsPage) {
     const itemId = row._id;
 
@@ -485,7 +490,7 @@ export const refoldLedgersWithAdjustments = async ({
       unit: row.unit,
       openingQuantity: adjusted.openingQuantity,
       summary: adjusted.summary,
-      transactions: adjusted.transactions, // controller can omit if not needed
+      transactions: adjusted.transactions,
     });
   }
 
@@ -503,6 +508,7 @@ export const refoldLedgersWithAdjustments = async ({
       startDate,
       endDate,
       transactionType: transactionType || "all",
+      searchTerm: searchTerm || null,
     },
   };
 };
