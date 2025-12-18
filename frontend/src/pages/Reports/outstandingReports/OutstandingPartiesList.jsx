@@ -1,31 +1,62 @@
 // src/components/Outstanding/OutstandingPartiesList.jsx
-import React, { useRef, useEffect } from "react";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useRef, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Search, ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
 import { formatINR } from "../../../../../shared/utils/currency";
 import CustomMoonLoader from "@/components/loaders/CustomMoonLoader";
 import ErrorDisplay from "@/components/errors/ErrorDisplay";
+import { outstandingQueries } from "../../../hooks/queries/outstandingQueries";
 
 const OutstandingPartiesList = ({
-  parties,
-  isLoading,
-  isError,
-  error,
-  onRetry,
+  companyId,
+  branchId,
   selectedParty,
   onSelectParty,
-  searchTerm,
-  onSearchChange,
-  currentPage,
-  totalPages,
-  totalCount,
-  pageSize,
-  onPreviousPage,
-  onNextPage,
 }) => {
   const listContainerRef = useRef(null);
   const selectedPartyRef = useRef(null);
 
-  // Scroll to selected party when it changes
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+
+  // debounce search
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    ...outstandingQueries.partiesList(
+      companyId,
+      branchId,
+      null, // no dateRange here
+      currentPage,
+      pageSize,
+      debouncedSearchTerm,
+      "all" // partyType filter if your API expects it
+    ),
+    enabled: !!companyId && !!branchId,
+  });
+
+  const parties = data?.data?.parties || [];
+  const totalPages = data?.data?.summary?.totalPages || 0;
+  const totalCount = data?.data?.summary?.totalParties || 0;
+
+  // auto select first party if none selected
+  useEffect(() => {
+    if (!selectedParty && parties.length > 0) {
+      onSelectParty(parties[0]);
+    } else if (parties.length === 0) {
+      onSelectParty(null);
+    }
+  }, [parties, selectedParty, onSelectParty]);
+
+  // scroll selected party into view
   useEffect(() => {
     if (selectedPartyRef.current && listContainerRef.current) {
       selectedPartyRef.current.scrollIntoView({
@@ -41,47 +72,35 @@ const OutstandingPartiesList = ({
     const isReceivable = amount >= 0;
     const absAmount = Math.abs(amount);
 
-    let typeBadge = "";
-    let typeBadgeColor = "";
-
-    if (party.partyType === "both") {
-      typeBadge = "C+S";
-      typeBadgeColor = "bg-purple-100 text-purple-700";
-    } else if (party.partyType === "customer") {
-      typeBadge = "C";
-      typeBadgeColor = "bg-blue-100 text-blue-700";
-    } else {
-      typeBadge = "S";
-      typeBadgeColor = "bg-orange-100 text-orange-700";
-    }
-
     return {
       displayAmount: formatINR(absAmount),
-      symbol: isReceivable ? "+" : "-",
       color: isReceivable ? "text-green-600" : "text-red-600",
       drCrBadge: isReceivable ? "DR" : "CR",
       drCrBadgeColor: isReceivable
         ? "bg-green-100 text-green-700"
         : "bg-red-100 text-red-700",
-      typeBadge,
-      typeBadgeColor,
     };
   };
+
+  const handlePreviousPage = () =>
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+
+  const handleNextPage = () =>
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
   return (
     <div className="w-1/4 bg-white border-r flex flex-col">
       {/* Header with Search */}
-      <div className="flex-none p-3 border-b bg-gray-50">
+      <div className="flex-none p-3 border-b-2 bg-gray-50 shadow-sm ">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-bold text-gray-900">Parties</h2>
         </div>
 
-        {/* Search Bar */}
         <div className="relative">
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search parties..."
             className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
             disabled={isLoading || isError}
@@ -96,19 +115,21 @@ const OutstandingPartiesList = ({
           <div className="h-full p-4">
             <ErrorDisplay
               error={error}
-              onRetry={onRetry}
+              onRetry={refetch}
               title="Failed to load parties"
               fullHeight={true}
             />
           </div>
         ) : isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <CustomMoonLoader />
+          <div className="flex items-center justify-center h-[calc(100vh-250px)]">
+            <LoaderCircle className="animate-spin w-8 h-8 text-slate-500" />
           </div>
         ) : parties.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500 text-xs">
-              {searchTerm ? "No parties found" : "No outstanding parties"}
+            <p className="text-gray-500 text-sm">
+              {debouncedSearchTerm
+                ? "No parties found"
+                : "No outstanding parties found"}
             </p>
           </div>
         ) : (
@@ -127,14 +148,12 @@ const OutstandingPartiesList = ({
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    {/* Party Name */}
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-gray-900 truncate">
                         {party.partyName}
                       </p>
                     </div>
 
-                    {/* Amount with DR/CR Badge */}
                     <div className="flex items-center gap-1">
                       <p className={`text-xs font-bold ${displayInfo.color}`}>
                         {displayInfo.displayAmount}
@@ -147,7 +166,6 @@ const OutstandingPartiesList = ({
                     </div>
                   </div>
 
-                  {/* Show breakdown if party has both types */}
                   {party.partyType === "both" && (
                     <div className="mt-2 pt-2 border-t border-gray-200 text-[10px] text-gray-600">
                       <div className="flex justify-between">
@@ -183,7 +201,7 @@ const OutstandingPartiesList = ({
         </div>
         <div className="flex items-center gap-1">
           <button
-            onClick={onPreviousPage}
+            onClick={handlePreviousPage}
             disabled={currentPage === 1 || isLoading || isError}
             className="p-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
@@ -193,8 +211,13 @@ const OutstandingPartiesList = ({
             {totalPages > 0 ? `${currentPage} / ${totalPages}` : "0 / 0"}
           </span>
           <button
-            onClick={onNextPage}
-            disabled={currentPage === totalPages || totalPages === 0 || isLoading || isError}
+            onClick={handleNextPage}
+            disabled={
+              currentPage === totalPages ||
+              totalPages === 0 ||
+              isLoading ||
+              isError
+            }
             className="p-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             <ChevronRight className="w-3.5 h-3.5" />

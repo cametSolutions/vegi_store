@@ -11,7 +11,7 @@ import OutstandingReport from "@/pages/Reports/outstandingReports/OutstandingRep
 
 import TransactionSummary from "@/pages/Reports/TransactionSummary/TransactionSummary";
 import ItemSummary from "@/pages/Reports/itemReports/org/ItemSummary";
-import OutstandingSummary from "@/pages/Reports/outstandingReports/OutstandingSummary ";
+import OutstandingSummary from "@/pages/Reports/outstandingReports/OutstandingSummary";
 
 export default function TransactionRoutes() {
   return (

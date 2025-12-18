@@ -1,138 +1,140 @@
 // src/components/Outstanding/OutstandingTransactionsList.jsx
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useDispatch, useSelector } from "react-redux";
+import { ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
+
 import {
-  Filter,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-import { formatDate } from "../../../../../shared/utils/date";
+  DATE_FILTERS,
+  getDateRange,
+  formatDate,
+} from "../../../../../shared/utils/date";
 import { formatINR } from "../../../../../shared/utils/currency";
 import CustomMoonLoader from "@/components/loaders/CustomMoonLoader";
-import DateFilter from "../../../components/DateFilterComponent/DateFilter";
 import ErrorDisplay from "@/components/errors/ErrorDisplay";
+import { outstandingQueries } from "../../../hooks/queries/outstandingQueries";
+import FiltersBar from "@/components/filters/filterBar/FiltersBar";
+import { setFilter } from "@/store/slices/filtersSlice";
 
 const OutstandingTransactionsList = ({
+  companyId,
+  branchId,
   selectedParty,
-  transactions,
-  isLoading,
-  isError,
-  error,
-  onRetry,
-  totalOutstanding,
-  currentPage,
-  totalPages,
-  totalCount,
-  pageSize,
-  onPreviousPage,
-  onNextPage,
-  dateFilter,
-  onDateFilterChange,
-  outstandingTypeFilter,
-  onOutstandingTypeFilterChange,
-  showFilterDropdown,
-  setShowFilterDropdown,
 }) => {
-  const getOutstandingColor = (type) => {
-    return type === "dr" ? "text-red-600" : "text-green-600";
+  const dispatch = useDispatch();
+  const filters = useSelector((state) => state.filters);
+
+  // Redux filter keys (used only here, but stored globally for consistency)
+  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.TODAY);
+  const startDate = filters.startDate;
+  const endDate = filters.endDate;
+  const outstandingTypeFilter = filters.outstandingType || "all";
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Ensure defaults for this page
+  useEffect(() => {
+    if (!filters.outstandingType) {
+      dispatch(setFilter({ key: "outstandingType", value: "all" }));
+    }
+    if (!startDate || !endDate) {
+      const range = getDateRange(DATE_FILTERS.THIS_MONTH);
+      dispatch(
+        setFilter({ key: "dateFilterKey", value: DATE_FILTERS.THIS_MONTH })
+      );
+      dispatch(setFilter({ key: "startDate", value: range.start }));
+      dispatch(setFilter({ key: "endDate", value: range.end }));
+    }
+  }, [filters.outstandingType, startDate, endDate, dispatch]);
+
+  const dateRange = { start: startDate, end: endDate };
+
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    ...outstandingQueries.partyDetails(
+      companyId,
+      branchId,
+      selectedParty?.partyId,
+      outstandingTypeFilter, // "all" | "dr" | "cr"
+      dateRange,
+      currentPage,
+      pageSize
+    ),
+    enabled:
+      !!companyId && !!branchId && !!selectedParty && !!startDate && !!endDate,
+  });
+
+  const transactions = data?.data?.transactions || [];
+  const totalOutstanding = data?.data?.totalOutstanding || 0;
+  const totalPages = data?.data?.totalPages || 0;
+  const totalCount = data?.data?.totalCount || 0;
+
+  // Reset page when filters or selected party change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedParty?.partyId, outstandingTypeFilter, startDate, endDate]);
+
+  const handlePreviousPage = () =>
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+
+  const handleNextPage = () =>
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+
+  const handleDateFilterChange = (key) => {
+    const range = getDateRange(key);
+    dispatch(setFilter({ key: "dateFilterKey", value: key }));
+    dispatch(setFilter({ key: "startDate", value: range.start }));
+    dispatch(setFilter({ key: "endDate", value: range.end }));
+    setCurrentPage(1);
   };
 
-  const getOutstandingBadge = (type) => {
-    return type === "dr" ? (
-      <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded ml-1">
+  const handleOutstandingTypeChange = (value) => {
+    dispatch(setFilter({ key: "outstandingType", value }));
+    setCurrentPage(1);
+  };
+
+  const getOutstandingColor = (type) =>
+    type === "dr" ? "text-green-600" : "text-red-600";
+
+  const getOutstandingBadge = (type) =>
+    type === "dr" ? (
+      <span className="text-xs bg-green-100 text-red-700 px-2 py-0.5 rounded ml-1">
         DR
       </span>
     ) : (
-      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded ml-1">
+      <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded ml-1">
         CR
       </span>
     );
-  };
 
   return (
     <div className="flex-1 flex flex-col">
-      {/* Fixed Header */}
-      <div className="flex-none bg-white shadow-sm border-b p-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-base font-bold text-gray-900">
+      <div className="flex justify-between items-center px-3 py-3 bg-gray-50   shadow-sm border-b mb-1">
+        {/* Header with party name only */}
+        <div className="flex-none ">
+          <div className="flex items-center justify-between">
+            <h1 className="text-sm font-bold text-gray-900">
               {selectedParty?.partyName || "Select a Party"}
             </h1>
           </div>
-
-          <div className="flex items-center gap-2">
-            {/* Date Filter */}
-            <DateFilter
-              selectedFilter={dateFilter}
-              onFilterChange={onDateFilterChange}
-              disabled={!selectedParty || isLoading || isError}
-            />
-
-            {/* Outstanding Type Filter */}
-            <div className="relative">
-              <button
-                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                disabled={!selectedParty || isLoading || isError}
-                className="flex items-center gap-2 px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Filter className="w-3.5 h-3.5" />
-                Filter:{" "}
-                {outstandingTypeFilter === "all"
-                  ? "All"
-                  : outstandingTypeFilter.toUpperCase()}
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showFilterDropdown && (
-                <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-10">
-                  <button
-                    onClick={() => {
-                      onOutstandingTypeFilterChange("all");
-                      setShowFilterDropdown(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 ${
-                      outstandingTypeFilter === "all"
-                        ? "bg-blue-50 text-blue-700 font-semibold"
-                        : ""
-                    }`}
-                  >
-                    All
-                  </button>
-                  <button
-                    onClick={() => {
-                      onOutstandingTypeFilterChange("dr");
-                      setShowFilterDropdown(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 ${
-                      outstandingTypeFilter === "dr"
-                        ? "bg-blue-50 text-blue-700 font-semibold"
-                        : ""
-                    }`}
-                  >
-                    DR (Receivable)
-                  </button>
-                  <button
-                    onClick={() => {
-                      onOutstandingTypeFilterChange("cr");
-                      setShowFilterDropdown(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-50 ${
-                      outstandingTypeFilter === "cr"
-                        ? "bg-blue-50 text-blue-700 font-semibold"
-                        : ""
-                    }`}
-                  >
-                    CR (Payable)
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+        </div>
+        {/* Filter bar only for transactions */}
+        <div className=" flex justify-end">
+          <FiltersBar
+            showTransactionType={false}
+            showDateFilter={true}
+            showOutstandingType={true}
+            // add showTransactionType if you later support it here
+            dateFilter={dateFilter}
+            onDateFilterChange={setDateFilter}
+            onOutstandingTypeChange={handleOutstandingTypeChange}
+            onPageReset={() => setCurrentPage(1)}
+          />
         </div>
       </div>
 
       {/* Scrollable Table Area */}
-      <div className="flex-1 overflow-hidden pb-2">
+      <div className="flex-1 overflow-hidden pb-2 ">
         <div className="bg-white shadow-sm h-full flex flex-col">
           {!selectedParty ? (
             <div className="flex items-center justify-center flex-1">
@@ -144,15 +146,15 @@ const OutstandingTransactionsList = ({
             <div className="flex items-center justify-center flex-1 p-4">
               <ErrorDisplay
                 error={error}
-                onRetry={onRetry}
+                onRetry={refetch}
                 title="Failed to load transactions"
                 fullHeight={true}
               />
             </div>
           ) : isLoading ? (
-            <div className="flex items-center justify-center flex-1">
-              <CustomMoonLoader />
-            </div>
+           <div className="flex items-center justify-center h-[calc(100vh-250px)]">
+            <LoaderCircle className="animate-spin w-8 h-8 text-slate-500" />
+          </div>
           ) : transactions.length === 0 ? (
             <div className="flex items-center justify-center flex-1">
               <p className="text-gray-500 text-sm">No transactions found</p>
@@ -160,42 +162,42 @@ const OutstandingTransactionsList = ({
           ) : (
             <>
               {/* Fixed Table Header */}
-              <div className="flex-none px-2">
+              <div className="flex-none ">
                 <table className="w-full table-fixed">
-                  <thead className="bg-gray-50 border-b">
+                  <thead className="bg-gray-300 border-b">
                     <tr>
                       <th
-                        className="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                        className="px-2 py-3 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                         style={{ width: "50px" }}
                       >
                         #
                       </th>
                       <th
-                        className="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                        className="px-2 py-3 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                         style={{ width: "120px" }}
                       >
                         Transaction No.
                       </th>
                       <th
-                        className="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                        className="px-2 py-3 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                         style={{ width: "120px" }}
                       >
                         Date
                       </th>
                       <th
-                        className="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                        className="px-2 py-3 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                         style={{ width: "130px" }}
                       >
                         Total Amount
                       </th>
                       <th
-                        className="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                        className="px-2 py-3 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                         style={{ width: "130px" }}
                       >
                         Paid Amount
                       </th>
                       <th
-                        className="px-2 py-1.5 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
+                        className="px-2 py-3 text-center text-[10px] font-semibold text-gray-500 uppercase tracking-wider"
                         style={{ width: "150px" }}
                       >
                         Closing Balance
@@ -206,13 +208,13 @@ const OutstandingTransactionsList = ({
               </div>
 
               {/* Scrollable Table Body */}
-              <div className="flex-1 overflow-y-auto px-2">
+              <div className="flex-1 overflow-y-auto ">
                 <table className="w-full table-fixed">
                   <tbody className="bg-white divide-y divide-gray-200">
                     {transactions.map((transaction, index) => (
                       <tr
                         key={transaction._id}
-                        className="hover:bg-gray-50 transition"
+                        className="hover:bg-blue-100 bg-blue-50 transition"
                       >
                         <td
                           className="px-2 py-1.5 whitespace-nowrap text-xs text-gray-900 text-center"
@@ -256,7 +258,7 @@ const OutstandingTransactionsList = ({
                                 transaction.outstandingType
                               )}
                             >
-                              {formatINR(transaction.closingBalanceAmount)}
+                              {formatINR(Math.abs(transaction.closingBalanceAmount))}
                             </span>
                             {getOutstandingBadge(transaction.outstandingType)}
                           </div>
@@ -296,24 +298,35 @@ const OutstandingTransactionsList = ({
               {/* Fixed Footer with Pagination */}
               <div className="flex-none flex items-center justify-between px-1 py-1 border-t bg-gray-50">
                 <div className="text-xs text-gray-700">
-                  Showing {(currentPage - 1) * pageSize + 1}-
-                  {Math.min(currentPage * pageSize, totalCount)} of {totalCount}
+                  {totalCount > 0
+                    ? `Showing ${(currentPage - 1) * pageSize + 1}-${Math.min(
+                        currentPage * pageSize,
+                        totalCount
+                      )} of ${totalCount}`
+                    : "Showing 0-0 of 0"}
                 </div>
 
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={onPreviousPage}
+                    onClick={handlePreviousPage}
                     disabled={currentPage === 1 || isLoading || isError}
                     className="p-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
                   <span className="text-xs text-gray-700 px-2">
-                    {currentPage} / {totalPages}
+                    {totalPages > 0
+                      ? `${currentPage} / ${totalPages}`
+                      : "0 / 0"}
                   </span>
                   <button
-                    onClick={onNextPage}
-                    disabled={currentPage === totalPages || totalPages === 0 || isLoading || isError}
+                    onClick={handleNextPage}
+                    disabled={
+                      currentPage === totalPages ||
+                      totalPages === 0 ||
+                      isLoading ||
+                      isError
+                    }
                     className="p-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
                     <ChevronRight className="w-3.5 h-3.5" />

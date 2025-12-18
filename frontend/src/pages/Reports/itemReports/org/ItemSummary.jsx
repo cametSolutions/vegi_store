@@ -181,9 +181,9 @@ const ItemSummaryPage = () => {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 bg-blue-100">
+              <tbody className="divide-y divide-gray-200 ">
                 {summaryData.map((row, idx) => (
-                  <tr key={row.itemId} className="h-12 hover:bg-gray-50">
+                  <tr key={row.itemId} className="h-12 bg-blue-50 hover:bg-blue-100">
                     <td className="px-3 text-gray-500 text-left">
                       {(pagination.page - 1) * pagination.limit + idx + 1}
                     </td>

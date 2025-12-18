@@ -1,7 +1,7 @@
 import express from "express"
 import { getItemLedgerReport, getItemMonthlyReport } from "../../controller/reportController/itemReportController.js"
 // import { getAccountLedgerReport, getAccountMonthlySummary } from "../../controller/reportController/accountReportController.js"
-import { getOutstandingReport, getOutstandingSummary,getOutstandingCustomers,getCustomerOutstandingDetails,getOutstandingParties } from "../../controller/reportController/outstandingReportController.js"
+import { getOutstandingReport, getOutstandingSummary,getPartyOutstandingDetails,getOutstandingParties } from "../../controller/reportController/outstandingReportController.js"
 import {getTransactionSummary} from "../../controller/reportController/saleReportController.js"
 import { getItemSummaryReport } from "../../controller/reportController/itemSummaryController.js"
 const router=express.Router()
@@ -18,8 +18,8 @@ router.get("/items-summary",getItemSummaryReport)
 router.get("/outstanding-report",getOutstandingReport)
 router.get("/outstanding-summary",getOutstandingSummary)
 router.get("/transaction-summary/:companyId/:branchId/:transactionType",getTransactionSummary)
-router.get('/getCustomerOutstandingDetails/:companyId/:branchId/:customerId',getCustomerOutstandingDetails);
-router.get('/getOutstandingCustomers/:companyId/:branchId',getOutstandingCustomers);
+router.get('/getCustomerOutstandingDetails/:companyId/:branchId/:customerId',getPartyOutstandingDetails);
+// router.get('/getOutstandingCustomers/:companyId/:branchId',getOutstandingCustomers);
 // In your routes file
 router.get('/getOutstandingParties/:companyId/:branchId', getOutstandingParties);
 

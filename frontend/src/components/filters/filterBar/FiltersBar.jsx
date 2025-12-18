@@ -3,8 +3,6 @@ import React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Filter as FilterIcon } from "lucide-react";
 
-
-
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,21 +11,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { getDateRange,DATE_FILTERS } from "../../../../../shared/utils/date";
+import { getDateRange, DATE_FILTERS } from "../../../../../shared/utils/date";
 import { setFilter } from "@/store/slices/filtersSlice";
 import DateFilter from "../dateFIlter/DateFilter";
 
-/**
- * @param {Object} props
- * @param {boolean} props.showDateFilter
- * @param {boolean} props.showTransactionType
- * @param {boolean} props.showOutstandingType
- * @param {Array<'all'|'sale'|'purchase'|'sales_return'|'purchase_return'>} props.allowedTxnTypes
- * @param {Array<'receivables'|'payables'>} props.allowedOutstandingTypes
- * @param {string} props.dateFilter
- * @param {function} props.onDateFilterChange
- * @param {function} props.onPageReset
- */
 const FiltersBar = ({
   showDateFilter = true,
   showTransactionType = true,
@@ -46,7 +33,9 @@ const FiltersBar = ({
 }) => {
   const dispatch = useDispatch();
   const filters = useSelector((state) => state.filters);
+
   const transactionType = filters.transactionType || "all";
+  // slice stores "dr" | "cr" | null
   const outstandingType = filters.outstandingType || null;
 
   const isCustomFilterActive = dateFilter === DATE_FILTERS.CUSTOM;
@@ -56,8 +45,18 @@ const FiltersBar = ({
     if (onPageReset) onPageReset();
   };
 
+  // Store "dr" / "cr" / null in Redux
   const handleOutstandingChange = (value) => {
-    dispatch(setFilter({ key: "outstandingType", value }));
+    let storedValue = null; // default "All"
+    if (value === "receivables") {
+      storedValue = "dr";
+    } else if (value === "payables") {
+      storedValue = "cr";
+    } else {
+      storedValue = null; // all
+    }
+
+    dispatch(setFilter({ key: "outstandingType", value: storedValue }));
     if (onPageReset) onPageReset();
   };
 
@@ -95,23 +94,25 @@ const FiltersBar = ({
     }
   };
 
+  // Map stored dr/cr to human‑readable text
   const renderOutstandingLabel = (type) => {
     switch (type) {
-      case "receivables":
-        return "Receivables (Return Dr)";
-      case "payables":
-        return "Payables (Return Cr)";
+      case "dr":
+        return "Receivables (Dr)";
+      case "cr":
+        return "Payables (Cr)";
       default:
-        return type;
+        return "All";
     }
   };
 
   return (
     <div className="flex items-center gap-2 ">
-      {/* Transaction type (configurable) */}
+       <FilterIcon className="w-3 h-3 text-gray-500 mr-1" />
+      {/* Transaction type */}
       {showTransactionType && (
         <div className="flex items-center gap-1">
-          <FilterIcon className="w-3 h-3 text-gray-500 mr-1" />
+         
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -133,10 +134,11 @@ const FiltersBar = ({
         </div>
       )}
 
-      {/* Outstanding type (configurable) */}
+      {/* Outstanding type */}
       {showOutstandingType && (
         <div className="flex items-center gap-1">
-          <span className="text-[11px] text-gray-600">Outstanding</span>
+          <span className="text-[12px] text-gray-600 mr-1
+          ">Outstanding</span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -144,21 +146,24 @@ const FiltersBar = ({
                 size="sm"
                 className="h-8 text-xs px-2"
               >
-                {outstandingType
-                  ? renderOutstandingLabel(outstandingType)
-                  : "All"}
+                {renderOutstandingLabel(outstandingType)}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              {/* All */}
               <DropdownMenuItem onClick={() => handleOutstandingChange(null)}>
                 All
               </DropdownMenuItem>
+
+              {/* Receivables / Payables */}
               {allowedOutstandingTypes.map((t) => (
                 <DropdownMenuItem
                   key={t}
                   onClick={() => handleOutstandingChange(t)}
                 >
-                  {renderOutstandingLabel(t)}
+                  {t === "receivables"
+                    ? "Receivables (Dr)"
+                    : "Payables (Cr)"}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -166,7 +171,7 @@ const FiltersBar = ({
         </div>
       )}
 
-      {/* Date filter (can be hidden via prop) */}
+      {/* Date filter */}
       {showDateFilter && (
         <DateFilter
           selectedFilter={dateFilter}
