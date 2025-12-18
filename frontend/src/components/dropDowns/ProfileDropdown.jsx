@@ -8,6 +8,7 @@ import {
   Power,
   RefreshCcw,
   CodeXml,
+  FileText,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -337,6 +338,48 @@ const ProfileDropdown = () => {
     []
   );
 
+  // Developer menu items (Reports moved here)
+  const developerMenuItems = useMemo(
+    () => [
+      {
+        path: "/developer/item-ledger",
+        label: "Item Ledger",
+        icon: CodeXml,
+      },
+      {
+        path: "/developer/account-ledger",
+        label: "Account Ledger",
+        icon: CodeXml,
+      },
+      {
+        path: "/reports/item-report",
+        label: "Item Report",
+        icon: FileText,
+      },
+      {
+        path: "/reports/item-monthly-report",
+        label: "Item Monthly Report",
+        icon: FileText,
+      },
+      {
+        path: "/reports/account-report",
+        label: "Account Report",
+        icon: FileText,
+      },
+      {
+        path: "/reports/account-monthly-report",
+        label: "Account Monthly Report",
+        icon: FileText,
+      },
+      {
+        path: "/reports/outstanding-report",
+        label: "Outstanding Report",
+        icon: FileText,
+      },
+    ],
+    []
+  );
+
   // Loading state
   if (isLoading) {
     return (
@@ -496,31 +539,24 @@ const ProfileDropdown = () => {
             </DropdownMenuSubContent>
           </DropdownMenuSub>
 
+          {/* Developer Menu with Reports */}
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="flex items-center gap-2">
               <CodeXml className="w-4 h-4" />
-              <span className="ml-2">Developer</span>
+              <span className="ml-2">Developer & Reports</span>
             </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="w-48">
-              <DropdownMenuItem
-                onClick={() => handleNavigate("/developer/item-ledger")}
-              >
-                <CodeXml className="w-4 h-4 mr-2 opacity-50" />
-                Item Ledger
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleNavigate("/developer/account-ledger")}
-              >
-                <CodeXml className="w-4 h-4 mr-2 opacity-50" />
-                Account Ledger
-              </DropdownMenuItem>
+            <DropdownMenuSubContent className="w-56 max-h-[400px] overflow-y-auto">
+              {developerMenuItems.map(({ path, label, icon: Icon }) => (
+                <DropdownMenuItem
+                  key={path}
+                  onClick={() => handleNavigate(path)}
+                >
+                  <Icon className="w-4 h-4 mr-2 opacity-50" />
+                  {label}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
-
-          {/* <DropdownMenuItem onClick={() => handleNavigate("/settings")}>
-            <RefreshCcw className="w-4 h-4 mr-2" />
-            Run Revaluation
-          </DropdownMenuItem> */}
 
           <RunRevaluation />
           <DropdownMenuSeparator />
