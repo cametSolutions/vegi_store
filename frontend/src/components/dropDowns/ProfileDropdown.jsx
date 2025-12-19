@@ -341,16 +341,7 @@ const ProfileDropdown = () => {
   // Developer menu items (Reports moved here)
   const developerMenuItems = useMemo(
     () => [
-      {
-        path: "/developer/item-ledger",
-        label: "Item Ledger",
-        icon: CodeXml,
-      },
-      {
-        path: "/developer/account-ledger",
-        label: "Account Ledger",
-        icon: CodeXml,
-      },
+     
       {
         path: "/reports/item-report",
         label: "Item Report",
@@ -543,7 +534,7 @@ const ProfileDropdown = () => {
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="flex items-center gap-2">
               <CodeXml className="w-4 h-4" />
-              <span className="ml-2">Developer & Reports</span>
+              <span className="ml-2">Developer </span>
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="w-56 max-h-[400px] overflow-y-auto">
               {developerMenuItems.map(({ path, label, icon: Icon }) => (
