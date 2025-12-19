@@ -2,7 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { transactionSummaryService } from "../../../src/api/services/transactionSummary.service ";
 
 export const transactionSummaryQueries = {
-  all: () => ["transactionSummary"],
+  all: () => ["reports","transactionSummary"],
 
   // Get transaction summary
   summary: (companyId, branchId, transactionType, params = {}) =>
