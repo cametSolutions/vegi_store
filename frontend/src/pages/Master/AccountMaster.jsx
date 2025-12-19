@@ -71,7 +71,7 @@ const AccountMaster = () => {
       accountName: "John Doe",
       accountType: "Savings",
       pricelevel: "Standard",
-      openingBalance: 15000,
+      openingBalance: 14000,
       openingBalanceType: "Credit",
       address: "123 Main St, Mumbai",
       phoneNumber: "9876543210"
@@ -81,7 +81,7 @@ const AccountMaster = () => {
       accountName: "Jane Smith",
       accountType: "Current",
       pricelevel: "Premium",
-      openingBalance: 25000,
+      openingBalance: 24000,
       openingBalanceType: "Debit",
       address: "456 Park Ave, Delhi",
       phoneNumber: "9876543211"

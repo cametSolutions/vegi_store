@@ -56,7 +56,7 @@ const TransactionList = ({ onEditTransaction, selectedTransaction }) => {
       debouncedSearchTerm,
       companyId,
       branchId,
-      12,
+      30,
       "transactionDate",
       "desc",
       { refetchOnWindowFocus: false, retry: 2 }

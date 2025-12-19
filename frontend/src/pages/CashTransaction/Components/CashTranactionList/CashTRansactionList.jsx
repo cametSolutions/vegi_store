@@ -57,7 +57,7 @@ const TransactionList = ({ onEditTransaction, selectedTransaction }) => {
       debouncedSearchTerm,
       companyId,
       branchId,
-      12,
+      30, // pageSize
       "transactionDate", /// sort by date
       "desc", // sortOrder  for MongoDB
       { refetchOnWindowFocus: false, retry: 2 }

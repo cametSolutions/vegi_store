@@ -1,5 +1,12 @@
 import BranchModel from "../../model/masters/BranchModel.js";
-
+import mongoose from "mongoose";
+import AccountMasterModel from "../../model/masters/AccountMasterModel.js";
+import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
+import OutstandingModel from "../../model/OutstandingModel.js";
+import {PaymentModel,ReceiptModel} from "../../model/FundTransactionMode.js";
+import {SalesReturnModel,PurchaseReturnModel} from "../../model/TransactionModel.js";
+import UserModel from "../../model/userModel.js";
+import {PurchaseModel,SalesModel} from "../../model/TransactionModel.js";
 // ✅ Create new branch
 export const createBranch = async (req, res) => {
   try {
@@ -263,25 +270,82 @@ export const updateBranch = async (req, res) => {
 };
 
 // ✅ Delete branch
+const isBranchReferenced = async (referencesToCheck, branchId) => {
+  for (const ref of referencesToCheck) {
+    const count = await ref.model.countDocuments({
+      [ref.field]: branchId,
+    });
+    if (count > 0) {
+      return true;
+    }
+  }
+  return false;
+};
+
 export const deleteBranch = async (req, res) => {
+  const session = await mongoose.startSession();
   try {
+    session.startTransaction();
     const { id } = req.params;
 
+    // Check if branch exists
     const branch = await BranchModel.findById(id);
     if (!branch) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({
         success: false,
         message: "Branch not found",
       });
     }
 
-    await BranchModel.findByIdAndDelete(id);
+    // Collections and fields to check for branch references
+    const referencesToCheck = [
+      { model: AccountMasterModel, field: "branches" },
+      { model: ItemMasterModel, field: "branch" },
+      { model: ReceiptModel, field: "branch" },
+      { model: PaymentModel, field: "branch" },
+      { model: PurchaseModel, field: "branch" },
+      { model: SalesModel, field: "branch" },
+      { model: UserModel, field: "branches" }, // If users are linked to branches
+      { model: OutstandingModel, field: "branch" },
+      { model: SalesReturnModel, field: "branch" },
+      { model: PurchaseReturnModel, field: "branch" },
+      // Add more models as needed
+    ];
+
+    // Check if branch is referenced in any collection
+    const inUse = await isBranchReferenced(referencesToCheck, id);
+    if (inUse) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({
+        success: false,
+        message: "Branch is used in accounts, transactions or other records and cannot be deleted.",
+      });
+    }
+
+    // Delete the branch
+    const result = await BranchModel.findByIdAndDelete(id, { session });
+    if (!result) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({
+        success: false,
+        message: "Branch not found",
+      });
+    }
+
+    await session.commitTransaction();
+    session.endSession();
 
     return res.status(200).json({
       success: true,
       message: "Branch deleted successfully",
     });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error("Error deleting branch:", error);
     return res.status(500).json({
       success: false,

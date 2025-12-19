@@ -95,6 +95,8 @@ const ItemMasterSchema = new mongoose.Schema(
 
 // ==================== INDEXES ====================
 ItemMasterSchema.index({ company: 1, status: 1 });
+ItemMasterSchema.index({ company: 1 });
+ItemMasterSchema.index({ branch: 1, });
 ItemMasterSchema.index({ category: 1, status: 1 });
 ItemMasterSchema.index({ "stock.branch": 1 });
 ItemMasterSchema.index({ company: 1, "stock.branch": 1 });
@@ -160,6 +162,7 @@ ItemMasterSchema.virtual("branchSummary").get(function () {
 ItemMasterSchema.methods.getBranchStock = function (branchId) {
   return this.stock.find((s) => s.branch.toString() === branchId.toString());
 };
+
 
 
 

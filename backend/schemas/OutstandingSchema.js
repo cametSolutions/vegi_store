@@ -35,7 +35,7 @@ const OutstandingSchema = new mongoose.Schema(
     transactionModel: {
       type: String,
       required: [true, "Transaction model is required"],
-      enum: ["Sale", "Purchase", "SalesReturn", "PurchaseReturn", "OpeningBalance"],
+      enum: ["Sale", "Purchase", "SalesReturn", "PurchaseReturn", "OpeningBalance", "Receipt", "Payment"],
     },
     sourceTransaction: {
       type: mongoose.Schema.Types.ObjectId,
@@ -54,6 +54,8 @@ const OutstandingSchema = new mongoose.Schema(
           "sales_return",
           "purchase_return",
           "opening_balance",
+          "advance_receipt",
+          "advance_payment",
         ],
         message: "Invalid transaction type",
       },
@@ -416,9 +418,13 @@ OutstandingSchema.pre("save", function (next) {
   }
 
   /// if outstandingType is cr closingBalanceAmount should be negative
-  if (this.outstandingType === "cr") {
-    this.closingBalanceAmount = -this.closingBalanceAmount;
-  }
+if (this.outstandingType === "cr") {
+  this.closingBalanceAmount = -Math.abs(this.closingBalanceAmount);
+}
+if (this.outstandingType === "dr") {
+  this.closingBalanceAmount = Math.abs(this.closingBalanceAmount);
+}
+
 
   next();
 });

@@ -37,15 +37,18 @@ const CreateCashTransaction = () => {
     [location, CashtransactionData.transactionType]
   );
 
+  console.log(currentTransactionType);
+  
+
   useEffect(() => {
-    resetCashTransactionData();
+    resetCashTransactionData(currentTransactionType);
     updateTransactionField("transactionType", currentTransactionType);
   }, [currentTransactionType, updateTransactionField]);
 
   useEffect(() => {
     // Cleanup function - runs when component unmounts
     return () => {
-      resetCashTransactionData();
+      resetCashTransactionData(currentTransactionType);
     };
   }, []);
 
@@ -73,7 +76,7 @@ const CreateCashTransaction = () => {
           {/* Receipt Details - Top */}
           <div className="bg-white rounded-lg shadow-sm">
             <TransactionAccountSelector
-              transactionType={CashtransactionData?.transactionType}
+              transactionType={currentTransactionType}
               accountName={CashtransactionData?.accountName}
               amount={CashtransactionData?.amount}
               previousBalanceAmount={CashtransactionData?.previousBalanceAmount}

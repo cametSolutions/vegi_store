@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   useParams,
   useNavigate,
@@ -24,6 +24,7 @@ const TransactionPrintPreview = () => {
 
   // Print size selector state
   const [printSize, setPrintSize] = useState("80mm");
+  const [contentHeight, setContentHeight] = useState("auto");
 
   const selectedCompanyFromStore = useSelector(
     (state) => state?.company?.selectedCompany
@@ -40,7 +41,7 @@ const TransactionPrintPreview = () => {
     isLoading,
     isError,
     error,
-    refetch
+    refetch,
   } = useQuery({
     ...transactionQueries.getTransactionById(
       companyId,
@@ -55,7 +56,17 @@ const TransactionPrintPreview = () => {
 
   const transaction = transactionResponse;
 
-  // Print size configurations - all use thermal receipt layout
+  // Calculate content height dynamically
+  useEffect(() => {
+    if (printRef.current && transaction) {
+      setTimeout(() => {
+        const height = printRef.current.scrollHeight;
+        setContentHeight(`${height}px`);
+      }, 100);
+    }
+  }, [transaction, printSize]);
+
+  // Print size configurations
   const printSizes = {
     "80mm": {
       width: "80mm",
@@ -79,7 +90,6 @@ const TransactionPrintPreview = () => {
     },
   };
 
-  // Helper to format CR/DR for balance
   const formatWithCrDr = (value = 0) => {
     if (value < 0) return `(CR) ${Math.abs(value).toFixed(2)} `;
     if (value > 0) return ` (DR) ${value.toFixed(2)}`;
@@ -87,143 +97,57 @@ const TransactionPrintPreview = () => {
   };
 
   const handlePrint = () => {
-    const printContent = printRef.current;
-
-    if (printContent) {
-      const printWindow = window.open("", "", "width=800,height=600");
-      const currentSize = printSizes[printSize];
-      const isThermal = printSize === "80mm" || printSize === "127mm";
-
-      printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Print - ${
-            transaction?.transactionNumber || "Transaction"
-          }</title>
-          <style>
-            @page {
-              size: ${
-                printSize === "a4"
-                  ? "A4"
-                  : printSize === "letter"
-                  ? "letter"
-                  : `${currentSize.width} auto`
-              };
-              margin: ${isThermal ? "0" : "10mm"};
-            }
-            
-            body {
-              margin: 0;
-              padding: ${isThermal ? "16px" : "20px"};
-              font-family: 'Courier', monospace;
-              width: ${currentSize.width};
-            }
-            
-            * { 
-              box-sizing: border-box; 
-            }
-            
-            table { 
-              width: 100%; 
-              border-collapse: collapse; 
-            }
-            
-            .text-center { text-align: center; }
-            .text-right { text-align: right; }
-            .text-left { text-align: left; }
-            .font-bold { font-weight: bold; }
-            .border-b { border-bottom: 1px solid #000; }
-            .border-t-2 { border-top: 2px solid #000; }
-            .border-black { border-color: #000; }
-            .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
-            .mb-4 { margin-bottom: 1rem; }
-            .mt-4 { margin-top: 1rem; }
-            .my-2 { margin-top: 0.5rem; margin-bottom: 0.5rem; }
-            .space-y-1 > * + * { margin-top: 0.25rem; }
-            .flex { display: flex; }
-            .justify-between { justify-content: space-between; }
-            .truncate { 
-              overflow: hidden; 
-              text-overflow: ellipsis; 
-              white-space: nowrap; 
-            }
-            
-            /* Font sizes based on print size */
-            ${
-              printSize === "80mm"
-                ? `
-              .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
-              .text-xs { font-size: 0.75rem; line-height: 1rem; }
-            `
-                : printSize === "127mm"
-                ? `
-              .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
-              .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
-            `
-                : `
-              .text-2xl { font-size: 1.5rem; line-height: 2rem; }
-              .text-base { font-size: 1rem; line-height: 1.5rem; }
-            `
-            }
-            
-            hr { 
-              border: 0; 
-              border-top: 2px solid #000; 
-              margin: 0.5rem 0;
-            }
-            
-            .max-w-100px {
-              max-width: 100px;
-            }
-          </style>
-        </head>
-        <body>
-          ${printContent.innerHTML}
-        </body>
-      </html>
-    `);
-
-      printWindow.document.close();
-      printWindow.focus();
-
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-      }, 250);
-    }
+    window.print();
   };
 
   const handleDownloadPDF = () => {
-    if (!transaction) return;
+    if (!transaction || !printRef.current) return;
 
     const sizeConfig = printSizes[printSize];
+    const element = printRef.current;
+
+    // Calculate actual content height
+    const contentHeightMM = (element.scrollHeight * 0.264583); // Convert px to mm
+
+    let pdfFormat;
+    let pdfWidth;
+    let pdfHeight;
+
+    if (printSize === "80mm") {
+      pdfWidth = 80;
+      pdfHeight = Math.max(contentHeightMM, 100); // Minimum 100mm
+    } else if (printSize === "127mm") {
+      pdfWidth = 127;
+      pdfHeight = Math.max(contentHeightMM, 100);
+    } else if (printSize === "a4") {
+      pdfWidth = 210;
+      pdfHeight = 297;
+    } else if (printSize === "letter") {
+      pdfWidth = 216;
+      pdfHeight = 279;
+    }
 
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
-      format: sizeConfig.pdfFormat,
+      format: [pdfWidth, pdfHeight],
     });
 
-    // All sizes use thermal receipt layout
-    generateThermalPDF(doc, transaction, printSize);
+    generateThermalPDF(doc, transaction, printSize, pdfHeight);
 
     doc.save(`${transaction?.transactionNumber || "receipt"}.pdf`);
   };
 
-  // Thermal PDF generation for all sizes
-  const generateThermalPDF = (doc, transaction, size) => {
+  const generateThermalPDF = (doc, transaction, size, pageHeight) => {
     let yPos = 10;
     const leftMargin = 5;
 
-    // Get page width based on size
     let pageWidth;
     if (size === "80mm") pageWidth = 80;
     else if (size === "127mm") pageWidth = 127;
     else if (size === "a4") pageWidth = 210;
     else if (size === "letter") pageWidth = 216;
 
-    // Adjust font sizes based on width
     const fontSize = {
       title: size === "80mm" ? 12 : size === "127mm" ? 14 : 16,
       header: size === "80mm" ? 9 : size === "127mm" ? 10 : 12,
@@ -232,7 +156,6 @@ const TransactionPrintPreview = () => {
       footer: size === "80mm" ? 8 : size === "127mm" ? 9 : 11,
     };
 
-    // Helper for PDF CR/DR formatting
     const formatWithCrDrForPdf = (value = 0) => {
       if (value < 0) return `CR ${Math.abs(value).toFixed(2)}`;
       if (value > 0) return `DR ${value.toFixed(2)}`;
@@ -275,7 +198,6 @@ const TransactionPrintPreview = () => {
     doc.setFontSize(fontSize.tableHeader);
     doc.setFont("courier", "bold");
 
-    // Dynamic column positions based on width
     const col1 = leftMargin;
     const col2 = leftMargin + pageWidth * 0.1;
     const col3 = leftMargin + pageWidth * 0.3;
@@ -298,17 +220,11 @@ const TransactionPrintPreview = () => {
 
     if (transaction?.items && Array.isArray(transaction.items)) {
       transaction.items.forEach((item, index) => {
-        if (yPos > 280) {
-          doc.addPage();
-          yPos = 10;
-        }
-
         doc.text(String(index + 1), col1, yPos);
         const price = item?.rate || 0;
         doc.text(String(price.toFixed(2)), col2, yPos);
 
         const itemName = item?.itemName || "Item";
-        // Adjust max length based on size
         let maxLength;
         if (size === "80mm") maxLength = 18;
         else if (size === "127mm") maxLength = 30;
@@ -335,7 +251,7 @@ const TransactionPrintPreview = () => {
     doc.line(leftMargin, yPos, pageWidth - leftMargin, yPos);
     yPos += 5;
 
-    // Totals - UPDATED
+    // Totals
     doc.setFont("courier", "bold");
     doc.setFontSize(fontSize.footer);
 
@@ -369,9 +285,14 @@ const TransactionPrintPreview = () => {
 
     doc.text("Balance (Opening)", leftMargin, yPos);
     doc.text(":", leftMargin + 30, yPos);
-    doc.text(formatWithCrDrForPdf(openingBalance), pageWidth - leftMargin, yPos, {
-      align: "right",
-    });
+    doc.text(
+      formatWithCrDrForPdf(openingBalance),
+      pageWidth - leftMargin,
+      yPos,
+      {
+        align: "right",
+      }
+    );
     yPos += 5;
 
     doc.text("Cash", leftMargin, yPos);
@@ -383,9 +304,14 @@ const TransactionPrintPreview = () => {
 
     doc.text("Closing Balance", leftMargin, yPos);
     doc.text(":", leftMargin + 30, yPos);
-    doc.text(String(formatWithCrDrForPdf(closingBalance)), pageWidth - leftMargin, yPos, {
-      align: "right",
-    });
+    doc.text(
+      String(formatWithCrDrForPdf(closingBalance)),
+      pageWidth - leftMargin,
+      yPos,
+      {
+        align: "right",
+      }
+    );
     yPos += 8;
 
     doc.setFont("courier", "normal");
@@ -395,7 +321,6 @@ const TransactionPrintPreview = () => {
     });
   };
 
-  // Render thermal receipt preview - UPDATED
   const renderThermalPreview = () => {
     const sizeConfig = printSizes[printSize];
     const itemFontSize =
@@ -472,7 +397,9 @@ const TransactionPrintPreview = () => {
                     {(item?.quantity || 0).toFixed(2)}
                   </td>
                   <td className="py-1 text-right">
-                    {(item?.amountAfterTax || item?.baseAmount || 0).toFixed(2)}
+                    {(item?.amountAfterTax || item?.baseAmount || 0).toFixed(
+                      2
+                    )}
                   </td>
                 </tr>
               ))}
@@ -513,7 +440,7 @@ const TransactionPrintPreview = () => {
           </div>
           <div className="flex justify-between">
             <span>Closing Balance:</span>
-            <span>{(formatWithCrDr(transaction?.balanceAmount || 0))}</span>
+            <span>{formatWithCrDr(transaction?.balanceAmount || 0)}</span>
           </div>
         </div>
 
@@ -556,55 +483,14 @@ const TransactionPrintPreview = () => {
     );
   }
 
-if (isError || !transaction) {
-  return (
-    <div className="flex flex-col items-center justify-center h-[calc(100vh-101px)] bg-gradient-to-br from-gray-50 to-gray-100 px-4">
-      {/* Error Icon Container */}
-      <div className="relative mb-8">
-        <div className="absolute inset-0 bg-red-100 rounded-full blur-2xl opacity-50 animate-pulse"></div>
-        <div className="relative bg-white rounded-full p-6 shadow-xl border-4 border-red-50">
-          <svg
-            className="w-10 h-10 text-red-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        </div>
-      </div>
-
-      {/* Error Content */}
-      <div className="text-center max-w-md">
-        <h1 className="text-xl font-bold text-gray-800 mb-3">
-          Oops! Something Went Wrong
-        </h1>
-        <p className="text-gray-600 mb-2 text-lg">
-          We couldn't load the transaction details
-        </p>
-        
-
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
-          <button
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Go Back
-          </button>
-          <button
-            onClick={() =>{ refetch()}}
-            className="inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 font-medium px-6 py-3 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105"
-          >
+  if (isError || !transaction) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-101px)] bg-gradient-to-br from-gray-50 to-gray-100 px-4">
+        <div className="relative mb-8">
+          <div className="absolute inset-0 bg-red-100 rounded-full blur-2xl opacity-50 animate-pulse"></div>
+          <div className="relative bg-white rounded-full p-6 shadow-xl border-4 border-red-50">
             <svg
-              className="w-5 h-5"
+              className="w-10 h-10 text-red-500"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -613,39 +499,68 @@ if (isError || !transaction) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            Try Again
-          </button>
+          </div>
         </div>
 
-        {/* Help Text */}
-        <p className="text-sm text-gray-500 mt-8">
-          If the problem persists, please contact support or check your connection.
-        </p>
-      </div>
-    </div>
-  );
-}
+        <div className="text-center max-w-md">
+          <h1 className="text-xl font-bold text-gray-800 mb-3">
+            Oops! Something Went Wrong
+          </h1>
+          <p className="text-gray-600 mb-2 text-lg">
+            We couldn't load the transaction details
+          </p>
 
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
+            <button
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Go Back
+            </button>
+            <button
+              onClick={() => {
+                refetch();
+              }}
+              className="inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 font-medium px-6 py-3 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Try Again
+            </button>
+          </div>
+
+          <p className="text-sm text-gray-500 mt-8">
+            If the problem persists, please contact support or check your
+            connection.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const currentSize = printSizes[printSize];
 
   return (
     <div className="h-[calc(100vh-101px)] bg-gray-500 flex flex-col">
-      {/* Header with actions - FIXED AT TOP */}
+      {/* Header with actions */}
       <div className="bg-white shadow-sm border-b z-10 print:hidden flex-shrink-0">
         <div className="mx-auto px-4 py-4 shadow-lg">
-          {/* Top Row: Back button and Action buttons */}
           <div className="flex items-center justify-between text-sm">
-            {/* <button
-              onClick={() => navigate(-1,{ replace: true })}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4 font-bold" />
-              <span className="font-bold">Back</span>
-            </button> */}
             <div></div>
             <div className="flex gap-2">
               <label
@@ -699,14 +614,14 @@ if (isError || !transaction) {
 
       {/* SCROLLABLE CONTENT AREA */}
       <div className="flex-1 overflow-auto">
-        {/* Print Preview Content */}
         <div className="max-w-4xl mx-auto py-8 px-4 print:p-0 print:max-w-full">
           <div
             ref={printRef}
+            id="print-content"
             className="bg-white shadow-lg mx-auto print:shadow-none transition-all duration-300"
             style={{
               width: currentSize.width,
-              minHeight: "200mm",
+              minHeight: "fit-content",
               fontFamily: "Courier, monospace",
             }}
           >
@@ -719,37 +634,45 @@ if (isError || !transaction) {
       <style>{`
         @media print {
           @page {
-            size: ${
-              printSize === "a4"
-                ? "A4"
-                : printSize === "letter"
-                ? "letter"
-                : `${currentSize.width} auto`
-            };
-            margin: ${
-              printSize === "80mm" || printSize === "127mm" ? "0" : "10mm"
-            };
+            size: ${currentSize.width} auto;
+            margin: 0;
+          }
+
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
           }
 
           body {
-            margin: 0;
-            padding: 0;
+            width: ${currentSize.width} !important;
+          }
+
+          #print-content {
+            width: ${currentSize.width} !important;
+            height: auto !important;
+            min-height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            page-break-after: auto !important;
           }
 
           .print\\:hidden {
             display: none !important;
           }
 
-          .print\\:p-0 {
-            padding: 0 !important;
+          * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
+        }
 
-          .print\\:max-w-full {
-            max-width: 100% !important;
-          }
-
-          .print\\:shadow-none {
-            box-shadow: none !important;
+        @media screen {
+          #print-content {
+            min-height: fit-content;
+            height: auto;
           }
         }
       `}</style>

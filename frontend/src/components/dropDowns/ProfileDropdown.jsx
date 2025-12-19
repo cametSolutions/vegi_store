@@ -7,6 +7,8 @@ import {
   Database,
   Power,
   RefreshCcw,
+  CodeXml,
+  FileText,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -321,9 +323,50 @@ const ProfileDropdown = () => {
   // Navigation items configuration
   const masterMenuItems = useMemo(
     () => [
-      { path: "/master/company-master", label: "Company Master", icon: Building2 },
-      { path: "/master/branch-master", label: "Branch Master", icon: GitBranch },
+      {
+        path: "/master/company-master",
+        label: "Company Master",
+        icon: Building2,
+      },
+      {
+        path: "/master/branch-master",
+        label: "Branch Master",
+        icon: GitBranch,
+      },
       { path: "/masters/user", label: "User Master", icon: User },
+    ],
+    []
+  );
+
+  // Developer menu items (Reports moved here)
+  const developerMenuItems = useMemo(
+    () => [
+     
+      {
+        path: "/reports/item-report",
+        label: "Item Report",
+        icon: FileText,
+      },
+      {
+        path: "/reports/item-monthly-report",
+        label: "Item Monthly Report",
+        icon: FileText,
+      },
+      {
+        path: "/reports/account-report",
+        label: "Account Report",
+        icon: FileText,
+      },
+      {
+        path: "/reports/account-monthly-report",
+        label: "Account Monthly Report",
+        icon: FileText,
+      },
+      {
+        path: "/reports/outstanding-report",
+        label: "Outstanding Report",
+        icon: FileText,
+      },
     ],
     []
   );
@@ -435,7 +478,7 @@ const ProfileDropdown = () => {
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="w-56">
               {loggedUser?.access?.find(
-                (access) => access.company._id === selectedCompany?._id
+                (access) => access.company?._id === selectedCompany?._id
               )?.branches?.length > 0 ? (
                 loggedUser.access
                   .find((access) => access.company._id === selectedCompany?._id)
@@ -487,10 +530,24 @@ const ProfileDropdown = () => {
             </DropdownMenuSubContent>
           </DropdownMenuSub>
 
-          {/* <DropdownMenuItem onClick={() => handleNavigate("/settings")}>
-            <RefreshCcw className="w-4 h-4 mr-2" />
-            Run Revaluation
-          </DropdownMenuItem> */}
+          {/* Developer Menu with Reports */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="flex items-center gap-2">
+              <CodeXml className="w-4 h-4" />
+              <span className="ml-2">Developer </span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-56 max-h-[400px] overflow-y-auto">
+              {developerMenuItems.map(({ path, label, icon: Icon }) => (
+                <DropdownMenuItem
+                  key={path}
+                  onClick={() => handleNavigate(path)}
+                >
+                  <Icon className="w-4 h-4 mr-2 opacity-50" />
+                  {label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
 
           <RunRevaluation />
           <DropdownMenuSeparator />

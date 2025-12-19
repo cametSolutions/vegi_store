@@ -45,6 +45,8 @@ const EditCashTransaction = ({
     [location, CashtransactionData.transactionType]
   );
 
+
+
   useEffect(() => {
     resetCashTransactionData(currentTransactionType);
     //// add to global state that edit mode is true and the transaction id
@@ -97,8 +99,9 @@ const EditCashTransaction = ({
       console.log("cal");
       
       resetCashTransactionData(currentTransactionType);
+       
       handleCancelEdit();
-      dispatch(removeTransactionDataFromStore());
+    
     };
 
   // Empty dependency array means this only sets up on mount

@@ -23,7 +23,7 @@ export const getTransactionType = (location) => {
   const pathName = location?.pathname || "";
   return pathName?.split("/")[2];
 };
-export const createEmptyTransaction = () => ({
+export const createEmptyTransaction = (transactionType) => ({
     accountName: '',
     //  transactionNumber: "",
   accountType: "customer",
@@ -37,7 +37,7 @@ export const createEmptyTransaction = () => ({
     description: '',
     paymentMode: 'cash',
     transactionDate: new Date().toISOString().split("T")[0],
-    transactionType: 'receipt',
+    transactionType: transactionType??'receipt',
 });
 export const convertStringNumbersToNumbers=(data) =>{
   if (Array.isArray(data)) {
