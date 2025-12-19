@@ -89,25 +89,36 @@ const OutstandingPartiesList = ({
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
   return (
-    <div className="w-1/4 bg-white border-r flex flex-col">
+    <div className="w-1/4 bg-white  flex flex-col border-r-4">
       {/* Header with Search */}
-      <div className="flex-none p-3 border-b-2 bg-gray-50 shadow-sm ">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-bold text-gray-900">Parties</h2>
+      <div className="flex-none p-5 border-b border-gray-900 bg-[#8da9c4] shadow-sm ">
+        <div className="flex items-center justify-between ">
+          <h2 className="text-sm font-bold ">Parties</h2>
         </div>
 
-        <div className="relative">
+        {/* <div className="relative">
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search parties..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full pl-8 pr-3 py-1.5 text-xs border text-white border-gray-400 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
             disabled={isLoading || isError}
           />
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-        </div>
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-white" />
+        </div> */}
       </div>
+        <div className="relative ">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search parties..."
+            className="w-full pl-8 pr-3 py-1.5 text-xs border-b border-gray-500  focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            disabled={isLoading || isError}
+          />
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 " />
+        </div>
 
       {/* Party List */}
       <div className="flex-1 overflow-y-auto" ref={listContainerRef}>
@@ -143,11 +154,11 @@ const OutstandingPartiesList = ({
                   key={party.partyId}
                   ref={isSelected ? selectedPartyRef : null}
                   onClick={() => onSelectParty(party)}
-                  className={`p-3 cursor-pointer transition hover:bg-gray-50 ${
-                    isSelected ? "bg-blue-50 border-l-4 border-blue-600" : ""
+                  className={`p-3 cursor-pointer transition border-b  ${
+                    isSelected ? "bg-blue-200  border-l-4 border-blue-600" : "bg-slate-100 hover:bg-slate-200"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
+                  <div className={ ` flex items-start justify-between gap-2`}>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-gray-900 truncate">
                         {party.partyName}
@@ -190,7 +201,7 @@ const OutstandingPartiesList = ({
       </div>
 
       {/* Pagination */}
-      <div className="flex-none flex items-center justify-between px-3 py-4 border-t bg-gray-50">
+      <div className="flex-none flex items-center justify-between px-3 py-3 border-t bg-gray-50">
         <div className="text-xs text-gray-700">
           {totalCount > 0
             ? `${(currentPage - 1) * pageSize + 1}-${Math.min(
@@ -203,7 +214,7 @@ const OutstandingPartiesList = ({
           <button
             onClick={handlePreviousPage}
             disabled={currentPage === 1 || isLoading || isError}
-            className="p-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className="p-1 border border-gray-600 bg-gray-500 rounded hover:bg-gray-600 text-white  disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
@@ -218,7 +229,7 @@ const OutstandingPartiesList = ({
               isLoading ||
               isError
             }
-            className="p-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className="p-1 border border-gray-600 bg-gray-500 rounded hover:bg-gray-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             <ChevronRight className="w-3.5 h-3.5" />
           </button>

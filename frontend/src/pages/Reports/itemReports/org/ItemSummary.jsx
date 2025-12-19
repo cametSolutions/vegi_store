@@ -82,6 +82,9 @@ const ItemSummaryPage = () => {
     setCurrentPage(1);
   };
 
+  console.log(summaryData);
+  
+
   return (
     <div className="flex flex-col bg-white h-[calc(100vh-101px)] overflow-hidden">
       {/* Top bar: title + search + filters */}
@@ -167,6 +170,9 @@ const ItemSummaryPage = () => {
                   <th className="px-3 text-center font-medium text-gray-600 w-20">
                     Unit
                   </th>
+                  <th className="px-3 text-center font-medium text-gray-600 w-20">
+                    Opening Qty
+                  </th>
                   <th className="px-3 text-center font-medium text-gray-600 w-24">
                     Qty In
                   </th>
@@ -174,11 +180,9 @@ const ItemSummaryPage = () => {
                     Qty Out
                   </th>
                   <th className="px-3 text-center font-medium text-gray-600 w-28">
-                    Amount In
+                   Closing Balance
                   </th>
-                  <th className="px-3 text-right font-medium text-gray-600 w-28">
-                    Amount Out
-                  </th>
+                  
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 ">
@@ -202,18 +206,20 @@ const ItemSummaryPage = () => {
                     <td className="px-3 text-center text-gray-700">
                       {row.unit}
                     </td>
+                     <td className="px-3 text-center ">
+                      {row.openingQuantity?.toLocaleString() ?? 0}
+                    </td>
                     <td className="px-3 text-center ">
                       {row.totalIn?.toLocaleString() ?? 0}
                     </td>
+                   
                     <td className="px-3 text-center ">
                       {row.totalOut?.toLocaleString() ?? 0}
                     </td>
                     <td className="px-3 text-center ">
-                      ₹{row.amountIn?.toLocaleString() ?? 0}
+                      ₹{row.closingBalance?.toLocaleString() ?? 0}
                     </td>
-                    <td className="px-3 text-right  font-semibold">
-                      ₹{row.amountOut?.toLocaleString() ?? 0}
-                    </td>
+                   
                   </tr>
                 ))}
               </tbody>

@@ -1,7 +1,7 @@
 // model/AdjustmentEntryModel.js
 
 import mongoose from "mongoose";
-
+import { nanoid } from 'nanoid';
 const { Schema } = mongoose;
 
 export const adjustmentEntrySchema = new Schema(
@@ -238,6 +238,8 @@ adjustmentEntrySchema.index({ originalTransaction: 1 });
 /**
  * Generate adjustment number
  */
+
+
 adjustmentEntrySchema.statics.generateAdjustmentNumber = async function (
   company,
   branch,
@@ -248,24 +250,11 @@ adjustmentEntrySchema.statics.generateAdjustmentNumber = async function (
   const month = String(today.getMonth() + 1).padStart(2, "0");
 
   const prefix = `ADJ-${year}${month}`;
-
-  const lastAdjustment = await this.findOne({
-    company,
-    branch,
-    adjustmentNumber: { $regex: `^${prefix}` },
-  })
-    .sort({ adjustmentNumber: -1 })
-    .session(session);
-
-  let sequence = 1;
-  if (lastAdjustment) {
-    const lastSequence = parseInt(
-      lastAdjustment.adjustmentNumber.split("-").pop()
-    );
-    sequence = lastSequence + 1;
-  }
-
-  return `${prefix}-${String(sequence).padStart(4, "0")}`;
+  
+  // Generate unique ID using nanoid
+  const uniqueId = nanoid(4);
+  
+  return `${prefix}-${uniqueId}`;
 };
 
 /**

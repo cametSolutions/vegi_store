@@ -180,38 +180,3 @@ export const processTransaction = async (transactionData, userId, session) => {
   }
 };
 
-// /**
-//  * Helper: Determine transaction behavior based on type
-//  */
-// function determineTransactionBehavior(transactionType) {
-//   const behaviors = {
-//     sale: {
-//       stockDirection: "out",
-//       outstandingType: "dr", // Customer owes us (receivable)
-//       ledgerSide: "debit",
-//     },
-//     purchase_return: {
-//       stockDirection: "out",
-//       outstandingType: "dr",
-//       ledgerSide: "debit",
-//     },
-//     purchase: {
-//       stockDirection: "in",
-//       outstandingType: "cr", // We owe supplier (payable)
-//       ledgerSide: "credit",
-//     },
-//     sales_return: {
-//       stockDirection: "in",
-//       outstandingType: "cr",
-//       ledgerSide: "credit",
-//     },
-//   };
-
-//   const behavior = behaviors[transactionType];
-
-//   if (!behavior) {
-//     throw new Error(`Invalid transaction type: ${transactionType}`);
-//   }
-
-//   return behavior;
-// }

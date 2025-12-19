@@ -118,7 +118,7 @@ const FiltersBar = ({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 text-xs px-2"
+                className="h-8 text-xs px-2 bg-gray-500 text-white hover:bg-gray-600 hover:text-white"
               >
                 {renderTxnLabel(transactionType)}
               </Button>
@@ -139,12 +139,12 @@ const FiltersBar = ({
         <div className="flex items-center gap-1">
           <span className="text-[12px] text-gray-600 mr-1
           ">Outstanding</span>
-          <DropdownMenu>
+          <DropdownMenu className="bg-gray-500">
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 text-xs px-2"
+                className="h-8 text-xs px-2 bg-gray-500 text-white hover:bg-gray-600 hover:text-white"
               >
                 {renderOutstandingLabel(outstandingType)}
               </Button>

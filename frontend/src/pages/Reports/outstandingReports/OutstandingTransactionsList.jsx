@@ -133,7 +133,7 @@ const OutstandingTransactionsList = ({
       </div>
 
       {/* Scrollable Table Area */}
-      <div className="flex-1 overflow-hidden pb-2 ">
+      <div className="flex-1 overflow-hidden  ">
         <div className="bg-white shadow-sm h-full flex flex-col">
           {!selectedParty ? (
             <div className="flex items-center justify-center flex-1">
@@ -318,7 +318,7 @@ const OutstandingTransactionsList = ({
                   <button
                     onClick={handlePreviousPage}
                     disabled={currentPage === 1 || isLoading || isError}
-                    className="p-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    className="p-1 border border-gray-600 bg-gray-500 rounded hover:bg-gray-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
@@ -335,7 +335,7 @@ const OutstandingTransactionsList = ({
                       isLoading ||
                       isError
                     }
-                    className="p-1 border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    className="p-1 border border-gray-600 bg-gray-500 rounded hover:bg-gray-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
