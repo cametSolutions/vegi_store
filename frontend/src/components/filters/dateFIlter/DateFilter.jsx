@@ -68,7 +68,7 @@ const DateFilter = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className={`flex items-center gap-2 px-4 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition border border-gray-300 focus:outline-none ${buttonClassName}`}
+        className={`flex items-center gap-2 px-4 py-1  transition border rounded-sm border-gray-300 focus:outline-none bg-gray-500 text-white hover:bg-gray-600 hover:text-white ${buttonClassName}`}
       >
         <Calendar className="w-3 h-3" />
         <span className="text-xs font-medium">

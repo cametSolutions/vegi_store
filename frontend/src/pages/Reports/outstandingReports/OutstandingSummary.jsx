@@ -27,7 +27,7 @@ const OutstandingSummary = () => {
   }
 
   return (
-    <div className="h-[calc(100vh-104px)] flex bg-gray-50">
+    <div className="h-[calc(100vh-104px)] flex bg-gray-50 gap-1">
       <OutstandingPartiesList
         companyId={companyId}
         branchId={branchId}
