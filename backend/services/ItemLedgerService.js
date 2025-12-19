@@ -11,23 +11,14 @@ const toObjectId = (id) => new mongoose.Types.ObjectId(id);
    1️⃣ BATCHED Opening Balance (ALL items at once)
    ========================================================================= */
 
-export const getBatchOpeningBalances = async (
-  company,
-  branch,
-  itemIds,
-  selectedDate
-) => {
+export const getBatchOpeningBalances = async (company, branch, itemIds, selectedDate) => {
   const companyId = toObjectId(company);
   const branchId = toObjectId(branch);
-  const itemIdObjs = itemIds.map((id) => toObjectId(id));
+  const itemIdObjs = itemIds.map(id => toObjectId(id));
 
   const BASE_START_DATE = new Date("2025-04-01T00:00:00.000Z");
-
-  if (
-    !selectedDate ||
-    isNaN(selectedDate.getTime()) ||
-    selectedDate < BASE_START_DATE
-  ) {
+  
+  if (!selectedDate || isNaN(selectedDate.getTime()) || selectedDate < BASE_START_DATE) {
     return itemIds.reduce((acc, id) => ({ ...acc, [id.toString()]: 0 }), {});
   }
 
@@ -49,27 +40,27 @@ export const getBatchOpeningBalances = async (
         needsRecalculation: false,
         $or: [
           { year: { $lt: prevYear } },
-          { year: prevYear, month: { $lte: prevMonthNum } },
-        ],
-      },
+          { year: prevYear, month: { $lte: prevMonthNum } }
+        ]
+      }
     },
     {
-      $sort: { item: 1, year: -1, month: -1 },
+      $sort: { item: 1, year: -1, month: -1 }
     },
     {
       $group: {
         _id: "$item",
         closingStock: { $first: "$closingStock" },
         year: { $first: "$year" },
-        month: { $first: "$month" },
-      },
-    },
+        month: { $first: "$month" }
+      }
+    }
   ]);
 
   // Step 2: Get item masters for items WITHOUT monthly balances
-  const itemsWithBalances = monthlyBalances.map((m) => m._id.toString());
+  const itemsWithBalances = monthlyBalances.map(m => m._id.toString());
   const itemsNeedingMaster = itemIdObjs.filter(
-    (id) => !itemsWithBalances.includes(id.toString())
+    id => !itemsWithBalances.includes(id.toString())
   );
 
   let masterBalances = [];
@@ -78,21 +69,21 @@ export const getBatchOpeningBalances = async (
       {
         $match: {
           _id: { $in: itemsNeedingMaster },
-          company: companyId,
-        },
+          company: companyId
+        }
       },
       { $unwind: "$stock" },
       {
         $match: {
-          "stock.branch": branchId,
-        },
+          "stock.branch": branchId
+        }
       },
       {
         $project: {
           _id: 1,
-          openingStock: "$stock.openingStock",
-        },
-      },
+          openingStock: "$stock.openingStock"
+        }
+      }
     ]);
   }
 
@@ -100,20 +91,20 @@ export const getBatchOpeningBalances = async (
   const baseBalances = {};
   const dirtyPeriodStarts = {};
 
-  monthlyBalances.forEach((mb) => {
+  monthlyBalances.forEach(mb => {
     const itemKey = mb._id.toString();
     baseBalances[itemKey] = mb.closingStock || 0;
     dirtyPeriodStarts[itemKey] = new Date(mb.year, mb.month, 1);
   });
 
-  masterBalances.forEach((master) => {
+  masterBalances.forEach(master => {
     const itemKey = master._id.toString();
     baseBalances[itemKey] = master.openingStock || 0;
     dirtyPeriodStarts[itemKey] = BASE_START_DATE;
   });
 
   // Initialize items with no data
-  itemIdObjs.forEach((id) => {
+  itemIdObjs.forEach(id => {
     const itemKey = id.toString();
     if (!baseBalances[itemKey]) {
       baseBalances[itemKey] = 0;
@@ -133,26 +124,26 @@ export const getBatchOpeningBalances = async (
         item: { $in: itemIdObjs },
         transactionDate: {
           $gte: BASE_START_DATE,
-          $lt: dirtyPeriodEnd,
-        },
-      },
+          $lt: dirtyPeriodEnd
+        }
+      }
     },
     {
       $addFields: {
         signedQuantity: {
           $multiply: [
             "$quantity",
-            { $cond: [{ $eq: ["$movementType", "out"] }, -1, 1] },
-          ],
-        },
-      },
+            { $cond: [{ $eq: ["$movementType", "out"] }, -1, 1] }
+          ]
+        }
+      }
     },
     {
       $group: {
         _id: "$item",
-        totalSignedQuantity: { $sum: "$signedQuantity" },
-      },
-    },
+        totalSignedQuantity: { $sum: "$signedQuantity" }
+      }
+    }
   ]);
 
   // Step 5: Get adjustments for ALL items in ONE query
@@ -165,15 +156,15 @@ export const getBatchOpeningBalances = async (
         isReversed: false,
         originalTransactionDate: {
           $gte: BASE_START_DATE,
-          $lt: dirtyPeriodEnd,
-        },
-      },
+          $lt: dirtyPeriodEnd
+        }
+      }
     },
     { $unwind: "$itemAdjustments" },
     {
       $match: {
-        "itemAdjustments.item": { $in: itemIdObjs },
-      },
+        "itemAdjustments.item": { $in: itemIdObjs }
+      }
     },
     {
       $addFields: {
@@ -185,54 +176,48 @@ export const getBatchOpeningBalances = async (
                 branches: [
                   {
                     case: {
-                      $in: [
-                        "$originalTransactionModel",
-                        ["Sale", "PurchaseReturn"],
-                      ],
+                      $in: ["$originalTransactionModel", ["Sale", "PurchaseReturn"]]
                     },
-                    then: -1,
+                    then: -1
                   },
                   {
                     case: {
-                      $in: [
-                        "$originalTransactionModel",
-                        ["Purchase", "SalesReturn"],
-                      ],
+                      $in: ["$originalTransactionModel", ["Purchase", "SalesReturn"]]
                     },
-                    then: 1,
-                  },
+                    then: 1
+                  }
                 ],
-                default: 1,
-              },
-            },
-          ],
-        },
-      },
+                default: 1
+              }
+            }
+          ]
+        }
+      }
     },
     {
       $group: {
         _id: "$itemAdjustments.item",
-        totalSignedQtyDelta: { $sum: "$signedQuantityDelta" },
-      },
-    },
+        totalSignedQtyDelta: { $sum: "$signedQuantityDelta" }
+      }
+    }
   ]);
 
   // Step 6: Combine all data
   const finalBalances = {};
 
-  itemIdObjs.forEach((id) => {
+  itemIdObjs.forEach(id => {
     const itemKey = id.toString();
     let balance = baseBalances[itemKey] || 0;
 
     const ledgerMove = ledgerMovements.find(
-      (m) => m._id.toString() === itemKey
+      m => m._id.toString() === itemKey
     );
     if (ledgerMove) {
       balance += ledgerMove.totalSignedQuantity;
     }
 
     const adjMove = adjustmentMovements.find(
-      (m) => m._id.toString() === itemKey
+      m => m._id.toString() === itemKey
     );
     if (adjMove) {
       balance += adjMove.totalSignedQtyDelta;
@@ -245,7 +230,86 @@ export const getBatchOpeningBalances = async (
 };
 
 /* =========================================================================
-   2️⃣ BATCHED Adjusted Ledger (ALL items at once)
+   🆕 Get Last Purchase Rates for ALL items at once
+   ========================================================================= */
+
+export const getBatchLastPurchaseRates = async (companyId, branchId, itemIds, endDate) => {
+  const itemIdObjs = itemIds.map(id => toObjectId(id));
+
+  // Get last purchase transaction for each item (before or on endDate)
+  const lastPurchases = await ItemLedger.aggregate([
+    {
+      $match: {
+        company: companyId,
+        branch: branchId,
+        item: { $in: itemIdObjs },
+        transactionType: { $in: ["purchase", "purchase_return"] },
+        transactionDate: { $lte: endDate }
+      }
+    },
+    {
+      $sort: { item: 1, transactionDate: -1, createdAt: -1 }
+    },
+    {
+      $group: {
+        _id: "$item",
+        lastPurchaseRate: { $first: "$rate" }
+      }
+    }
+  ]);
+
+  // Build map of item -> last purchase rate
+  const ratesMap = {};
+  lastPurchases.forEach(purchase => {
+    ratesMap[purchase._id.toString()] = purchase.lastPurchaseRate;
+  });
+
+  // For items without purchase history, get opening rate from ItemMaster
+  const itemsNeedingMasterRate = itemIdObjs.filter(
+    id => !ratesMap[id.toString()]
+  );
+
+  if (itemsNeedingMasterRate.length > 0) {
+    const masterRates = await ItemMasterModel.aggregate([
+      {
+        $match: {
+          _id: { $in: itemsNeedingMasterRate },
+          company: companyId
+        }
+      },
+      { $unwind: "$stock" },
+      {
+        $match: {
+          "stock.branch": branchId
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          openingRate: "$stock.openingRate"
+        }
+      }
+    ]);
+
+    masterRates.forEach(master => {
+      const itemKey = master._id.toString();
+      ratesMap[itemKey] = master.openingRate || 0;
+    });
+  }
+
+  // Ensure all items have a rate (default to 0 if not found)
+  itemIdObjs.forEach(id => {
+    const itemKey = id.toString();
+    if (!ratesMap[itemKey]) {
+      ratesMap[itemKey] = 0;
+    }
+  });
+
+  return ratesMap;
+};
+
+/* =========================================================================
+   2️⃣ BATCHED Adjusted Ledger (ALL items at once) - WITH CLOSING VALUE
    ========================================================================= */
 
 export const getBatchAdjustedLedgers = async ({
@@ -255,15 +319,16 @@ export const getBatchAdjustedLedgers = async ({
   startDate,
   endDate,
   openingBalances,
+  lastPurchaseRates,
   transactionType = null,
 }) => {
-  const itemIdObjs = itemIds.map((id) => toObjectId(id));
+  const itemIdObjs = itemIds.map(id => toObjectId(id));
 
   const baseMatch = {
     company: companyId,
     branch: branchId,
     item: { $in: itemIdObjs },
-    transactionDate: { $gte: startDate, $lte: endDate },
+    transactionDate: { $gte: startDate, $lte: endDate }
   };
 
   if (transactionType === "sale") {
@@ -282,7 +347,7 @@ export const getBatchAdjustedLedgers = async ({
           txnNum: "$transactionNumber",
           company: "$company",
           branch: "$branch",
-          item: "$item",
+          item: "$item"
         },
         pipeline: [
           {
@@ -297,68 +362,59 @@ export const getBatchAdjustedLedgers = async ({
                   {
                     $in: [
                       "$originalTransactionModel",
-                      ["Sale", "Purchase", "SalesReturn", "PurchaseReturn"],
-                    ],
-                  },
-                ],
-              },
-            },
+                      ["Sale", "Purchase", "SalesReturn", "PurchaseReturn"]
+                    ]
+                  }
+                ]
+              }
+            }
           },
           { $unwind: "$itemAdjustments" },
           {
             $match: {
-              $expr: { $eq: ["$itemAdjustments.item", "$$item"] },
-            },
+              $expr: { $eq: ["$itemAdjustments.item", "$$item"] }
+            }
           },
           {
             $group: {
               _id: null,
               totalQuantityDelta: { $sum: "$itemAdjustments.quantityDelta" },
               totalRateDelta: { $sum: "$itemAdjustments.rateDelta" },
-              totalAmountDelta: { $sum: "$amountDelta" },
-            },
-          },
+              totalAmountDelta: { $sum: "$amountDelta" }
+            }
+          }
         ],
-        as: "adjustments",
-      },
+        as: "adjustments"
+      }
     },
 
     {
       $addFields: {
         totalQuantityDelta: {
-          $ifNull: [
-            { $arrayElemAt: ["$adjustments.totalQuantityDelta", 0] },
-            0,
-          ],
+          $ifNull: [{ $arrayElemAt: ["$adjustments.totalQuantityDelta", 0] }, 0]
         },
         totalRateDelta: {
-          $ifNull: [{ $arrayElemAt: ["$adjustments.totalRateDelta", 0] }, 0],
+          $ifNull: [{ $arrayElemAt: ["$adjustments.totalRateDelta", 0] }, 0]
         },
         totalAmountDelta: {
-          $ifNull: [{ $arrayElemAt: ["$adjustments.totalAmountDelta", 0] }, 0],
+          $ifNull: [{ $arrayElemAt: ["$adjustments.totalAmountDelta", 0] }, 0]
         },
 
         effectiveQuantity: {
           $add: [
             "$quantity",
             {
-              $ifNull: [
-                { $arrayElemAt: ["$adjustments.totalQuantityDelta", 0] },
-                0,
-              ],
-            },
-          ],
+              $ifNull: [{ $arrayElemAt: ["$adjustments.totalQuantityDelta", 0] }, 0]
+            }
+          ]
         },
         effectiveRate: {
           $add: [
             "$rate",
             {
-              $ifNull: [
-                { $arrayElemAt: ["$adjustments.totalRateDelta", 0] },
-                0,
-              ],
-            },
-          ],
+              $ifNull: [{ $arrayElemAt: ["$adjustments.totalRateDelta", 0] }, 0]
+            }
+          ]
         },
 
         effectiveBaseAmount: {
@@ -369,10 +425,10 @@ export const getBatchAdjustedLedgers = async ({
                 {
                   $ifNull: [
                     { $arrayElemAt: ["$adjustments.totalQuantityDelta", 0] },
-                    0,
-                  ],
-                },
-              ],
+                    0
+                  ]
+                }
+              ]
             },
             {
               $add: [
@@ -380,12 +436,12 @@ export const getBatchAdjustedLedgers = async ({
                 {
                   $ifNull: [
                     { $arrayElemAt: ["$adjustments.totalRateDelta", 0] },
-                    0,
-                  ],
-                },
-              ],
-            },
-          ],
+                    0
+                  ]
+                }
+              ]
+            }
+          ]
         },
 
         effectiveAmountAfterTax: {
@@ -397,13 +453,11 @@ export const getBatchAdjustedLedgers = async ({
                     "$quantity",
                     {
                       $ifNull: [
-                        {
-                          $arrayElemAt: ["$adjustments.totalQuantityDelta", 0],
-                        },
-                        0,
-                      ],
-                    },
-                  ],
+                        { $arrayElemAt: ["$adjustments.totalQuantityDelta", 0] },
+                        0
+                      ]
+                    }
+                  ]
                 },
                 {
                   $add: [
@@ -411,26 +465,26 @@ export const getBatchAdjustedLedgers = async ({
                     {
                       $ifNull: [
                         { $arrayElemAt: ["$adjustments.totalRateDelta", 0] },
-                        0,
-                      ],
-                    },
-                  ],
-                },
-              ],
+                        0
+                      ]
+                    }
+                  ]
+                }
+              ]
             },
-            "$taxAmount",
-          ],
+            "$taxAmount"
+          ]
         },
 
-        hasAdjustment: { $gt: [{ $size: "$adjustments" }, 0] },
-      },
+        hasAdjustment: { $gt: [{ $size: "$adjustments" }, 0] }
+      }
     },
 
     {
       $project: {
         adjustments: 0,
-        __v: 0,
-      },
+        __v: 0
+      }
     },
 
     { $sort: { item: 1, transactionDate: 1, createdAt: 1, _id: 1 } },
@@ -442,43 +496,54 @@ export const getBatchAdjustedLedgers = async ({
         transactions: { $push: "$$ROOT" },
         totalIn: {
           $sum: {
-            $cond: [{ $eq: ["$movementType", "in"] }, "$effectiveQuantity", 0],
-          },
+            $cond: [
+              { $eq: ["$movementType", "in"] },
+              "$effectiveQuantity",
+              0
+            ]
+          }
         },
         totalOut: {
           $sum: {
-            $cond: [{ $eq: ["$movementType", "out"] }, "$effectiveQuantity", 0],
-          },
+            $cond: [
+              { $eq: ["$movementType", "out"] },
+              "$effectiveQuantity",
+              0
+            ]
+          }
         },
         amountIn: {
           $sum: {
             $cond: [
               { $eq: ["$movementType", "in"] },
               "$effectiveAmountAfterTax",
-              0,
-            ],
-          },
+              0
+            ]
+          }
         },
         amountOut: {
           $sum: {
             $cond: [
               { $eq: ["$movementType", "out"] },
               "$effectiveAmountAfterTax",
-              0,
-            ],
-          },
+              0
+            ]
+          }
         },
-        transactionCount: { $sum: 1 },
-      },
-    },
+        transactionCount: { $sum: 1 }
+      }
+    }
   ]);
 
   // Convert to map for easy lookup
   const ledgerMap = {};
 
-  ledgers.forEach((item) => {
+  ledgers.forEach(item => {
     const itemKey = item._id.toString();
     const openingQty = openingBalances[itemKey] || 0;
+    const closingQty = openingQty + item.totalIn - item.totalOut;
+    const lastPurchaseRate = lastPurchaseRates[itemKey] || 0;
+    const closingValue = closingQty * lastPurchaseRate;
 
     ledgerMap[itemKey] = {
       openingQuantity: openingQty,
@@ -487,28 +552,36 @@ export const getBatchAdjustedLedgers = async ({
         totalOut: item.totalOut,
         amountIn: item.amountIn,
         amountOut: item.amountOut,
-        closingQuantity: openingQty + item.totalIn - item.totalOut,
-        transactionCount: item.transactionCount,
+        closingQuantity: closingQty,
+        lastPurchaseRate: lastPurchaseRate,
+        closingBalance: closingValue,
+        transactionCount: item.transactionCount
       },
-      transactions: item.transactions,
+      transactions: item.transactions
     };
   });
 
   // Handle items with no transactions in the period
-  itemIds.forEach((id) => {
+  itemIds.forEach(id => {
     const itemKey = id.toString();
     if (!ledgerMap[itemKey]) {
+      const openingQty = openingBalances[itemKey] || 0;
+      const lastPurchaseRate = lastPurchaseRates[itemKey] || 0;
+      const closingValue = openingQty * lastPurchaseRate;
+
       ledgerMap[itemKey] = {
-        openingQuantity: openingBalances[itemKey] || 0,
+        openingQuantity: openingQty,
         summary: {
           totalIn: 0,
           totalOut: 0,
           amountIn: 0,
           amountOut: 0,
-          closingQuantity: openingBalances[itemKey] || 0,
-          transactionCount: 0,
+          closingQuantity: openingQty,
+          lastPurchaseRate: lastPurchaseRate,
+          closingBalance: closingValue,
+          transactionCount: 0
         },
-        transactions: [],
+        transactions: []
       };
     }
   });
@@ -517,7 +590,7 @@ export const getBatchAdjustedLedgers = async ({
 };
 
 /* =========================================================================
-   3️⃣ Main BATCHED Refold Function
+   3️⃣ Main BATCHED Refold Function - WITH CLOSING VALUE
    ========================================================================= */
 
 export const refoldLedgersWithAdjustments = async ({
@@ -572,7 +645,10 @@ export const refoldLedgersWithAdjustments = async ({
     {
       $facet: {
         meta: [{ $count: "totalItems" }],
-        data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+        data: [
+          { $skip: (page - 1) * limit },
+          { $limit: limit },
+        ],
       },
     },
   ]);
@@ -600,7 +676,7 @@ export const refoldLedgersWithAdjustments = async ({
     };
   }
 
-  const itemIds = itemsPage.map((row) => row._id.toString());
+  const itemIds = itemsPage.map(row => row._id.toString());
 
   // QUERY 2: Get ALL opening balances at once
   const openingBalances = await getBatchOpeningBalances(
@@ -610,7 +686,15 @@ export const refoldLedgersWithAdjustments = async ({
     new Date(startDate)
   );
 
-  // QUERY 3: Get ALL ledger data at once
+  // QUERY 3: Get ALL last purchase rates at once
+  const lastPurchaseRates = await getBatchLastPurchaseRates(
+    companyId,
+    branchId,
+    itemIds,
+    endDate
+  );
+
+  // QUERY 4: Get ALL ledger data at once
   const ledgerData = await getBatchAdjustedLedgers({
     companyId,
     branchId,
@@ -618,11 +702,12 @@ export const refoldLedgersWithAdjustments = async ({
     startDate,
     endDate,
     openingBalances,
-    transactionType,
+    lastPurchaseRates,
+    transactionType
   });
 
   // Combine results (no more queries!)
-  const ledgersPerItem = itemsPage.map((row) => {
+  const ledgersPerItem = itemsPage.map(row => {
     const itemKey = row._id.toString();
     const data = ledgerData[itemKey];
 
@@ -660,18 +745,9 @@ export const refoldLedgersWithAdjustments = async ({
    ⚠️ DEPRECATED - Keep for backward compatibility only
    ========================================================================= */
 
-export const getOpeningBalance = async (
-  company,
-  branch,
-  itemObj,
-  selectedDate
-) => {
-  const result = await getBatchOpeningBalances(
-    company,
-    branch,
-    [itemObj],
-    selectedDate
-  );
+export const getOpeningBalance = async (company, branch, itemObj, selectedDate) => {
+  console.warn("⚠️ getOpeningBalance is deprecated. Use getBatchOpeningBalances instead.");
+  const result = await getBatchOpeningBalances(company, branch, [itemObj], selectedDate);
   return result[itemObj.toString()] || 0;
 };
 
@@ -684,7 +760,11 @@ export const getAdjustedItemLedger = async ({
   openingQuantity,
   transactionType = null,
 }) => {
+  console.warn("⚠️ getAdjustedItemLedger is deprecated. Use getBatchAdjustedLedgers instead.");
+  
   const openingBalances = { [itemId.toString()]: openingQuantity };
+  const lastPurchaseRates = await getBatchLastPurchaseRates(companyId, branchId, [itemId], endDate);
+  
   const result = await getBatchAdjustedLedgers({
     companyId,
     branchId,
@@ -692,8 +772,9 @@ export const getAdjustedItemLedger = async ({
     startDate,
     endDate,
     openingBalances,
-    transactionType,
+    lastPurchaseRates,
+    transactionType
   });
-
+  
   return result[itemId.toString()];
 };

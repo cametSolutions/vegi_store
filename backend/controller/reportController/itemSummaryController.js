@@ -1,8 +1,8 @@
-// controllers/ItemLedgerController.js (or wherever your controller is)
+// controllers/ItemLedgerController.js
 import { refoldLedgersWithAdjustments } from "../../services/ItemLedgerService.js";
 
 export const getItemSummaryReport = async (req, res) => {
-  const startTime = Date.now(); // Performance tracking
+  const startTime = Date.now();
   
   try {
     const {
@@ -51,20 +51,20 @@ export const getItemSummaryReport = async (req, res) => {
         amountIn: summary.amountIn,
         amountOut: summary.amountOut,
         closingQuantity: summary.closingQuantity,
+        lastPurchaseRate: summary.lastPurchaseRate,
+        closingBalance: summary.closingBalance,
         transactionCount: summary.transactionCount,
       };
     });
 
     const executionTime = Date.now() - startTime;
     
-    // Log performance for monitoring
     console.log(`✅ Item Summary Report - ${shapedItems.length} items in ${executionTime}ms`);
 
     res.json({
       items: shapedItems,
       pagination: serviceResult.pagination,
       filters: serviceResult.filters,
-      // Include performance data in development
       ...(process.env.NODE_ENV === 'development' && {
         _debug: { executionTimeMs: executionTime }
       })
