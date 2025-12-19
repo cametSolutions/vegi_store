@@ -91,9 +91,9 @@ const OutstandingPartiesList = ({
   return (
     <div className="w-1/4 bg-white  flex flex-col border-r-4">
       {/* Header with Search */}
-      <div className="flex-none p-5 border-b border-gray-400 bg-gray-300 shadow-sm ">
+      <div className="flex-none p-5 border-b border-gray-900 bg-[#8da9c4] shadow-sm ">
         <div className="flex items-center justify-between ">
-          <h2 className="text-sm font-bold text-gray-900">Parties</h2>
+          <h2 className="text-sm font-bold ">Parties</h2>
         </div>
 
         {/* <div className="relative">
