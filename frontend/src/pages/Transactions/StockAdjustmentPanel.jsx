@@ -1,4 +1,3 @@
-// src/pages/Inventory/StockAdjustment/StockAdjustmentPanel.jsx
 import React, { useEffect, useState } from "react";
 import CreateStockAdjustment from "./CreateStockAdjustment";
 import EditStockAdjustment from "./EditStockAdjustment";
@@ -7,7 +6,7 @@ import { useSelector } from "react-redux";
 
 const StockAdjustmentPanel = () => {
   const isEditMode = useSelector((state) => state.stockAdjustment?.isEditMode);
-  const [editMode, setEditMode] = useState(isEditMode);
+  const [editMode, setEditMode] = useState(false);
   const [selectedAdjustment, setSelectedAdjustment] = useState(null);
 
   // Handler to switch to edit mode
@@ -31,7 +30,13 @@ const StockAdjustmentPanel = () => {
   }, [isEditMode]);
 
   return (
-    <div className="flex w-full justify-between bg-white gap-2 h-[calc(100vh-110px)]">
+    <div className="flex w-full justify-between bg-white gap-2 h-[calc(100vh-99px)]">
+      <div className="w-[45%] border-r border-gray-200">
+        <StockAdjustmentList
+          onEditAdjustment={handleEditAdjustment}
+          selectedAdjustment={selectedAdjustment}
+        />
+      </div>
       <div className="w-[55%]">
         {editMode ? (
           <EditStockAdjustment
@@ -42,12 +47,6 @@ const StockAdjustmentPanel = () => {
         ) : (
           <CreateStockAdjustment />
         )}
-      </div>
-      <div className="w-[45%]">
-        <StockAdjustmentList
-          onEditAdjustment={handleEditAdjustment}
-          selectedAdjustment={selectedAdjustment}
-        />
       </div>
     </div>
   );

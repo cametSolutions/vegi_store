@@ -15,7 +15,10 @@ export const transactionMutations = {
       queryClient.invalidateQueries({
         queryKey: ["transactions", transactionType, "", company, branch],
       });
-
+ 
+      queryClient.invalidateQueries({
+        queryKey: ["reports" ]
+      });
       toast.success(
         `${capitalizeFirstLetter(
           response?.data?.transaction?.transactionType || "Transaction"
@@ -51,6 +54,11 @@ export const transactionMutations = {
       queryClient.invalidateQueries({
         queryKey: ["transactions", transactionType, "", company, branch],
       });
+
+       queryClient.invalidateQueries({
+        queryKey: ["reports"]
+      });
+
       toast.success(
         `${capitalizeFirstLetter(
           response?.data?.transaction?.transactionType || "Transaction"

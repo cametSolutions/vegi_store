@@ -3,7 +3,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { outstandingService } from "../../api/services/outstandingService ";
 
 export const outstandingQueries = {
-  all: () => ["outstanding"],
+  all: () => ["reports", "outstanding"],
 
   // Get all parties with combined outstanding (customers + suppliers netted)
    partiesList: (
