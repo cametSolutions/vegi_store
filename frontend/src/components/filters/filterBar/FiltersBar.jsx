@@ -1,7 +1,14 @@
 // components/FiltersBar.jsx
 import React from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Filter as FilterIcon } from "lucide-react";
+import {
+  Filter as FilterIcon,
+  Tags,
+  ArrowRightLeft,
+  Check,
+  ChevronDown,
+  RotateCcw,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +16,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 import { getDateRange, DATE_FILTERS } from "../../../../../shared/utils/date";
@@ -35,26 +44,17 @@ const FiltersBar = ({
   const filters = useSelector((state) => state.filters);
 
   const transactionType = filters.transactionType || "all";
-  // slice stores "dr" | "cr" | null
-  const outstandingType = filters.outstandingType || null;
-
-  const isCustomFilterActive = dateFilter === DATE_FILTERS.CUSTOM;
+  const outstandingType = filters.outstandingType || null; // "dr" | "cr" | null
 
   const handleTxnChange = (value) => {
     dispatch(setFilter({ key: "transactionType", value }));
     if (onPageReset) onPageReset();
   };
 
-  // Store "dr" / "cr" / null in Redux
   const handleOutstandingChange = (value) => {
-    let storedValue = null; // default "All"
-    if (value === "receivables") {
-      storedValue = "dr";
-    } else if (value === "payables") {
-      storedValue = "cr";
-    } else {
-      storedValue = null; // all
-    }
+    let storedValue = null;
+    if (value === "receivables") storedValue = "dr";
+    else if (value === "payables") storedValue = "cr";
 
     dispatch(setFilter({ key: "outstandingType", value: storedValue }));
     if (onPageReset) onPageReset();
@@ -62,7 +62,6 @@ const FiltersBar = ({
 
   const handleDateFilterChange = (filter) => {
     if (onDateFilterChange) onDateFilterChange(filter);
-
     if (filter !== DATE_FILTERS.CUSTOM) {
       const range = getDateRange(filter);
       dispatch(setFilter({ key: "startDate", value: range.start }));
@@ -78,100 +77,120 @@ const FiltersBar = ({
   };
 
   const renderTxnLabel = (type) => {
-    switch (type) {
-      case "all":
-        return "All";
-      case "sale":
-        return "Sale";
-      case "purchase":
-        return "Purchase";
-      case "sales_return":
-        return "Sales Return";
-      case "purchase_return":
-        return "Purchase Return";
-      default:
-        return type;
-    }
+    const labels = {
+      all: "All Transactions",
+      sale: "Sales",
+      purchase: "Purchases",
+      sales_return: "Sales Return",
+      purchase_return: "Purchase Return",
+    };
+    return labels[type] || type;
   };
 
-  // Map stored dr/cr to human‑readable text
   const renderOutstandingLabel = (type) => {
-    switch (type) {
-      case "dr":
-        return "Receivables (Dr)";
-      case "cr":
-        return "Payables (Cr)";
-      default:
-        return "All";
-    }
+    if (type === "dr") return "Receivables";
+    if (type === "cr") return "Payables";
+    return "All Outstanding";
   };
 
   return (
-    <div className="flex items-center gap-2 ">
-       <FilterIcon className="w-3 h-3 text-gray-500 mr-1" />
-      {/* Transaction type */}
+    <div className="flex items-center gap-2">
+      {/* Transaction Type Filter */}
       {showTransactionType && (
-        <div className="flex items-center gap-1">
-         
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs px-2 bg-gray-500 text-white hover:bg-gray-600 hover:text-white"
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs font-medium border-dashed border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-50 px-3"
+            >
+              <Tags className="w-3.5 h-3.5 mr-2 text-slate-400" />
+              {renderTxnLabel(transactionType)}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-[180px]">
+            <DropdownMenuLabel className="text-xs text-slate-500 font-normal">
+              Filter by Type
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {allowedTxnTypes.map((t) => (
+              <DropdownMenuItem
+                key={t}
+                onClick={() => handleTxnChange(t)}
+                className="text-xs cursor-pointer"
               >
-                {renderTxnLabel(transactionType)}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {allowedTxnTypes.map((t) => (
-                <DropdownMenuItem key={t} onClick={() => handleTxnChange(t)}>
+                {transactionType === t && (
+                  <Check className="w-3 h-3 mr-2 text-slate-600" />
+                )}
+                <span className={transactionType === t ? "ml-0" : "ml-5"}>
                   {renderTxnLabel(t)}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                </span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
 
-      {/* Outstanding type */}
+      {/* Outstanding Type Filter */}
       {showOutstandingType && (
-        <div className="flex items-center gap-1">
-          <span className="text-[12px] text-gray-600 mr-1
-          ">Outstanding</span>
-          <DropdownMenu className="bg-gray-500">
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs px-2 bg-gray-500 text-white hover:bg-gray-600 hover:text-white"
-              >
-                {renderOutstandingLabel(outstandingType)}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {/* All */}
-              <DropdownMenuItem onClick={() => handleOutstandingChange(null)}>
-                All
-              </DropdownMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs font-medium border-dashed border-slate-300 text-slate-600 hover:text-slate-900 hover:bg-slate-50 px-3"
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5 mr-2 text-slate-400" />
+              {renderOutstandingLabel(outstandingType)}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-[180px]">
+            <DropdownMenuLabel className="text-xs text-slate-500 font-normal">
+              Filter by Balance
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
 
-              {/* Receivables / Payables */}
-              {allowedOutstandingTypes.map((t) => (
+            <DropdownMenuItem
+              onClick={() => handleOutstandingChange(null)}
+              className="text-xs cursor-pointer"
+            >
+              {!outstandingType && (
+                <Check className="w-3 h-3 mr-2 text-slate-600" />
+              )}
+              <span className={!outstandingType ? "ml-0" : "ml-5"}>
+                All Outstanding
+              </span>
+            </DropdownMenuItem>
+
+            {allowedOutstandingTypes.map((t) => {
+              const isSelected =
+                (t === "receivables" && outstandingType === "dr") ||
+                (t === "payables" && outstandingType === "cr");
+              return (
                 <DropdownMenuItem
                   key={t}
                   onClick={() => handleOutstandingChange(t)}
+                  className="text-xs cursor-pointer"
                 >
-                  {t === "receivables"
-                    ? "Receivables (Dr)"
-                    : "Payables (Cr)"}
+                  {isSelected && (
+                    <Check className="w-3 h-3 mr-2 text-slate-600" />
+                  )}
+                  <span className={isSelected ? "ml-0" : "ml-5"}>
+                    {t === "receivables" ? "Receivables (Dr)" : "Payables (Cr)"}
+                  </span>
                 </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
 
-      {/* Date filter */}
+      {/* Separator if both groups exist */}
+      {(showTransactionType || showOutstandingType) && showDateFilter && (
+        <div className="h-4 w-px bg-slate-200 mx-1" />
+      )}
+
+      {/* Date Filter */}
       {showDateFilter && (
         <DateFilter
           selectedFilter={dateFilter}
@@ -179,8 +198,24 @@ const FiltersBar = ({
           onCustomRangeChange={handleCustomRangeChange}
           customStartDate={filters.startDate || ""}
           customEndDate={filters.endDate || ""}
-          buttonClassName="h-8 text-xs px-2"
+          // Pass modern styling to child
+          buttonClassName="h-8 text-xs font-medium border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 px-3 shadow-sm"
         />
+      )}
+
+      {(transactionType !== "all" || outstandingType !== null) && (
+        <Button
+          variant="ghost"
+          size="icon" // changed from size="sm" to "icon" for square shape
+          className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+          onClick={() => {
+            handleTxnChange("all");
+            handleOutstandingChange(null);
+          }}
+          title="Reset Filters" // Tooltip for accessibility
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+        </Button>
       )}
     </div>
   );

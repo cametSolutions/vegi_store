@@ -99,8 +99,20 @@ const OutstandingTransactionsList = ({
     };
   };
 
+  // Define column widths for strict alignment
+  const TableColGroup = () => (
+    <colgroup>
+      <col style={{ width: "50px" }} />   {/* # */}
+      <col style={{ width: "140px" }} />  {/* Ref No */}
+      <col style={{ width: "120px" }} />  {/* Date */}
+      <col style={{ width: "130px" }} />  {/* Total */}
+      <col style={{ width: "130px" }} />  {/* Paid */}
+      <col style={{ width: "160px" }} />  {/* Balance */}
+    </colgroup>
+  );
+
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50/30 font-sans">
+    <div className="flex-1 flex flex-col h-full bg-slate-50/30 font-sans text-sm">
       
       {/* Header Section */}
       <div className="flex-none bg-white border-b border-slate-100 px-6 py-4">
@@ -137,7 +149,7 @@ const OutstandingTransactionsList = ({
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden p-2">
-        <div className="bg-white rounded-sm shadow-sm border border-slate-200 h-full flex flex-col overflow-hidden">
+        <div className="bg-white rounded-sm shadow-sm border border-slate-300 h-full flex flex-col overflow-hidden">
           
           {!selectedParty ? (
             <div className="flex flex-col items-center justify-center flex-1 text-slate-400">
@@ -166,16 +178,17 @@ const OutstandingTransactionsList = ({
           ) : (
             <>
               {/* Table Header */}
-              <div className="flex-none bg-slate-50 border-b border-slate-200">
-                <table className="w-full table-fixed">
+              <div className="flex-none bg-slate-50 border-b border-slate-300">
+                <table className="w-full table-fixed border-collapse">
+                  <TableColGroup />
                   <thead>
                     <tr>
-                      <th className="w-12 px-3 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase">#</th>
-                      <th className="w-32 px-3 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase">Ref No.</th>
-                      <th className="w-32 px-3 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase">Date</th>
-                      <th className="w-32 px-3 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase">Total</th>
-                      <th className="w-32 px-3 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase">Paid</th>
-                      <th className="w-40 px-6 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase">Balance</th>
+                      <th className="px-3 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">#</th>
+                      <th className="px-3 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Ref No.</th>
+                      <th className="px-3 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Date</th>
+                      <th className="px-3 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Total</th>
+                      <th className="px-3 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Paid</th>
+                      <th className="px-6 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase">Balance</th>
                     </tr>
                   </thead>
                 </table>
@@ -183,8 +196,9 @@ const OutstandingTransactionsList = ({
 
               {/* Table Body */}
               <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
-                <table className="w-full table-fixed">
-                  <tbody className="divide-y divide-slate-50">
+                <table className="w-full table-fixed border-collapse">
+                  <TableColGroup />
+                  <tbody className="divide-y divide-slate-200">
                     {transactions.map((transaction, index) => {
                       const styles = getOutstandingStyle(transaction.outstandingType);
                       return (
@@ -192,22 +206,22 @@ const OutstandingTransactionsList = ({
                           key={transaction._id}
                           className="hover:bg-slate-50 transition-colors duration-150 group"
                         >
-                          <td className="w-12 px-3 py-3.5 text-xs text-slate-400 text-center">
+                          <td className="px-3 py-3.5 text-xs text-slate-400 text-center border-r border-slate-200">
                             {(currentPage - 1) * pageSize + index + 1}
                           </td>
-                          <td className="w-32 px-3 py-3.5 text-xs font-medium text-slate-700 truncate">
+                          <td className="px-3 py-3.5 text-xs font-medium text-slate-700 truncate border-r border-slate-200">
                             {transaction.transactionNumber || "-"}
                           </td>
-                          <td className="w-32 px-3 py-3.5 text-xs text-slate-600">
+                          <td className="px-3 py-3.5 text-xs text-slate-600 border-r border-slate-200">
                             {transaction.transactionDate ? formatDate(transaction.transactionDate) : "-"}
                           </td>
-                          <td className="w-32 px-3 py-3.5 text-xs text-slate-600 text-right font-mono tracking-tight">
+                          <td className="px-3 py-3.5 text-xs text-slate-600 text-right font-mono tracking-tight border-r border-slate-200">
                             {transaction.totalAmount ? formatINR(transaction.totalAmount) : "-"}
                           </td>
-                          <td className="w-32 px-3 py-3.5 text-xs text-slate-600 text-right font-mono tracking-tight">
+                          <td className="px-3 py-3.5 text-xs text-slate-600 text-right font-mono tracking-tight border-r border-slate-200">
                             {transaction.paidAmount ? formatINR(transaction.paidAmount) : "-"}
                           </td>
-                          <td className="w-40 px-6 py-3.5 text-right">
+                          <td className="px-6 py-3.5 text-right">
                              <div className="flex items-center justify-end gap-2">
                                 <span className={`text-xs font-bold font-mono tracking-tight ${styles.text}`}>
                                   {formatINR(Math.abs(transaction.closingBalanceAmount))}
@@ -227,16 +241,13 @@ const OutstandingTransactionsList = ({
               {/* Totals Footer */}
               <div className="flex-none bg-slate-50 border-t border-slate-200">
                  <table className="w-full table-fixed">
+                    <TableColGroup />
                     <tfoot>
                       <tr>
-                        <td className="w-12"></td>
-                        <td className="w-32"></td>
-                        <td className="w-32"></td>
-                        <td className="w-32"></td>
-                        <td className="w-32 px-4 py-3 text-xs font-bold text-slate-600 text-right uppercase tracking-wide">
+                        <td colSpan={5} className="px-4 py-3 text-xs font-bold text-slate-600 text-right uppercase tracking-wide border-r border-slate-300">
                            Total Outstanding:
                         </td>
-                        <td className="w-40 px-3 py-3">
+                        <td className="px-3 py-3">
                            <div className="flex items-center justify-end gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
                               <span className={`text-sm font-bold ${totalOutstanding >= 0 ? "text-teal-600" : "text-rose-600"}`}>
                                 {formatINR(Math.abs(totalOutstanding))}

@@ -99,7 +99,7 @@ const OutstandingPartiesList = ({
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
   return (
-    <div className="w-80 bg-white flex flex-col border-r border-slate-100 h-full font-sans text-sm">
+    <div className="w-80 bg-white flex flex-col border-r border-slate-100 h-full font-sans text-sm   border-b">
       {/* Header - Transparent/Clean look */}
       <div className="flex-none bg-white z-10 border-b border-slate-300">
         <div className="px-4 py-4 flex items-center justify-between">
@@ -126,7 +126,7 @@ const OutstandingPartiesList = ({
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search..."
               // Light Slate background for input
-              className="w-full pl-9 pr-3 py-2.5 bg-slate-200 border border-transparent focus:bg-white focus:border-sky-200 focus:ring-4 focus:ring-sky-50 rounded-xs text-slate-700 text-sm placeholder:text-slate-400 focus:outline-none transition-all duration-200"
+              className="w-full pl-9 pr-3 py-2.5 bg-slate-200 border border-transparent focus:bg-white focus:border-sky-200 focus:ring-4 focus:ring-sky-50 rounded-sm text-slate-700 text-sm placeholder:text-slate-400 focus:outline-none transition-all duration-200"
               disabled={isLoading || isError}
             />
           </div>
@@ -233,7 +233,7 @@ const OutstandingPartiesList = ({
       </div>
 
       {/* Minimal Footer */}
-      <div className="flex-none pt-2 pb-3 px-4 bg-slate-50 border-t border-slate-50">
+      <div className="flex-none py-3 mb-1 px-4 bg-slate-50 border border-b-2 border-gray-300 rounded-b-sm shadow-lg">
         <div className="flex items-center justify-between">
           <button
             onClick={handlePreviousPage}
