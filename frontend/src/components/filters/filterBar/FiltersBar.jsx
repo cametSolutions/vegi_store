@@ -29,7 +29,7 @@ const FiltersBar = ({
   showTransactionType = true,
   showOutstandingType = false,
   allowedTxnTypes = [
-    "all",
+    // "all",
     "sale",
     "purchase",
     "sales_return",
@@ -209,7 +209,7 @@ const FiltersBar = ({
           size="icon" // changed from size="sm" to "icon" for square shape
           className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
           onClick={() => {
-            handleTxnChange("all");
+            handleTxnChange("sale");
             handleOutstandingChange(null);
           }}
           title="Reset Filters" // Tooltip for accessibility

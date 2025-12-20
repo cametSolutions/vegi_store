@@ -1,11 +1,12 @@
+// components/AccountMasterForm.jsx
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Loader2, UserPlus, Pencil, AlertCircle } from "lucide-react";
 import BranchSelector from "@/components/BranchSelector";
 import { accountMasterMutations } from "@/hooks/mutations/accountMaster.mutations";
 import { priceLevelQueries } from "@/hooks/queries/priceLevel.queries";
-import CustomMoonLoader from "@/components/loaders/CustomMoonLoader";
 
 const AccountMasterForm = ({
   companyId,
@@ -54,7 +55,7 @@ const AccountMasterForm = ({
   });
 
   const [selectedBranches, setSelectedBranches] = useState([]);
-  const accountType = watch("accountType"); // watch accountType field
+  const accountType = watch("accountType");
 
   useEffect(() => {
     setValue("branches", selectedBranches);
@@ -83,13 +84,10 @@ const AccountMasterForm = ({
         priceLevel: null,
         status: "active",
       });
-      if (branchId) {
-        setSelectedBranches([branchId]);
-      } else {
-        setSelectedBranches([]);
-      }
+      if (branchId) setSelectedBranches([branchId]);
+      else setSelectedBranches([]);
     }
-  }, [editData, companyId, reset]);
+  }, [editData, companyId, reset, branchId]);
 
   const mutation = useMutation(
     editingId
@@ -97,7 +95,6 @@ const AccountMasterForm = ({
       : accountMasterMutations.create(queryClient)
   );
 
-  // Check if either mutation is loading
   const isLoading = mutation.isPending || mutation.isLoading;
 
   const onSubmit = (formData) => {
@@ -106,10 +103,8 @@ const AccountMasterForm = ({
       return;
     }
 
-    if (formData.priceLevel === "") {
-      formData.priceLevel = null;
-    }
-    
+    if (formData.priceLevel === "") formData.priceLevel = null;
+
     if (editingId) {
       mutation.mutate(
         { id: editingId, formData },
@@ -117,11 +112,8 @@ const AccountMasterForm = ({
           onSuccess: () => {
             onClearEdit();
             reset();
-            if (branchId) {
-              setSelectedBranches([branchId]);
-            } else {
-              setSelectedBranches([]);
-            }
+            if (branchId) setSelectedBranches([branchId]);
+            else setSelectedBranches([]);
           },
         }
       );
@@ -129,266 +121,242 @@ const AccountMasterForm = ({
       mutation.mutate(formData, {
         onSuccess: () => {
           reset();
-          if (branchId) {
-            setSelectedBranches([branchId]);
-          } else {
-            setSelectedBranches([]);
-          }
+          if (branchId) setSelectedBranches([branchId]);
+          else setSelectedBranches([]);
         },
       });
     }
   };
 
+  const InputLabel = ({ label, required }) => (
+    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+  );
+
+  const ErrorMessage = ({ message }) => (
+    <p className="flex items-center gap-1 text-[10px] text-red-500 mt-1 font-medium">
+       <AlertCircle className="w-3 h-3" /> {message}
+    </p>
+  );
+
+  const inputClass = " rounded-xs w-full text-xs border border-slate-300 rounded-md px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white disabled:bg-slate-50 disabled:text-slate-500";
+  const selectClass = " rounded-xs w-full text-xs border border-slate-300 rounded-md px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white disabled:bg-slate-50 disabled:text-slate-500 appearance-none";
+
   return (
-    <div className="h-full min-h-[400px] flex flex-col">
+    <div className="h-full flex flex-col bg-slate-50 border-l border-slate-200 shadow-sm relative overflow-hidden">
+      
+      {/* Loading Overlay */}
       {isLoading && (
-        <div className="absolute inset-0 bg-white/60 z-50 flex items-center justify-center">
-          <CustomMoonLoader />
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-[1px] z-50 flex items-center justify-center flex-col gap-2">
+          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+          <span className="text-xs font-medium text-slate-600">Processing...</span>
         </div>
       )}
-      <h2 className="text-sm font-bold shadow-lg p-2 px-4 mb-1">
-        {editingId ? "Edit Account" : "Create Account"}
-      </h2>
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="flex flex-col flex-1 bg-white shadow p-6"
-      >
-        {/* Form fields as flex-1 section */}
-        <div className="flex-1 space-y-6">
-          {/* Account Name */}
-          <div>
-            <label className="block font-medium mb-1 text-xs">
-              Account Name *
-            </label>
-            <input
-              {...register("accountName", {
-                required: "Account name is required",
-                maxLength: 100,
-              })}
-              type="text"
-              className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
-              disabled={mutation.isLoading}
-            />
-            {errors.accountName && (
-              <p className="text-red-500 text-xs mt-1">{errors.accountName.message}</p>
-            )}
-          </div>
 
-          {/* Account Type */}
-          <div>
-            <label className="block font-medium mb-1 text-xs">
-              Account Type *
-            </label>
-            <select
-              {...register("accountType", {
-                required: "Account type is required",
-              })}
-              className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
-              disabled={mutation.isLoading}
-            >
-              <option value="customer">Customer</option>
-              <option value="supplier">Supplier</option>
-              <option value="cash">Cash</option>
-              <option value="bank">Bank</option>
-              <option value="other">Other</option>
-            </select>
-            {errors.accountType && (
-              <p className="text-red-500 text-xs mt-1">{errors.accountType.message}</p>
-            )}
-          </div>
-
-          {/* Address */}
-          <div>
-            <label className="block font-medium mb-1 text-xs">
-              Address
-            </label>
-            <textarea
-              {...register("address")}
-              className="w-full border text-xs rounded px-3 py-2 h-20 resize-none outline-none focus:ring focus:border-blue-400"
-              disabled={mutation.isLoading}
-            />
-            {errors.address && (
-              <p className="text-red-500 text-xs mt-1">{errors.address.message}</p>
-            )}
-          </div>
-
-          {/* Opening Balance and Type */}
-          <div className="flex space-x-4">
-            <div className="flex-1">
-              <label className="block font-medium mb-1 text-xs">
-                Opening Balance
-              </label>
-              <input
-                {...register("openingBalance", { valueAsNumber: true, min: 0 })}
-                type="number"
-                className={`${
-                  editingId && "bg-slate-200"
-                } w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400`}
-                disabled={mutation.isLoading || editingId}
-              />
-              {errors.openingBalance && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.openingBalance.message}
-                </p>
-              )}
-            </div>
-            <div className="w-32">
-              <label className="block font-medium mb-1 text-xs">
-                Balance Type
-              </label>
-              <select
-                {...register("openingBalanceType")}
-                className={`${
-                  editingId && "bg-slate-200"
-                } w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400`}
-                disabled={mutation.isLoading || editingId}
-              >
-                <option value="dr">Dr</option>
-                <option value="cr">Cr</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Phone Number */}
-          <div>
-            <label className="block font-medium mb-1 text-xs">
-              Phone Number
-            </label>
-            <input
-              {...register("phoneNo", {
-                pattern: {
-                  value: /^[6-9]\d{9}$/,
-                  message:
-                    "Phone number must be a valid 10-digit Indian mobile number",
-                },
-              })}
-              type="text"
-              className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
-              disabled={mutation.isLoading}
-            />
-            {errors.phoneNo && (
-              <p className="text-red-500 text-xs mt-1">{errors.phoneNo.message}</p>
-            )}
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block font-medium mb-1 text-xs">
-              Email
-            </label>
-            <input
-              {...register("email", {
-                pattern: {
-                  value: /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-                  message: "Please enter a valid email address",
-                },
-              })}
-              type="email"
-              className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
-              disabled={mutation.isLoading}
-            />
-            {errors.email && (
-              <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
-            )}
-          </div>
-
-          {/* Price Level Dropdown */}
-          <div>
-            <label className="block font-medium mb-1 text-xs">
-              Price Level *
-            </label>
-            {isPriceLevelLoading && (
-              <p className="text-gray-600 text-xs">Loading price levels...</p>
-            )}
-            {isPriceLevelError && (
-              <p className="text-red-500 text-xs">
-                Error loading price levels.{" "}
-                <button
-                  type="button"
-                  onClick={refetchPriceLevels}
-                  className="underline text-blue-600"
-                >
-                  Retry
-                </button>
-              </p>
-            )}
-            {!isPriceLevelLoading && !isPriceLevelError && (
-              <select
-                {...register("priceLevel", {
-                  required:
-                    accountType === "customer"
-                      ? "Price level is required for Customers"
-                      : false,
-                })}
-                className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
-                disabled={mutation.isLoading}
-              >
-                <option value="">Select Price Level</option>
-                {priceLevels.map((pl) => (
-                  <option key={pl._id} value={pl._id}>
-                    {pl.priceLevelName}
-                  </option>
-                ))}
-              </select>
-            )}
-            {errors.priceLevel && (
-              <p className="text-red-500 text-xs mt-1">{errors.priceLevel.message}</p>
-            )}
-          </div>
-
-          {/* Branch Selector */}
-          <div>
-            <BranchSelector
-              selectedBranches={selectedBranches}
-              setSelectedBranches={setSelectedBranches}
-            />
-            {errors.branches && (
-              <p className="text-red-500 text-xs mt-1">{errors.branches.message}</p>
-            )}
-          </div>
-
-          {/* Status */}
-          <div>
-            <label className="block font-medium mb-1 text-xs">
-              Status *
-            </label>
-            <select
-              {...register("status")}
-              className="w-full border text-xs rounded px-3 py-2 outline-none focus:ring focus:border-blue-400"
-              disabled={mutation.isLoading}
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="blocked">Blocked</option>
-            </select>
-          </div>
+      {/* Header */}
+      <div className="flex-none px-6 py-4 bg-white border-b border-slate-200 flex items-center gap-3">
+        <div className={`p-2 rounded-sm ${editingId ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"}`}>
+           {editingId ? <Pencil className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
         </div>
+        <div>
+           <h2 className="text-sm font-bold text-slate-800">
+             {editingId ? "Edit Account" : "New Account"}
+           </h2>
+           <p className="text-[11px] text-slate-500 font-medium">
+             {editingId ? "Update account details below" : "Fill in details to create a new account"}
+           </p>
+        </div>
+      </div>
 
-        {/* Buttons aligned at form bottom */}
-        <div className="mt-6 flex flex-col gap-2">
+      {/* Scrollable Form Content */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          
+          {/* Section: Basic Info */}
+          <div className="bg-white p-4 rounded-sm border border-slate-200 shadow-sm space-y-4">
+             <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Basic Details</span>
+             </div>
+
+             <div className="grid grid-cols-1 gap-4">
+               <div>
+                 <InputLabel label="Account Name" required />
+                 <input
+                   {...register("accountName", { required: "Name is required", maxLength: 100 })}
+                   className={inputClass}
+                   placeholder="e.g., John Doe Enterprises"
+                   disabled={isLoading}
+                 />
+                 {errors.accountName && <ErrorMessage message={errors.accountName.message} />}
+               </div>
+
+               <div className="grid grid-cols-2 gap-4">
+                 <div>
+                   <InputLabel label="Account Type" required />
+                   <div className="relative">
+                      <select {...register("accountType", { required: "Type is required" })} className={selectClass} disabled={isLoading}>
+                        <option value="customer">Customer</option>
+                        <option value="supplier">Supplier</option>
+                        <option value="cash">Cash</option>
+                        <option value="bank">Bank</option>
+                        <option value="other">Other</option>
+                      </select>
+                   </div>
+                   {errors.accountType && <ErrorMessage message={errors.accountType.message} />}
+                 </div>
+                 
+                 <div>
+                    <InputLabel label="Status" required />
+                    <select {...register("status")} className={selectClass} disabled={isLoading}>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="blocked">Blocked</option>
+                    </select>
+                 </div>
+               </div>
+               
+               <div>
+                  <InputLabel label="Price Level" required={accountType === 'customer'} />
+                  {isPriceLevelLoading ? (
+                    <div className="flex items-center gap-2 text-xs text-slate-400 py-2"><Loader2 className="w-3 h-3 animate-spin" /> Loading levels...</div>
+                  ) : isPriceLevelError ? (
+                    <button type="button" onClick={refetchPriceLevels} className="text-xs text-red-500 hover:underline">Retry loading</button>
+                  ) : (
+                    <select
+                      {...register("priceLevel", { required: accountType === "customer" ? "Required for Customers" : false })}
+                      className={selectClass}
+                      disabled={isLoading}
+                    >
+                      <option value="">Select Price Level</option>
+                      {priceLevels.map((pl) => (
+                        <option key={pl._id} value={pl._id}>{pl.priceLevelName}</option>
+                      ))}
+                    </select>
+                  )}
+                  {errors.priceLevel && <ErrorMessage message={errors.priceLevel.message} />}
+               </div>
+
+             </div>
+          </div>
+
+          {/* Section: Contact Info */}
+          <div className="bg-white p-4 rounded-sm border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Contact Info</span>
+             </div>
+             
+             <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <InputLabel label="Phone Number" />
+                  <input
+                    {...register("phoneNo", { pattern: { value: /^[6-9]\d{9}$/, message: "Invalid mobile number" } })}
+                    className={inputClass}
+                    placeholder="10-digit mobile"
+                    disabled={isLoading}
+                  />
+                  {errors.phoneNo && <ErrorMessage message={errors.phoneNo.message} />}
+                </div>
+
+                <div>
+                  <InputLabel label="Email Address" />
+                  <input
+                    {...register("email", { pattern: { value: /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, message: "Invalid email" } })}
+                    className={inputClass}
+                    placeholder="email@example.com"
+                    disabled={isLoading}
+                  />
+                  {errors.email && <ErrorMessage message={errors.email.message} />}
+                </div>
+             </div>
+
+             <div>
+                <InputLabel label="Address" />
+                <textarea
+                  {...register("address")}
+                  className={`${inputClass} h-20 resize-none`}
+                  placeholder="Full billing address..."
+                  disabled={isLoading}
+                />
+                {errors.address && <ErrorMessage message={errors.address.message} />}
+             </div>
+          </div>
+
+          {/* Section: Financials */}
+          <div className="bg-white p-4 rounded-sm border border-slate-200 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Financials</span>
+             </div>
+
+             <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2">
+                  <InputLabel label="Opening Balance" />
+                  <input
+                    {...register("openingBalance", { valueAsNumber: true, min: 0 })}
+                    type="number"
+                    className={`${inputClass} font-mono`}
+                    placeholder="0.00"
+                    disabled={isLoading || editingId}
+                  />
+                  {errors.openingBalance && <ErrorMessage message={errors.openingBalance.message} />}
+                </div>
+                <div>
+                   <InputLabel label="Type" />
+                   <select
+                    {...register("openingBalanceType")}
+                    className={selectClass}
+                    disabled={isLoading || editingId}
+                   >
+                    <option value="dr">Dr (Rec)</option>
+                    <option value="cr">Cr (Pay)</option>
+                   </select>
+                </div>
+             </div>
+
+             <div>
+                <InputLabel label="Branch Access" />
+                <div className="mt-1">
+                   <BranchSelector
+                    selectedBranches={selectedBranches}
+                    setSelectedBranches={setSelectedBranches}
+                   />
+                </div>
+                {errors.branches && <ErrorMessage message={errors.branches.message} />}
+             </div>
+          </div>
+
+        </form>
+      </div>
+
+      {/* Fixed Footer Buttons */}
+      <div className="flex-none p-4 bg-white border-t border-slate-200 flex flex-col gap-3 z-10">
+        <button
+          onClick={handleSubmit(onSubmit)}
+          disabled={isLoading}
+          className="w-full bg-slate-800 text-white text-xs font-bold py-3 rounded-sm hover:bg-slate-700 active:bg-slate-900 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (editingId ? "Update Account" : "Create Account")}
+        </button>
+
+        {editingId && (
           <button
-            disabled={mutation.isLoading}
-            type="submit"
-            className="w-full bg-blue-600 cursor-pointer font-bold text-white text-xs py-3 rounded hover:bg-blue-700 transition"
+            type="button"
+            onClick={() => {
+              reset();
+              setSelectedBranches([]);
+              onClearEdit();
+            }}
+            disabled={isLoading}
+            className="w-full bg-white text-slate-600 border border-slate-200 text-xs font-bold py-2.5 rounded-sm hover:bg-slate-50 hover:text-slate-800 transition-all"
           >
-            {editingId ? "Update" : "Create"}
+            Cancel
           </button>
-          {editingId && (
-            <button
-              type="button"
-              className="w-full font-bold cursor-pointer bg-gray-200 text-gray-700 text-xs py-3 rounded hover:bg-gray-300 transition"
-              onClick={() => {
-                reset();
-                setSelectedBranches([]);
-                onClearEdit();
-              }}
-              disabled={mutation.isLoading}
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-      </form>
+        )}
+      </div>
+
     </div>
   );
 };
