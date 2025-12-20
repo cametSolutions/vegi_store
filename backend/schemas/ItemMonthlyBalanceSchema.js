@@ -43,7 +43,7 @@ export const ItemMonthlyBalanceSchema = new mongoose.Schema(
     openingStock: {
       type: Number,
       default: 0,
-      min: [0, "Opening stock cannot be negative"],
+      // min: [0, "Opening stock cannot be negative"],
     },
     totalStockIn: {
       type: Number,
