@@ -1,22 +1,25 @@
+// src/components/Reports/TransactionSummary.jsx
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector, useDispatch } from "react-redux";
 import { transactionSummaryQueries } from "../../../hooks/queries/transactionSummaryQueries ";
 import { transactionSummaryService } from "../../../api/services/transactionSummary.service ";
-import { 
-  Download, 
-  Printer, 
-  ChevronLeft, 
+import {
+  Printer,
+  ChevronLeft,
   ChevronRight,
   Search,
   FileSpreadsheet,
   FileText,
   X,
-  LoaderCircle,
+  Loader2,
+  FileBarChart,
+  ShoppingBag,
+  ShoppingCart,
+  CornerUpLeft,
 } from "lucide-react";
 import { DATE_FILTERS, formatDate, getDateRange } from "../../../../../shared/utils/date";
 import { formatINR } from "../../../../../shared/utils/currency";
-import CustomMoonLoader from "@/components/loaders/CustomMoonLoader";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,62 +28,56 @@ import FiltersBar from "@/components/filters/filterBar/FiltersBar";
 import { setFilter } from "@/store/slices/filtersSlice";
 import { useDebounce } from "@/hooks/useDebounce";
 
-// Transaction type configuration
+// Transaction type configuration with icons and modern colors
 const TRANSACTION_CONFIG = {
   sale: {
     label: "Sales Summary",
     accountLabel: "Customer Name",
-    color: "green",
+    icon: <ShoppingBag className="w-4 h-4 text-emerald-500" />,
+    theme: "emerald",
   },
   purchase: {
     label: "Purchase Summary",
     accountLabel: "Supplier Name",
-    color: "blue",
+    icon: <ShoppingCart className="w-4 h-4 text-blue-500" />,
+    theme: "blue",
   },
   sales_return: {
-    label: "Sales Return Summary",
+    label: "Sales Return",
     accountLabel: "Customer Name",
-    color: "orange",
+    icon: <CornerUpLeft className="w-4 h-4 text-orange-500" />,
+    theme: "orange",
   },
   purchase_return: {
-    label: "Purchase Return Summary",
+    label: "Purchase Return",
     accountLabel: "Supplier Name",
-    color: "purple",
+    icon: <CornerUpLeft className="w-4 h-4 text-purple-500" />,
+    theme: "purple",
   },
 };
 
 const TransactionSummary = () => {
   const dispatch = useDispatch();
-  
-  const selectedCompany = useSelector(
-    (state) => state?.companyBranch?.selectedCompany
-  );
-  const selectedBranch = useSelector(
-    (state) => state?.companyBranch?.selectedBranch
-  );
+
+  const selectedCompany = useSelector((state) => state?.companyBranch?.selectedCompany);
+  const selectedBranch = useSelector((state) => state?.companyBranch?.selectedBranch);
   const filters = useSelector((state) => state.filters);
 
   const companyId = selectedCompany?._id;
   const branchId = selectedBranch?._id;
 
-  // State for pagination and search
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [searchTerm, setSearchTerm] = useState("");
   const [isExporting, setIsExporting] = useState(false);
   const [dateFilter, setDateFilter] = useState(DATE_FILTERS.THIS_MONTH);
 
-  // Debounce search term with 500ms delay
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
-  // Initialize defaults on mount
   useEffect(() => {
-    // Default transaction type = "sale" if not set
     if (!filters.transactionType) {
       dispatch(setFilter({ key: "transactionType", value: "sale" }));
     }
-
-    // Default date = THIS_MONTH if not set
     if (!filters.startDate || !filters.endDate) {
       const range = getDateRange(DATE_FILTERS.THIS_MONTH);
       dispatch(setFilter({ key: "startDate", value: range.start }));
@@ -89,16 +86,15 @@ const TransactionSummary = () => {
   }, [filters.transactionType, filters.startDate, filters.endDate, dispatch]);
 
   const transactionType = filters.transactionType || "sale";
-  const config = TRANSACTION_CONFIG[transactionType];
+  const config = TRANSACTION_CONFIG[transactionType] || TRANSACTION_CONFIG.sale;
 
-  // Fetch transaction data using the query with debounced search
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery(
     transactionSummaryQueries.summary(companyId, branchId, transactionType, {
       page: currentPage,
       limit: pageSize,
       startDate: filters.startDate,
       endDate: filters.endDate,
-      search: debouncedSearchTerm, // Use debounced value here
+      search: debouncedSearchTerm,
     })
   );
 
@@ -107,15 +103,11 @@ const TransactionSummary = () => {
   const totalPages = data?.data?.totalPages || 0;
   const totalAmount = data?.data?.totalAmount || 0;
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [filters.startDate, filters.endDate, debouncedSearchTerm, pageSize, transactionType]);
 
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
+  const handleSearchChange = (e) => setSearchTerm(e.target.value);
   const handleClearSearch = () => {
     setSearchTerm("");
     setCurrentPage(1);
@@ -126,7 +118,6 @@ const TransactionSummary = () => {
       toast.error("Please select a company and branch");
       return;
     }
-
     setIsExporting(true);
     try {
       const params = {
@@ -134,90 +125,95 @@ const TransactionSummary = () => {
         endDate: filters.endDate,
         search: debouncedSearchTerm,
       };
-
       if (type === "excel") {
-        await transactionSummaryService.exportToExcel(
-          companyId,
-          branchId,
-          transactionType,
-          params
-        );
-        toast.success("Excel file downloaded successfully");
+        await transactionSummaryService.exportToExcel(companyId, branchId, transactionType, params);
+        toast.success("Excel downloaded");
       } else if (type === "pdf") {
-        await transactionSummaryService.exportToPDF(
-          companyId,
-          branchId,
-          transactionType,
-          params
-        );
-        toast.success("PDF file downloaded successfully");
+        await transactionSummaryService.exportToPDF(companyId, branchId, transactionType, params);
+        toast.success("PDF downloaded");
       }
     } catch (error) {
-      toast.error(error.message || `Failed to export to ${type.toUpperCase()}`);
+      toast.error(`Export failed: ${error.message}`);
     } finally {
       setIsExporting(false);
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => window.print();
 
   if (!companyId || !branchId) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-red-500">Please select a company and branch</p>
+      <div className="flex flex-col items-center justify-center h-screen text-slate-400">
+        <FileBarChart className="w-12 h-12 mb-3 opacity-20" />
+        <p>Please select a company and branch</p>
       </div>
     );
   }
 
-  if (!config) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-red-500">Invalid transaction type</p>
-      </div>
-    );
-  }
+  // Define column widths for strict alignment
+  const TableColGroup = () => (
+    <colgroup>
+      <col style={{ width: "50px" }} />  {/* # */}
+      <col style={{ width: "130px" }} /> {/* Ref No */}
+      <col style={{ width: "100px" }} /> {/* Date */}
+      <col style={{ width: "220px" }} /> {/* Account Name */}
+      <col style={{ width: "130px" }} /> {/* Phone */}
+      <col style={{ width: "180px" }} /> {/* Email */}
+      <col style={{ width: "140px" }} /> {/* Net Amount */}
+    </colgroup>
+  );
 
   return (
-    <div className="h-[calc(100vh-109px)] flex flex-col bg-gray-50">
+    <div className="h-[calc(100vh-104px)] bg-slate-100 flex flex-col font-sans text-sm">
       {/* Fixed Header */}
-      <div className="flex-none bg-white shadow-sm border-b px-4 py-2">
-        <div className="flex items-center justify-between gap-4">
-          {/* Left: Title */}
-          <h1 className="text-base font-semibold text-gray-900">
-            {config.label}
-          </h1>
+      <div className="flex-none bg-white border-b border-slate-200 px-6 py-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          
+          {/* Title Area */}
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 shadow-sm">
+              {config.icon}
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-slate-800 tracking-tight">
+                {config.label}
+              </h1>
+              <p className="text-xs text-slate-500 font-medium">
+                {totalRecords} records found
+              </p>
+            </div>
+          </div>
 
-          {/* Right: Search + Filters */}
-          <div className="flex items-center gap-2">
-            {/* Search Bar with Clear Button */}
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-              <Input
+          {/* Controls Area */}
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-sky-500 transition-colors" />
+              <input
                 type="text"
-                placeholder="Search by party, document..."
-                className="h-8 text-xs w-64 pl-8 pr-8"
+                placeholder="Search party, ref..."
+                className="h-9 text-sm w-64 pl-9 pr-8 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all placeholder:text-slate-400"
                 value={searchTerm}
                 onChange={handleSearchChange}
               />
               {searchTerm && (
                 <button
                   onClick={handleClearSearch}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200 transition"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-3 h-3" />
                 </button>
               )}
-              {/* Show searching indicator */}
               {isFetching && searchTerm && (
                 <div className="absolute right-8 top-1/2 -translate-y-1/2">
-                  <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  <Loader2 className="w-3 h-3 text-sky-500 animate-spin" />
                 </div>
               )}
             </div>
 
-            {/* FiltersBar */}
+            <div className="h-6 w-px bg-slate-200 mx-1"></div>
+
+            {/* Filters */}
             <FiltersBar
               showDateFilter={true}
               showTransactionType={true}
@@ -231,104 +227,88 @@ const TransactionSummary = () => {
         </div>
       </div>
 
-      {/* Applied Filters */}
-      <AppliedFilters />
+      {/* Applied Filters Context
+      <div className="px-4 bg-white border py-1">
+        <AppliedFilters />
+      </div> */}
 
-      {/* Scrollable Table Area */}
-      <div className="flex-1 overflow-hidden">
-        <div className="bg-white shadow-sm h-full flex flex-col">
+      {/* Main Content */}
+      <div className="flex-1 overflow-hidden py-1 px-2">
+        <div className="bg-white rounded-sm shadow-sm border border-slate-300 h-full flex flex-col overflow-hidden">
+          
           {isLoading ? (
-          <div className="flex items-center justify-center h-[calc(100vh-250px)]">
-            <LoaderCircle className="animate-spin w-8 h-8 text-slate-500" />
-          </div>
+            <div className="flex flex-col items-center justify-center h-full text-slate-400">
+              <Loader2 className="animate-spin w-8 h-8 mb-2 text-sky-500" />
+              <span className="text-xs font-medium">Loading transactions...</span>
+            </div>
           ) : isError ? (
-            <div className="flex flex-col items-center justify-center flex-1">
-              <p className="text-gray-500 text-sm mb-2">!Oops...Unable to fetch data</p>
-              <button
-                onClick={() => refetch()}
-                className=" text-sm px-3 py-1  bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Retry
-              </button>
+            <div className="flex flex-col items-center justify-center h-full text-slate-500">
+              <p className="text-sm mb-3">Unable to load data</p>
+              <Button onClick={() => refetch()} variant="outline" size="sm">Retry</Button>
             </div>
           ) : transactions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center flex-1">
-              <p className="text-gray-500 text-sm">
+            <div className="flex flex-col items-center justify-center h-full text-slate-400">
+              <FileBarChart className="w-10 h-10 mb-3 opacity-20" />
+              <p className="text-sm font-medium">
                 {debouncedSearchTerm 
-                  ? `No results found for "${debouncedSearchTerm}"`
-                  : "No records found"}
+                  ? `No results for "${debouncedSearchTerm}"`
+                  : "No transactions found"}
               </p>
               {debouncedSearchTerm && (
-                <button
-                  onClick={handleClearSearch}
-                  className="mt-2 text-xs text-blue-600 hover:text-blue-700 underline"
-                >
+                <button onClick={handleClearSearch} className="mt-2 text-xs text-sky-600 hover:underline">
                   Clear search
                 </button>
               )}
             </div>
           ) : (
             <>
-              {/* Fixed Table Header */}
-              <div className="flex-none ">
-                <table className="w-full table-fixed">
-                  <thead className="bg-gray-300 border-b">
-                    <tr className="h-10">
-                      <th className="px-2 text-center text-[10px] font-semibold text-gray-600 uppercase tracking-wider" style={{width: '50px'}}>
-                        #
-                      </th>
-                      <th className="px-2 text-center text-[10px] font-semibold text-gray-600 uppercase tracking-wider" style={{width: '120px'}}>
-                        Ref. No.
-                      </th>
-                      <th className="px-2 text-center text-[10px] font-semibold text-gray-600 uppercase tracking-wider" style={{width: '120px'}}>
-                        Date
-                      </th>
-                      <th className="px-2 text-center text-[10px] font-semibold text-gray-600 uppercase tracking-wider" style={{width: '180px'}}>
-                        {config.accountLabel}
-                      </th>
-                      <th className="px-2 text-center text-[10px] font-semibold text-gray-600 uppercase tracking-wider" style={{width: '130px'}}>
-                        Phone
-                      </th>
-                      <th className="px-2 text-center text-[10px] font-semibold text-gray-600 uppercase tracking-wider" style={{width: '200px'}}>
-                        Email
-                      </th>
-                      <th className="px-2 text-end pr-3 text-[10px] font-semibold text-gray-600 uppercase tracking-wider" style={{width: '130px'}}>
-                        Net Amount
-                      </th>
+              {/* Table Header */}
+              <div className="flex-none bg-slate-50 border-b border-slate-300">
+                <table className="w-full table-fixed border-collapse">
+                  <TableColGroup />
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">#</th>
+                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Ref No.</th>
+                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Date</th>
+                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">{config.accountLabel}</th>
+                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Phone</th>
+                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Email</th>
+                      <th className="px-6 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase">Net Amount</th>
                     </tr>
                   </thead>
                 </table>
               </div>
 
-              {/* Scrollable Table Body */}
-              <div className="flex-1 overflow-y-auto ">
-                <table className="w-full table-fixed">
-                  <tbody className="bg-blue-100 divide-y divide-gray-100">
+              {/* Table Body */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
+                <table className="w-full table-fixed border-collapse">
+                  <TableColGroup />
+                  <tbody className="divide-y divide-slate-200">
                     {transactions.map((transaction, index) => (
-                      <tr
-                        key={transaction._id}
-                        className="h-12 hover:bg-gray-50 transition"
-                      >
-                        <td className="px-2 whitespace-nowrap text-xs text-gray-500 text-center" style={{width: '50px'}}>
+                      <tr key={transaction._id} className="hover:bg-slate-50 transition-colors group">
+                        <td className="px-4 py-3 text-xs text-slate-400 text-center border-r border-slate-200">
                           {(currentPage - 1) * pageSize + index + 1}
                         </td>
-                        <td className="px-2 whitespace-nowrap text-xs text-gray-900 font-medium text-center" style={{width: '120px'}}>
-                          {transaction.transactionNumber || ""}
+                        <td className="px-4 py-3 text-xs font-medium text-slate-700 truncate border-r border-slate-200">
+                          {transaction.transactionNumber || "-"}
                         </td>
-                        <td className="px-2 whitespace-nowrap text-xs text-gray-900 text-center" style={{width: '120px'}}>
-                          {transaction.transactionDate ? formatDate(transaction.transactionDate) : ""}
+                        <td className="px-4 py-3 text-xs text-slate-600 border-r border-slate-200">
+                          {transaction.transactionDate ? formatDate(transaction.transactionDate) : "-"}
                         </td>
-                        <td className="px-2 whitespace-nowrap text-xs text-gray-900 text-center" style={{width: '180px'}}>
-                          {transaction.accountName || ""}
+                        <td className="px-4 py-3 text-xs font-medium text-slate-800 truncate border-r border-slate-200">
+                          {transaction.accountName || "-"}
                         </td>
-                        <td className="px-2 whitespace-nowrap text-xs text-gray-900 text-center" style={{width: '130px'}}>
-                          {transaction.phone || ""}
+                        <td className="px-4 py-3 text-xs text-slate-500 border-r border-slate-200">
+                          {transaction.phone || "-"}
                         </td>
-                        <td className="px-2 text-xs text-gray-900 text-center truncate" style={{width: '200px'}}>
-                          {transaction.email || ""}
+                        <td className="px-4 py-3 text-xs text-slate-500 truncate border-r border-slate-200">
+                          {transaction.email || "-"}
                         </td>
-                        <td className="px-2 pr-4 whitespace-nowrap text-xs text-gray-900 text-end font-semibold" style={{width: '130px'}}>
-                          {formatINR(transaction.netAmount)}
+                        <td className="px-6 py-3 text-right">
+                          <span className="text-xs font-bold text-slate-700 font-mono tracking-tight group-hover:text-slate-900">
+                            {formatINR(transaction.netAmount)}
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -336,116 +316,94 @@ const TransactionSummary = () => {
                 </table>
               </div>
 
-              {/* Fixed Table Footer (Total) */}
-              <div className="flex-none border-t-2 ">
+              {/* Table Footer (Totals) */}
+              <div className="flex-none bg-slate-50 border-t border-slate-200">
                 <table className="w-full table-fixed">
-                  <tfoot className="bg-gray-50">
-                    <tr className="h-8">
-                      <td style={{width: '50px'}}></td>
-                      <td style={{width: '120px'}}></td>
-                      <td style={{width: '120px'}}></td>
-                      <td style={{width: '180px'}}></td>
-                      <td style={{width: '130px'}}></td>
-                      <td className="px-2 text-xs font-bold text-gray-900 text-center" style={{width: '200px'}}>
-                        Total
+                  <TableColGroup />
+                  <tfoot>
+                    <tr>
+                      <td colSpan={6} className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase border-r border-slate-300">
+                        Total Amount:
                       </td>
-                      <td className="px-2 text-xs  font-bold text-gray-900 text-end pr-4" style={{width: '130px'}}>
-                        {formatINR(totalAmount)}
+                      <td className="px-6 py-3 text-right">
+                        <div className="bg-white border border-slate-300 rounded-md px-3 py-1.5 shadow-sm inline-block">
+                            <span className="text-sm font-bold text-slate-800 font-mono">
+                                {formatINR(totalAmount)}
+                            </span>
+                        </div>
                       </td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
 
-              {/* Fixed Footer with Action Buttons */}
-              <div className="flex-none flex items-center justify-between px-3 py-4 border-t bg-gray-50">
-                {/* Left: Action Buttons */}
-                <div className="flex items-center gap-1.5">
+              {/* Pagination & Actions Footer */}
+              <div className="flex-none px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between">
+                
+                {/* Export Actions */}
+                <div className="flex items-center gap-2">
                   <Button
-                    size="sm"
                     variant="outline"
+                    size="sm"
                     onClick={() => handleExport("excel")}
                     disabled={isExporting}
-                    className="h-7 text-xs  bg-green-500 text-white border rounded-sm"
+                    className="h-8 text-xs font-medium text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100 hover:text-emerald-800"
                   >
-                    {isExporting ? (
-                      <div className="w-3 h-3 border-2 border-gray-600 border-t-transparent rounded-full animate-spin mr-1" />
-                    ) : (
-                      <FileSpreadsheet className="w-3 h-3 mr-1" />
-                    )}
+                    {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" />}
                     Excel
                   </Button>
                   <Button
-                    size="sm"
                     variant="outline"
+                    size="sm"
                     onClick={() => handleExport("pdf")}
                     disabled={isExporting}
-                     className="h-7 text-xs  bg-red-500 text-white border rounded-sm"
+                    className="h-8 text-xs font-medium text-rose-700 bg-rose-50 border-rose-200 hover:bg-rose-100 hover:text-rose-800"
                   >
-                    {isExporting ? (
-                      <div className="w-3 h-3 border-2 border-gray-600 border-t-transparent rounded-full animate-spin mr-1" />
-                    ) : (
-                      <FileText className="w-3 h-3 mr-1" />
-                    )}
+                    {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <FileText className="w-3.5 h-3.5 mr-1.5" />}
                     PDF
                   </Button>
                   <Button
-                    size="sm"
                     variant="outline"
+                    size="sm"
                     onClick={handlePrint}
-                     className="h-7 text-xs  bg-blue-500 text-white border rounded-sm"
+                    className="h-8 text-xs font-medium text-slate-600 bg-white border-slate-200 hover:bg-slate-50"
                   >
-                    <Printer className="w-3 h-3 mr-1" />
+                    <Printer className="w-3.5 h-3.5 mr-1.5" />
                     Print
                   </Button>
                 </div>
 
+                {/* Pagination Controls */}
                 <div className="flex items-center gap-4">
-                  {/* Center: Record Count */}
-                  <div className="text-xs text-gray-600">
-                    Showing{" "}
-                    <span className="font-medium">
-                      {(currentPage - 1) * pageSize + 1}
-                    </span>
-                    -
-                    <span className="font-medium">
-                      {Math.min(currentPage * pageSize, totalRecords)}
-                    </span>{" "}
-                    of <span className="font-medium">{totalRecords}</span>
-                    {debouncedSearchTerm && (
-                      <span className="ml-1 text-gray-500">
-                        (filtered)
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Right: Pagination */}
-                  <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-500">
+                    Showing <span className="font-medium text-slate-700">{(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalRecords)}</span> of <span className="font-medium text-slate-700">{totalRecords}</span>
+                  </span>
+                  
+                  <div className="flex items-center gap-1">
                     <Button
+                      variant="ghost"
                       size="icon"
-                      variant="outline"
-                      className="h-7 w-7"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      className="h-8 w-8 text-slate-500 hover:text-slate-800"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
                     >
-                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <ChevronLeft className="w-4 h-4" />
                     </Button>
-                    <span className="text-xs text-gray-600">
-                      {currentPage}/{totalPages}
+                    <span className="text-xs font-medium text-slate-600 min-w-[3rem] text-center border border-slate-200 rounded px-2 py-1 bg-slate-50">
+                      {currentPage} / {totalPages}
                     </span>
                     <Button
+                      variant="ghost"
                       size="icon"
-                      variant="outline"
-                      className="h-7 w-7"
-                      onClick={() =>
-                        setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                      }
+                      className="h-8 w-8 text-slate-500 hover:text-slate-800"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
                     >
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <ChevronRight className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
+
               </div>
             </>
           )}

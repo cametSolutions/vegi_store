@@ -35,42 +35,28 @@ const RunRevaluation = () => {
       dispatch(setRevaluationMessage("Starting revaluation process..."));
     },
     onSuccess: (response) => {
-      // Clear progress interval
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-
       dispatch(setRevaluationProgress(100));
       dispatch(setRevaluationMessage("Revaluation completed successfully!"));
-
-      // Keep loader visible briefly to show completion
       setTimeout(() => {
         dispatch(hideRevaluationLoader());
       }, 1500);
     },
     onError: (error) => {
-      // Clear progress interval
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-
-      // Start countdown
       let seconds = 3;
-      dispatch(
-        setRevaluationMessage(`Revaluation failed. Closing in ${seconds}...`)
-      );
+      dispatch(setRevaluationMessage(`Revaluation failed. Closing in ${seconds}...`));
 
       const countdownInterval = setInterval(() => {
         seconds -= 1;
-
         if (seconds > 0) {
-          dispatch(
-            setRevaluationMessage(
-              `Revaluation failed. Closing in ${seconds}...`
-            )
-          );
+          dispatch(setRevaluationMessage(`Revaluation failed. Closing in ${seconds}...`));
         } else {
           clearInterval(countdownInterval);
           dispatch(hideRevaluationLoader());
@@ -79,14 +65,11 @@ const RunRevaluation = () => {
     },
   });
 
-  // Simulate progress updates
   useEffect(() => {
     if (revaluationMutation.isPending) {
       let currentProgress = 0;
-
       intervalRef.current = setInterval(() => {
         currentProgress += Math.random() * 15;
-
         if (currentProgress >= 90) {
           currentProgress = 90;
           if (intervalRef.current) {
@@ -94,10 +77,8 @@ const RunRevaluation = () => {
             intervalRef.current = null;
           }
         }
-
         dispatch(setRevaluationProgress(currentProgress));
 
-        // Update status messages based on progress
         if (currentProgress > 20 && currentProgress <= 40) {
           dispatch(setRevaluationMessage("Processing ledger entries..."));
         } else if (currentProgress > 40 && currentProgress <= 60) {
@@ -109,7 +90,6 @@ const RunRevaluation = () => {
         }
       }, 500);
     }
-
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -118,60 +98,62 @@ const RunRevaluation = () => {
     };
   }, [revaluationMutation.isPending, dispatch]);
 
-  const handleTriggerClick = () => {
-    setShowConfirmDialog(true);
-  };
-
+  const handleTriggerClick = () => setShowConfirmDialog(true);
   const handleConfirm = () => {
     setShowConfirmDialog(false);
     revaluationMutation.mutate();
   };
-
-  const handleCancel = () => {
-    setShowConfirmDialog(false);
-  };
+  const handleCancel = () => setShowConfirmDialog(false);
 
   return (
     <>
-      {/* Dropdown Menu Item Trigger */}
+      {/* Modernized Dropdown Item */}
       <DropdownMenuItem
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
           handleTriggerClick();
         }}
-        className="cursor-pointer"
+        className="cursor-pointer text-xs py-2 rounded-md focus:bg-slate-50 text-slate-700 hover:text-slate-900 transition-colors group"
       >
-        <RefreshCcw className="w-4 h-4 mr-2" />
+        <RefreshCcw className="w-4 h-4  text-slate-500 group-hover:text-blue-500 transition-colors" />
         Run Revaluation
       </DropdownMenuItem>
 
-      {/* Confirmation Dialog */}
+      {/* Modernized Confirmation Dialog */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white border-slate-200 shadow-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-500" />
+            <AlertDialogTitle className="flex items-center gap-3 text-slate-800">
+              <div className="p-2 bg-amber-50 rounded-full">
+                 <AlertTriangle className="w-5 h-5 text-amber-500" />
+              </div>
               Confirm Revaluation
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
+            <AlertDialogDescription className="space-y-3 pt-2 text-slate-600 text-sm">
               <p>
                 You are about to manually trigger the night revaluation process.
               </p>
-              <p className="text-amber-600 font-medium">
-                ⚠️ This process may take several minutes and will recalculate
-                all ledger balances. Please ensure no critical operations are in
-                progress.
-              </p>
+              <div className="bg-amber-50 p-3 rounded-md border border-amber-100">
+                <p className="text-amber-700 text-xs font-medium flex items-start gap-2">
+                   <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                   This process recalculates all ledger balances and may take several minutes. Ensure no critical operations are running.
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancel}>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="mt-2">
+            <AlertDialogCancel 
+                onClick={handleCancel}
+                className="border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 text-xs h-9"
+            >
+                Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirm}
-              className="bg-primary hover:bg-primary/90"
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-9"
             >
-              Yes, Run Revaluation
+              Start Revaluation
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
