@@ -49,9 +49,6 @@ const OutstandingTransactionsList = ({
 
   const dateRange = { start: startDate, end: endDate };
 
-  console.log(dateRange);
-  
-
   const { data, isLoading, isError, error, refetch } = useQuery({
     ...outstandingQueries.partyDetails(
       companyId,
@@ -152,7 +149,7 @@ const OutstandingTransactionsList = ({
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden p-2">
-        <div className="bg-white rounded-sm shadow-sm border border-slate-300 h-full flex flex-col overflow-hidden">
+        <div className="bg-white rounded-sm shadow-sm border border-slate-300 h-full flex flex-col overflow-hidden relative">
           
           {!selectedParty ? (
             <div className="flex flex-col items-center justify-center flex-1 text-slate-400">
@@ -180,28 +177,23 @@ const OutstandingTransactionsList = ({
             </div>
           ) : (
             <>
-              {/* Table Header */}
-              <div className="flex-none bg-slate-50 border-b border-slate-300">
+              {/* Scrollable Table Area (Header + Body) */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar relative bg-white">
                 <table className="w-full table-fixed border-collapse">
                   <TableColGroup />
                   <thead>
+                    {/* Sticky Header Row */}
                     <tr>
-                      <th className="px-3 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">#</th>
-                      <th className="px-3 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Ref No.</th>
-                      <th className="px-3 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Date</th>
-                      <th className="px-3 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Total</th>
-                      <th className="px-3 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Paid</th>
-                      <th className="px-6 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase">Balance</th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-3 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">#</th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-3 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Ref No.</th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-3 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Date</th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-3 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Total</th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-3 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Paid</th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-6 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Balance</th>
                     </tr>
                   </thead>
-                </table>
-              </div>
 
-              {/* Table Body */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
-                <table className="w-full table-fixed border-collapse">
-                  <TableColGroup />
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody className="divide-y divide-slate-200 bg-white">
                     {transactions.map((transaction, index) => {
                       const styles = getOutstandingStyle(transaction.outstandingType);
                       return (
@@ -241,32 +233,32 @@ const OutstandingTransactionsList = ({
                 </table>
               </div>
 
-              {/* Totals Footer */}
-              <div className="flex-none bg-slate-50 border-t border-slate-200">
-                 <table className="w-full table-fixed">
-                    <TableColGroup />
-                    <tfoot>
-                      <tr>
-                        <td colSpan={5} className="px-4 py-3 text-xs font-bold text-slate-600 text-right uppercase tracking-wide border-r border-slate-300">
-                           Total Outstanding:
-                        </td>
-                        <td className="px-3 py-3">
-                           <div className="flex items-center justify-end gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-                              <span className={`text-sm font-bold ${totalOutstanding >= 0 ? "text-teal-600" : "text-rose-600"}`}>
-                                {formatINR(Math.abs(totalOutstanding))}
-                              </span>
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${totalOutstanding >= 0 ? "bg-teal-100 text-teal-800" : "bg-rose-100 text-rose-800"}`}>
-                                {totalOutstanding >= 0 ? "DR" : "CR"}
-                              </span>
-                           </div>
-                        </td>
-                      </tr>
-                    </tfoot>
-                 </table>
+              {/* Total Outstanding Row - Fixed at Bottom (Outside Table) */}
+              <div className="flex-none bg-slate-50 border-t border-slate-300 z-30">
+                <table className="w-full table-fixed">
+                  <TableColGroup />
+                  <tfoot>
+                    <tr>
+                      <td colSpan={5} className="px-4 py-3 text-xs font-bold text-slate-600 text-right uppercase tracking-wide border-r border-slate-300">
+                         Total Outstanding:
+                      </td>
+                      <td className="px-3 py-3">
+                         <div className="flex items-center justify-end gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                            <span className={`text-sm font-bold ${totalOutstanding >= 0 ? "text-teal-600" : "text-rose-600"}`}>
+                              {formatINR(Math.abs(totalOutstanding))}
+                            </span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${totalOutstanding >= 0 ? "bg-teal-100 text-teal-800" : "bg-rose-100 text-rose-800"}`}>
+                              {totalOutstanding >= 0 ? "DR" : "CR"}
+                            </span>
+                         </div>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
 
-              {/* Pagination */}
-              <div className="flex-none flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-white">
+              {/* Pagination (Fixed at bottom) */}
+              <div className="flex-none flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-white z-40">
                 <span className="text-[11px] font-medium text-slate-500">
                    Showing {totalCount > 0 ? `${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, totalCount)}` : "0"} of {totalCount} records
                 </span>
