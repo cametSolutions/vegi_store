@@ -21,14 +21,12 @@ import {
 import { DATE_FILTERS, formatDate, getDateRange } from "../../../../../shared/utils/date";
 import { formatINR } from "../../../../../shared/utils/currency";
 import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import AppliedFilters from "@/components/filters/appliedFilters/AppliedFilters";
 import FiltersBar from "@/components/filters/filterBar/FiltersBar";
 import { setFilter } from "@/store/slices/filtersSlice";
 import { useDebounce } from "@/hooks/useDebounce";
 
-// Transaction type configuration with icons and modern colors
+// Transaction type configuration
 const TRANSACTION_CONFIG = {
   sale: {
     label: "Sales Summary",
@@ -88,7 +86,7 @@ const TransactionSummary = () => {
   const transactionType = filters.transactionType || "sale";
   const config = TRANSACTION_CONFIG[transactionType] || TRANSACTION_CONFIG.sale;
 
-  const { data, isLoading, isError, error, refetch, isFetching } = useQuery(
+  const { data, isLoading, isError, refetch, isFetching } = useQuery(
     transactionSummaryQueries.summary(companyId, branchId, transactionType, {
       page: currentPage,
       limit: pageSize,
@@ -186,7 +184,6 @@ const TransactionSummary = () => {
 
           {/* Controls Area */}
           <div className="flex items-center gap-3">
-            {/* Search */}
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-sky-500 transition-colors" />
               <input
@@ -213,7 +210,6 @@ const TransactionSummary = () => {
 
             <div className="h-6 w-px bg-slate-200 mx-1"></div>
 
-            {/* Filters */}
             <FiltersBar
               showDateFilter={true}
               showTransactionType={true}
@@ -227,14 +223,9 @@ const TransactionSummary = () => {
         </div>
       </div>
 
-      {/* Applied Filters Context
-      <div className="px-4 bg-white border py-1">
-        <AppliedFilters />
-      </div> */}
-
       {/* Main Content */}
       <div className="flex-1 overflow-hidden py-1 px-2">
-        <div className="bg-white rounded-sm shadow-sm border border-slate-300 h-full flex flex-col overflow-hidden">
+        <div className="bg-white rounded-sm shadow-sm border border-slate-300 h-full flex flex-col overflow-hidden relative">
           
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400">
@@ -254,37 +245,25 @@ const TransactionSummary = () => {
                   ? `No results for "${debouncedSearchTerm}"`
                   : "No transactions found"}
               </p>
-              {debouncedSearchTerm && (
-                <button onClick={handleClearSearch} className="mt-2 text-xs text-sky-600 hover:underline">
-                  Clear search
-                </button>
-              )}
             </div>
           ) : (
             <>
-              {/* Table Header */}
-              <div className="flex-none bg-slate-50 border-b border-slate-300">
+              {/* Table Container (Header + Body) */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar relative bg-white">
                 <table className="w-full table-fixed border-collapse">
                   <TableColGroup />
                   <thead>
                     <tr>
-                      <th className="px-4 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">#</th>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Ref No.</th>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Date</th>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">{config.accountLabel}</th>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Phone</th>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300">Email</th>
-                      <th className="px-6 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase">Net Amount</th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">#</th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Ref No.</th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Date</th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">{config.accountLabel}</th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Phone</th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Email</th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-6 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Net Amount</th>
                     </tr>
                   </thead>
-                </table>
-              </div>
-
-              {/* Table Body */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
-                <table className="w-full table-fixed border-collapse">
-                  <TableColGroup />
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody className="divide-y divide-slate-200 bg-white">
                     {transactions.map((transaction, index) => (
                       <tr key={transaction._id} className="hover:bg-slate-50 transition-colors group">
                         <td className="px-4 py-3 text-xs text-slate-400 text-center border-r border-slate-200">
@@ -316,17 +295,17 @@ const TransactionSummary = () => {
                 </table>
               </div>
 
-              {/* Table Footer (Totals) */}
-              <div className="flex-none bg-slate-50 border-t border-slate-200">
+              {/* Total Row - Fixed Position (Outside Table Scroll) */}
+              <div className="flex-none bg-slate-50 border-t border-slate-300 z-30">
                 <table className="w-full table-fixed">
                   <TableColGroup />
                   <tfoot>
                     <tr>
-                      <td colSpan={6} className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase border-r border-slate-300">
+                      <td colSpan={6} className="px-4 py-3 text-right text-xs font-bold text-slate-600 uppercase border-r border-slate-300">
                         Total Amount:
                       </td>
                       <td className="px-6 py-3 text-right">
-                        <div className="bg-white border border-slate-300 rounded-md px-3 py-1.5 shadow-sm inline-block">
+                         <div className="bg-white border border-slate-300 rounded-md px-3 py-1.5 shadow-sm inline-block">
                             <span className="text-sm font-bold text-slate-800 font-mono">
                                 {formatINR(totalAmount)}
                             </span>
@@ -337,8 +316,8 @@ const TransactionSummary = () => {
                 </table>
               </div>
 
-              {/* Pagination & Actions Footer */}
-              <div className="flex-none px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between">
+              {/* Pagination & Actions Footer (Fixed at page bottom) */}
+              <div className="flex-none px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between z-40">
                 
                 {/* Export Actions */}
                 <div className="flex items-center gap-2">

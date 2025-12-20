@@ -20,7 +20,6 @@ import { formatINR } from "../../../../../../shared/utils/currency";
 import { itemMasterQueries } from "@/hooks/queries/item.queries";
 
 import { Button } from "@/components/ui/button";
-import AppliedFilters from "@/components/filters/appliedFilters/AppliedFilters";
 import FiltersBar from "@/components/filters/filterBar/FiltersBar";
 import { setFilter } from "@/store/slices/filtersSlice";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -161,13 +160,9 @@ const ItemSummaryPage = () => {
         </div>
       </div>
 
-      {/* <div className="bg-white border-b border-slate-100 px-6 py-1">
-         <AppliedFilters />
-      </div> */}
-
       {/* Main Content */}
       <div className="flex-1 overflow-hidden p-1.5">
-        <div className="bg-white rounded-sm shadow-sm border border-slate-300 h-full flex flex-col overflow-hidden">
+        <div className="bg-white rounded-sm shadow-sm border border-slate-300 h-full flex flex-col overflow-hidden relative">
           
           {isLoading || isFetching ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400">
@@ -186,60 +181,54 @@ const ItemSummaryPage = () => {
             </div>
           ) : (
             <>
-              {/* Table Header */}
-              <div className="flex-none bg-slate-50 border-b border-slate-300 z-10">
+              {/* Unified Scrollable Table Container */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar relative">
                 <table className="w-full table-fixed border-collapse">
                   <TableColGroup />
                   <thead>
-                    {/* Top Group Headers */}
+                    {/* Top Group Headers - Sticky Row 1 */}
                     <tr className="border-b border-slate-300">
-                      <th className="bg-slate-50 border-r border-slate-300"></th>
-                      <th className="bg-slate-50 border-r border-slate-300"></th>
-                      <th className="bg-slate-50 border-r border-slate-300"></th>
+                      <th className="sticky top-0 z-30 bg-slate-50 border-r border-slate-300"></th>
+                      <th className="sticky top-0 z-30 bg-slate-50 border-r border-slate-300"></th>
+                      <th className="sticky top-0 z-30 bg-slate-50 border-r border-slate-300"></th>
                       
                       {/* Dynamic Header 1 (Main) */}
-                      <th colSpan={2} className={`py-1.5 text-center text-[11px] font-bold uppercase tracking-wider border-r border-white ${config.mainHeaderClass}`}>
+                      <th colSpan={2} className={`sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold uppercase tracking-wider border-r border-white ${config.mainHeaderClass}`}>
                         {config.mainHeader}
                       </th>
                       
                       {/* Dynamic Header 2 (Return) */}
-                      <th colSpan={2} className={`py-1.5 text-center text-[11px] font-bold uppercase tracking-wider border-r border-white ${config.returnHeaderClass}`}>
+                      <th colSpan={2} className={`sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold uppercase tracking-wider border-r border-white ${config.returnHeaderClass}`}>
                         {config.returnHeader}
                       </th>
 
                       {/* Closing Section */}
-                      <th colSpan={2} className="py-1.5 text-center text-[11px] font-bold text-slate-600 uppercase tracking-wider bg-slate-100 border-l border-slate-300">
+                      <th colSpan={2} className="sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold text-slate-600 uppercase tracking-wider bg-slate-100 border-l border-slate-300">
                         Closing Balance
                       </th>
                     </tr>
 
-                    {/* Sub Headers */}
+                    {/* Sub Headers - Sticky Row 2 (Top offset = approx height of Row 1 ~29px) */}
                     <tr>
-                      <th className="px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100">#</th>
-                      <th className="px-3 py-2 text-left text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100">Item</th>
-                      <th className="px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100">Unit</th>
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100 border-b border-slate-300">#</th>
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-left text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100 border-b border-slate-300">Item</th>
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100 border-b border-slate-300">Unit</th>
                       
                       {/* Main Cols */}
-                      <th className="px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-slate-50/80 border-r border-slate-300">Qty</th>
-                      <th className="px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-slate-50/80 border-r border-slate-300">Amount</th>
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-slate-50/95 border-r border-slate-300 border-b border-slate-300">Qty</th>
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-slate-50/95 border-r border-slate-300 border-b border-slate-300">Amount</th>
                       
                       {/* Return Cols */}
-                      <th className="px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-orange-50/30 border-r border-slate-300">Qty</th>
-                      <th className="px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-orange-50/30 border-r border-slate-300">Amount</th>
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-orange-50/95 border-r border-slate-300 border-b border-slate-300">Qty</th>
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-orange-50/95 border-r border-slate-300 border-b border-slate-300">Amount</th>
                       
                       {/* Closing Cols */}
-                      <th className="px-3 py-2 text-right text-[10px] font-semibold text-slate-700 uppercase bg-slate-100 border-r border-slate-300">Qty</th>
-                      <th className="px-3 py-2 text-right text-[10px] font-semibold text-slate-700 uppercase bg-slate-100">Value</th>
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-700 uppercase bg-slate-100 border-r border-slate-300 border-b border-slate-300">Qty</th>
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-700 uppercase bg-slate-100 border-b border-slate-300">Value</th>
                     </tr>
                   </thead>
-                </table>
-              </div>
 
-              {/* Table Body */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
-                <table className="w-full table-fixed border-collapse">
-                  <TableColGroup />
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody className="divide-y divide-slate-200 bg-white">
                     {summaryData.map((row, idx) => (
                       <tr key={row.itemId} className="hover:bg-slate-50 transition-colors group">
                         <td className="px-3 py-3 text-xs text-slate-500 text-center border-r border-slate-300">
@@ -297,7 +286,7 @@ const ItemSummaryPage = () => {
               </div>
 
               {/* Pagination Footer */}
-              <div className="flex-none px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between">
+              <div className="flex-none px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between z-40">
                  <span className="text-[11px] text-slate-500">
                     Showing <span className="font-medium text-slate-700">{(pagination.page - 1) * pagination.limit + 1}-{Math.min(pagination.page * pagination.limit, pagination.totalItems)}</span> of <span className="font-medium text-slate-700">{pagination.totalItems}</span>
                   </span>

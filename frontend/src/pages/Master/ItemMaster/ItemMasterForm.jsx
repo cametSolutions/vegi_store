@@ -1,22 +1,13 @@
+// components/ItemMasterForm.jsx
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { itemMasterMutations } from "../../../hooks/mutations/itemMasterMutations";
 import BranchSelector from "../../../components/BranchSelector";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Loader2, Package, Pencil, AlertCircle, Box } from "lucide-react";
 import { units } from "../../../../constants/units";
 import { toast } from "sonner";
-import CustomMoonLoader from "../../../components/loaders/CustomMoonLoader";
 
 const ItemMasterForm = ({ selectedItem, isEditMode, onSuccess, onCancel }) => {
   const queryClient = useQueryClient();
@@ -89,161 +80,173 @@ const ItemMasterForm = ({ selectedItem, isEditMode, onSuccess, onCancel }) => {
     if (isEditMode && selectedItem) {
       updateMutation.mutate(
         { id: selectedItem._id, formData },
-        {
-          onSuccess: () => {
-            onSuccess();
-          },
-        }
+        { onSuccess: () => onSuccess() }
       );
     } else {
       createMutation.mutate(formData, {
         onSuccess: () => {
           onSuccess();
           reset();
-          if (selectedBranchFromStore) {
-            setSelectedBranches([selectedBranchFromStore]);
-          } else {
-            setSelectedBranches([]);
-          }
+          if (selectedBranchFromStore) setSelectedBranches([selectedBranchFromStore]);
+          else setSelectedBranches([]);
         },
       });
     }
   };
 
-  return (
-    <div className="relative h-full min-h-[500px] flex flex-col">
-      <h2 className="text-sm font-bold shadow-lg p-2 px-4 mb-4">
-        {isEditMode ? "Edit Item" : "Create Item"}
-      </h2>
+  const InputLabel = ({ label, required }) => (
+    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+  );
 
+  const ErrorMessage = ({ message }) => (
+    <p className="flex items-center gap-1 text-[10px] text-red-500 mt-1 font-medium">
+       <AlertCircle className="w-3 h-3" /> {message}
+    </p>
+  );
+
+  const inputClass = "w-full rounded-xs text-xs border border-slate-300 rounded-md px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white disabled:bg-slate-50 disabled:text-slate-500";
+
+  return (
+    <div className="h-full flex flex-col bg-slate-50 border-l border-slate-200 shadow-sm relative overflow-hidden">
+      
+      {/* Loading Overlay */}
       {isLoading && (
-        <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
-          <CustomMoonLoader />
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-[1px] z-50 flex items-center justify-center flex-col gap-2">
+          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+          <span className="text-xs font-medium text-slate-600">Saving item...</span>
         </div>
       )}
 
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="flex flex-col flex-1 mt-7 px-5 max-h-[calc(100%-100px)]"
-       
-      >
-        {/* Fields section */}
-        <div className="space-y-5 flex-1 overflow-y-auto">
-          <div>
-            <Label htmlFor="itemName">Item Name *</Label>
-            <Input
-              id="itemName"
-              {...register("itemName", {
-                required: "Item name is required",
-                validate: {
-                  notEmpty: (value) =>
-                    value?.trim().length > 0 ||
-                    "Item name cannot be empty or only whitespace",
-                },
-              })}
-              placeholder="Enter item name"
-              className="mt-2 rounded-none"
-              disabled={isLoading}
-              onBlur={(e) => {
-                const trimmedValue = e.target.value.trim();
-                setValue("itemName", trimmedValue, { shouldValidate: true });
-              }}
-            />
-            {errors.itemName && (
-              <p className="text-red-500 text-[10px]">
-                {errors.itemName.message}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="itemCode">Item Code *</Label>
-            <Input
-              id="itemCode"
-              {...register("itemCode", {
-                required: "Item code is required",
-                validate: {
-                  notEmpty: (value) =>
-                    value?.trim().length > 0 ||
-                    "Item code cannot be empty or only whitespace",
-                },
-              })}
-              placeholder="Enter item code"
-              className="mt-2 rounded-none"
-              disabled={isLoading}
-              onBlur={(e) => {
-                const trimmedValue = e.target.value.trim();
-                setValue("itemCode", trimmedValue, { shouldValidate: true });
-              }}
-            />
-            {errors.itemCode && (
-              <p className="text-red-500 text-[10px]">
-                {errors.itemCode.message}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="unit">Unit *</Label>
-            <Select
-              onValueChange={(value) => setValue("unit", value)}
-              value={watch("unit")}
-              disabled={isLoading}
-            >
-              <SelectTrigger className="mt-2 rounded-none">
-                <SelectValue placeholder="Select unit" />
-              </SelectTrigger>
-              <SelectContent>
-                {units.map((unit) => (
-                  <SelectItem key={unit.value} value={unit.value}>
-                    {unit.displayName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.unit && (
-              <p className="text-red-500 text-[9px]">{errors.unit.message}</p>
-            )}
-          </div>
-
-          <BranchSelector
-            companyId={selectedCompanyFromStore}
-            selectedBranches={selectedBranches}
-            setSelectedBranches={setSelectedBranches}
-            disabled={isLoading}
-          />
+      {/* Header */}
+      <div className="flex-none px-6 py-4 bg-white border-b border-slate-200 flex items-center gap-3">
+        <div className={`p-2 rounded-sm ${isEditMode ? "bg-amber-50 text-amber-600" : "bg-blue-50 text-blue-600"}`}>
+           {isEditMode ? <Pencil className="w-4 h-4" /> : <Package className="w-4 h-4" />}
         </div>
+        <div>
+           <h2 className="text-sm font-bold text-slate-800">
+             {isEditMode ? "Edit Item" : "New Item"}
+           </h2>
+           <p className="text-[11px] text-slate-500 font-medium">
+             {isEditMode ? "Update item details below" : "Add a new product to inventory"}
+           </p>
+        </div>
+      </div>
 
-        {/* Button section pinned at bottom */}
-        <div className="flex gap-2 ">
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="rounded-xs flex-1 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
-          >
-            {isLoading
-              ? isEditMode
-                ? "Updating..."
-                : "Creating..."
-              : isEditMode
-              ? "Update Item"
-              : "Create Item"}
-          </Button>
-          {isEditMode && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={isLoading}
-              className="w-1/3 rounded-none bg-gray-200 border  "
-            >
-              Cancel
-            </Button>
+      {/* Scrollable Form Content */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          
+          <div className="bg-white p-4 rounded-sm border border-slate-200 shadow-sm space-y-4">
+             <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Item Details</span>
+             </div>
+
+             <div className="space-y-4">
+               <div>
+                 <InputLabel label="Item Name" required />
+                 <input
+                   {...register("itemName", { 
+                     required: "Item name is required",
+                     validate: { notEmpty: (v) => v?.trim().length > 0 || "Cannot be empty" }
+                   })}
+                   className={inputClass}
+                   placeholder="e.g., Premium Rice 5kg"
+                   disabled={isLoading}
+                   onBlur={(e) => setValue("itemName", e.target.value.trim(), { shouldValidate: true })}
+                 />
+                 {errors.itemName && <ErrorMessage message={errors.itemName.message} />}
+               </div>
+
+               <div className="grid grid-cols-2 gap-4">
+                 <div>
+                    <InputLabel label="Item Code" required />
+                    <input
+                      {...register("itemCode", { 
+                        required: "Code is required",
+                        validate: { notEmpty: (v) => v?.trim().length > 0 || "Cannot be empty" }
+                      })}
+                      className={`${inputClass} font-mono`}
+                      placeholder="e.g., ITM-001"
+                      disabled={isLoading}
+                      onBlur={(e) => setValue("itemCode", e.target.value.trim(), { shouldValidate: true })}
+                    />
+                    {errors.itemCode && <ErrorMessage message={errors.itemCode.message} />}
+                 </div>
+
+                 <div>
+                    <InputLabel label="Unit" required />
+                    <div className="relative">
+                      <select
+                        {...register("unit")}
+                        className={`${inputClass} appearance-none`}
+                        disabled={isLoading}
+                      >
+                        {units.map((unit) => (
+                          <SelectItem key={unit.value} value={unit.value}>
+                            {unit.displayName}
+                          </SelectItem>
+                        ))}
+                      </select>
+                      <Box className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                    </div>
+                 </div>
+               </div>
+
+               <div>
+                 <InputLabel label="Branch Availability" />
+                 <div className="bg-slate-50/50 p-1 rounded-md">
+                   <BranchSelector
+                      companyId={selectedCompanyFromStore}
+                      selectedBranches={selectedBranches}
+                      setSelectedBranches={setSelectedBranches}
+                      disabled={isLoading}
+                   />
+                 </div>
+                 {selectedBranches.length === 0 && <ErrorMessage message="Select at least one branch" />}
+               </div>
+             </div>
+          </div>
+        </form>
+      </div>
+
+          {/* Fixed Footer Buttons */}
+      <div className="flex-none p-4 bg-white border-t border-slate-200 flex flex-col gap-3 z-10">
+        <button
+          onClick={handleSubmit(onSubmit)}
+          disabled={isLoading}
+          className="w-full bg-slate-800 text-white text-xs font-bold py-3 rounded-sm hover:bg-slate-700 active:bg-slate-900 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : isEditMode ? (
+            "Update Item"
+          ) : (
+            "Create Item"
           )}
-        </div>
-      </form>
+        </button>
+
+        {isEditMode && (
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isLoading}
+            className="w-full bg-white text-slate-600 border border-slate-200 text-xs font-bold py-2.5 rounded-sm hover:bg-slate-50 hover:text-slate-800 transition-all"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+
     </div>
   );
 };
+
+// Simple helper for unit options if select element needs direct mapping
+const SelectItem = ({ value, children }) => (
+  <option value={value}>{children}</option>
+);
 
 export default ItemMasterForm;
