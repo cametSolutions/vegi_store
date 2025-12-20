@@ -1,29 +1,31 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import { 
-  ChevronDown, 
-  FileText, 
-  List, 
-  Package, 
-  ArrowLeftRight, 
+import { useDispatch, useSelector } from "react-redux";
+import {
+  ChevronDown,
+  FileText,
+  List,
+  Package,
+  ArrowLeftRight,
   Tags,
   FileBarChart,
-  Layers
+  Layers,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import ProfileDropdown from "../dropDowns/ProfileDropdown";
 import logoName from "../../../public/images/Logo/logoName.png";
 import logIcon from "../../../public/images/Logo/logoIcon.png";
+import { clearAllFilters } from "@/store/slices/filtersSlice";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const transactionDataFromStore = useSelector((state) => state.transaction);
 
   // Define menu items with icons for dropdowns
@@ -64,15 +66,15 @@ const Navbar = () => {
       path: "#",
       hasDropdown: true,
       dropdownItems: [
-        { 
-          label: "Stock Adjustment", 
+        {
+          label: "Stock Adjustment",
           path: "/stock-adjustment",
-          icon: ArrowLeftRight 
+          icon: ArrowLeftRight,
         },
-        { 
-          label: "Price Level", 
+        {
+          label: "Price Level",
           path: "/master/price-level",
-          icon: Tags 
+          icon: Tags,
         },
       ],
     },
@@ -85,6 +87,7 @@ const Navbar = () => {
       );
       if (!confirmLeave) return;
     }
+    dispatch(clearAllFilters());
     navigate(path);
   };
 
@@ -97,7 +100,7 @@ const Navbar = () => {
             {item.label}
             <ChevronDown className="ml-1.5 h-3.5 w-3.5 text-gray-400 group-hover:text-white transition-transform duration-200 group-data-[state=open]:rotate-180" />
           </DropdownMenuTrigger>
-          
+
           <DropdownMenuContent
             align="start"
             sideOffset={8}
@@ -138,14 +141,13 @@ const Navbar = () => {
     <nav className="bg-gray-900 border-b border-gray-800 shadow-lg sticky top-0 z-50 py-1">
       <div className="mx-auto px-4 sm:px-6 lg:px-4">
         <div className="flex items-center justify-between h-14">
-          
           {/* Logo Section */}
           <div
             onClick={() => handleNavClick("/")}
             className="flex items-center gap-1 cursor-pointer select-none"
           >
             <div className="bg-white/10 p-1 rounded-lg">
-                <img src={logIcon} alt="Logo" className="h-7 w-7" />
+              <img src={logIcon} alt="Logo" className="h-7 w-7" />
             </div>
             <img
               src={logoName}
@@ -159,10 +161,10 @@ const Navbar = () => {
             {menuItems.map((item) => (
               <NavLink key={item.label} item={item} />
             ))}
-            
+
             {/* Divider */}
             <div className="h-6 w-px bg-gray-700 mx-2" />
-            
+
             <ProfileDropdown />
           </div>
         </div>

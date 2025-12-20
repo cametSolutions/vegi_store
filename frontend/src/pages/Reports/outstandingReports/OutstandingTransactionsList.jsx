@@ -49,6 +49,9 @@ const OutstandingTransactionsList = ({
 
   const dateRange = { start: startDate, end: endDate };
 
+  console.log(dateRange);
+  
+
   const { data, isLoading, isError, error, refetch } = useQuery({
     ...outstandingQueries.partyDetails(
       companyId,
