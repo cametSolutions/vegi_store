@@ -114,6 +114,10 @@ export const updateItemMonthlyBalances = async (data, session) => {
         session
       );
 
+
+      // console.log("opening stock",openingStock);
+      
+
       // Prepare update operations
       const updateOps = {
         $inc: {
