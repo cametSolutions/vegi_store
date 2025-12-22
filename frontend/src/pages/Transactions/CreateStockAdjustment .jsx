@@ -1,27 +1,31 @@
 import React, { useEffect, useMemo, useState } from "react";
-import StockAdjustmentHeader from "./components/StockAdjustmentHeader";
-import StockAdjustmentTypeSelector from "./components/StockAdjustmentTypeSelector";
-import AddStockItemForm from "./components/AddStockItemForm";
-import StockItemsTable from "./components/StockItemsTable";
-import StockAdjustmentSummary from "./components/StockAdjustmentSummary";
-import StockAdjustmentActions from "./components/StockAdjustmentActions";
-import CustomMoonLoader from "@/components/loaders/CustomMoonLoader";
-import { useStockAdjustment } from "./hooks/useStockAdjustment";
+import AddItemFormComponent from "../Transactions/components/AddItemForm";
+import ItemsTableComponent from "../Transactions/components/ItemsTable";
+import TransactionActionsComponent from "../Transactions/components/TransactionActions";
+import TransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
+import CustomMoonLoader from "../../components/loaders/CustomMoonLoader";
+import { useStockAdjustment } from "../stock/hooks/useStockAdjustment ";
+import { useStockAdjustmentActions } from "../stock/hooks/useStockAdjustmentActions ";
 import { useSelector } from "react-redux";
+
+// Memoized components
+const TransactionHeader = React.memo(TransactionHeaderComponent);
+const AddItemForm = React.memo(AddItemFormComponent);
+const ItemsTable = React.memo(ItemsTableComponent);
+const TransactionActions = React.memo(TransactionActionsComponent);
 
 const CreateStockAdjustment = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const {
-    adjustmentData,
-    updateAdjustmentData,
-    updateAdjustmentField,
+    stockAdjustmentData,
+    updateStockAdjustmentField,
     updateItemQuantity,
     removeItem,
     addItem,
     clickedItemInTable,
     handleItemClickInItemsTable,
-    resetAdjustmentData,
+    resetStockAdjustmentData,
   } = useStockAdjustment();
 
   const selectedCompanyFromStore = useSelector(
@@ -31,22 +35,35 @@ const CreateStockAdjustment = () => {
     (state) => state.companyBranch?.selectedBranch
   );
 
-  // Initialize adjustment type on mount
+  // Initialize with default adjustment type
   useEffect(() => {
-    if (!adjustmentData.adjustmentType) {
-      updateAdjustmentField("adjustmentType", "add_to_stock");
-    }
-  }, []);
+    updateStockAdjustmentField("adjustmentType", "add");
+  }, [updateStockAdjustmentField]);
 
-  // Reset adjustment data when component unmounts
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      resetAdjustmentData();
+      resetStockAdjustmentData();
     };
-  }, [resetAdjustmentData]);
+  }, [resetStockAdjustmentData]);
+
+  const { handleSave } = useStockAdjustmentActions(stockAdjustmentData, false);
+
+  const onSave = async () => {
+    setIsLoading(true);
+    const success = await handleSave();
+    setIsLoading(false);
+
+    if (success) {
+      resetStockAdjustmentData();
+    }
+  };
+
+  console.log("stockAdjustmentData", stockAdjustmentData);
 
   return (
-    <div className="h-full w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
+    // ✅ ADDED: overflow-hidden to prevent page scroll
+    <div className="h-[calc(100vh-64px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col overflow-hidden relative">
       {/* Loader Overlay */}
       {isLoading && (
         <div className="absolute inset-0 bg-white/60 z-50 flex items-center justify-center">
@@ -54,61 +71,90 @@ const CreateStockAdjustment = () => {
         </div>
       )}
 
-      {/* Header */}
-      <StockAdjustmentHeader
-        date={adjustmentData.adjustmentDate}
-        updateAdjustmentField={updateAdjustmentField}
-      />
+      {/* Header - Fixed at top */}
+      <div className="flex-shrink-0">
+        <TransactionHeader
+          currentTransactionType="stock_adjustment"
+          date={stockAdjustmentData.adjustmentDate}
+          updateTransactionField={updateStockAdjustmentField}
+        />
+      </div>
 
-      {/* Main Content */}
-      <div className="flex flex-col h-[calc(100%-56px)] p-2">
-        {/* Type Selector */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-2">
-          <StockAdjustmentTypeSelector
-            adjustmentType={adjustmentData.adjustmentType}
-            updateAdjustmentField={updateAdjustmentField}
-          />
-        </div>
+      {/* Radio Buttons - Fixed below header */}
+      <div className="flex-shrink-0 bg-white px-4 py-3 border-b border-gray-200">
+        <div className="flex items-center gap-6">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="adjustmentType"
+              value="add"
+              checked={stockAdjustmentData.adjustmentType === "add"}
+              onChange={(e) =>
+                updateStockAdjustmentField("adjustmentType", e.target.value)
+              }
+              className="w-4 h-4 text-green-600 focus:ring-green-500"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              ⊕ Add To Stock
+            </span>
+          </label>
 
-        {/* Add Item Form */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-2">
-          <AddStockItemForm
-            items={adjustmentData.items}
-            branch={selectedBranchFromStore?._id}
-            company={selectedCompanyFromStore?._id}
-            addItem={addItem}
-            clickedItemInTable={clickedItemInTable}
-            adjustmentType={adjustmentData.adjustmentType}
-          />
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="adjustmentType"
+              value="remove"
+              checked={stockAdjustmentData.adjustmentType === "remove"}
+              onChange={(e) =>
+                updateStockAdjustmentField("adjustmentType", e.target.value)
+              }
+              className="w-4 h-4 text-red-600 focus:ring-red-500"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              ⊖ Remove From Stock
+            </span>
+          </label>
         </div>
+      </div>
 
-        {/* Items Table */}
-        <div className="flex-1 bg-white rounded-lg shadow-sm overflow-hidden mb-2">
-          <StockItemsTable
-            items={adjustmentData.items}
-            onUpdateQuantity={updateItemQuantity}
-            onRemoveItem={removeItem}
-            handleItemClickInItemsTable={handleItemClickInItemsTable}
-          />
-        </div>
+      {/* Add Item Form - Fixed */}
+      <div className="flex-shrink-0">
+        <AddItemForm
+          requireAccount={false}
+          items={stockAdjustmentData?.items}
+          branch={selectedBranchFromStore?._id}
+          company={selectedCompanyFromStore?._id}
+          priceLevel={null}
+          updateTransactionField={updateStockAdjustmentField}
+          addItem={addItem}
+          clickedItemInTable={clickedItemInTable}
+          transactionType={null}
+          account={null}
+        />
+      </div>
 
-        {/* Summary */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-2">
-          <StockAdjustmentSummary totalAmount={adjustmentData.totalAmount} />
-        </div>
+      {/* Items Table - Scrollable middle section - ✅ ONLY THIS SECTION SCROLLS */}
+      <div className="flex-1 overflow-auto min-h-0">
+        <ItemsTable
+          items={stockAdjustmentData?.items}
+          onUpdateQuantity={updateItemQuantity}
+          onRemoveItem={removeItem}
+          handleItemClickInItemsTable={handleItemClickInItemsTable}
+        />
+      </div>
 
-        {/* Actions */}
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <StockAdjustmentActions
-            adjustmentData={adjustmentData}
-            onLoadingChange={setIsLoading}
-            resetAdjustmentData={resetAdjustmentData}
-            onCancel={() => {
-              resetAdjustmentData();
-            }}
-            isEditMode={false}
-          />
-        </div>
+      {/* Action Buttons - Fixed at bottom - ✅ ALWAYS VISIBLE */}
+      <div className="flex-shrink-0 bg-white border-t border-gray-200">
+        <TransactionActions
+          onSave={onSave}
+          transactionData={stockAdjustmentData}
+          onLoadingChange={setIsLoading}
+          resetTransactionData={resetStockAdjustmentData}
+          isEditMode={false}
+          onCancel={() => {
+            resetStockAdjustmentData();
+          }}
+        />
       </div>
     </div>
   );
