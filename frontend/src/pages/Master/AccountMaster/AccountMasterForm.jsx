@@ -67,7 +67,7 @@ const AccountMasterForm = ({
         ...editData,
         openingBalance: Math.abs(editData.openingBalance),
         branches: editData.branches || [],
-        priceLevel: editData.priceLevel || null,
+        priceLevel: editData.priceLevel?._id || null,
       });
       setSelectedBranches(editData.branches || []);
     } else {

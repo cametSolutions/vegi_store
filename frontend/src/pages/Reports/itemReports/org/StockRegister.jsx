@@ -1,4 +1,4 @@
-// src/pages/ItemSummaryPage.jsx
+// src/pages/StockRegister.jsx
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector, useDispatch } from "react-redux";
@@ -8,7 +8,7 @@ import {
   Loader2, 
   X, 
   Search, 
-  Package, 
+  ClipboardList, 
   Layers
 } from "lucide-react";
 
@@ -24,7 +24,7 @@ import FiltersBar from "@/components/filters/filterBar/FiltersBar";
 import { setFilter } from "@/store/slices/filtersSlice";
 import { useDebounce } from "@/hooks/useDebounce";
 
-const ItemSummaryPage = () => {
+const StockRegister = () => {
   const dispatch = useDispatch();
 
   const companyId = useSelector((state) => state.companyBranch?.selectedCompany._id);
@@ -37,11 +37,14 @@ const ItemSummaryPage = () => {
   const [search, setSearch] = useState("");
   const limit = 20;
 
-  // Defaults
+  // Defaults - Force Stock Mode (clear transactionType)
   useEffect(() => {
-    if (!filters.transactionType) {
-      dispatch(setFilter({ key: "transactionType", value: "sale" }));
+    // Always clear transactionType to trigger "Stock Register" mode in backend
+    if (filters.transactionType !== null) {
+      dispatch(setFilter({ key: "transactionType", value: null }));
     }
+    
+    // Default Date Range
     if (!filters.startDate || !filters.endDate) {
       const range = getDateRange(DATE_FILTERS.TODAY);
       dispatch(setFilter({ key: "startDate", value: range.start }));
@@ -49,13 +52,13 @@ const ItemSummaryPage = () => {
     }
   }, [filters.transactionType, filters.startDate, filters.endDate, dispatch]);
 
-  const transactionType = filters.transactionType || "sale";
   const debouncedSearchTerm = useDebounce(search, 500);
 
+  // Query - passes transactionType: null for Stock Mode
   const queryOptions = itemMasterQueries.getItemSummary(companyId, branchId, {
     startDate: filters.startDate,
     endDate: filters.endDate,
-    transactionType,
+    transactionType: null, // Explicitly null for stock register
     search: debouncedSearchTerm,
     page: currentPage,
     limit,
@@ -80,33 +83,18 @@ const ItemSummaryPage = () => {
     setCurrentPage(1);
   };
 
-  // --- Configuration ---
-  const isSale = transactionType === "sale";
-  
-  const config = {
-    theme: isSale ? "emerald" : "blue",
-    mainHeader: isSale ? "Sales" : "Purchase",
-    returnHeader: isSale ? "Sales Return" : "Purchase Return",
-    mainQtyKey: isSale ? "totalOut" : "totalIn",
-    mainAmtKey: isSale ? "amountOut" : "amountIn",
-    returnQtyKey: isSale ? "totalIn" : "totalOut",
-    returnAmtKey: isSale ? "amountIn" : "amountOut",
-    
-    // Header Colors - darkened borders for better definition
-    mainHeaderClass: isSale ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-blue-50 text-blue-700 border-blue-300",
-    returnHeaderClass: "bg-orange-50 text-orange-700 border-orange-300",
-  };
-
-  // --- Strict Column Width Definition ---
+  // --- Column Configuration ---
   const TableColGroup = () => (
     <colgroup>
       <col style={{ width: "50px" }} />  {/* # */}
       <col style={{ width: "250px" }} /> {/* Item */}
       <col style={{ width: "80px" }} />  {/* Unit */}
-      <col style={{ width: "100px" }} /> {/* Main Qty */}
-      <col style={{ width: "130px" }} /> {/* Main Amt */}
-      <col style={{ width: "100px" }} /> {/* Return Qty */}
-      <col style={{ width: "130px" }} /> {/* Return Amt */}
+      <col style={{ width: "100px" }} /> {/* Opening */}
+      <col style={{ width: "100px" }} /> {/* In-ward */}
+      <col style={{ width: "100px" }} /> {/* Out-ward */}
+      <col style={{ width: "100px" }} /> {/* Closing Qty */}
+      <col style={{ width: "100px" }} /> {/* Closing Rate */}
+      <col style={{ width: "120px" }} /> {/* Closing Amt */}
     </colgroup>
   );
 
@@ -117,22 +105,22 @@ const ItemSummaryPage = () => {
       <div className="flex-none bg-white border-b border-slate-200 px-6 py-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-             <div className={`p-2 rounded-lg border shadow-sm ${isSale ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-blue-50 border-blue-100 text-blue-600'}`}>
-                <Package className="w-5 h-5" />
+             <div className="p-2 rounded-lg border shadow-sm bg-indigo-50 border-indigo-100 text-indigo-600">
+                <ClipboardList className="w-5 h-5" />
              </div>
              <div>
-                <h1 className="text-base font-bold text-slate-800">Item Summary</h1>
-                <p className="text-xs text-slate-500 font-medium">Inventory movement analysis</p>
+                <h1 className="text-base font-bold text-slate-800">Stock Register</h1>
+                <p className="text-xs text-slate-500 font-medium">Detailed inventory tracking</p>
              </div>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-sky-500 transition-colors" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
               <input
                 type="text"
                 placeholder="Search item name / code..."
-                className="h-9 text-sm w-60 pl-9 pr-8 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all placeholder:text-slate-400"
+                className="h-9 text-sm w-60 pl-9 pr-8 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400"
                 value={search}
                 onChange={handleSearchChange}
               />
@@ -146,10 +134,11 @@ const ItemSummaryPage = () => {
               )}
             </div>
              <div className="h-6 w-px bg-slate-200 mx-1"></div>
+            
+            {/* Filter Bar with Transaction Type Hidden */}
             <FiltersBar
               showDateFilter={true}
-              showTransactionType={true}
-              allowedTxnTypes={["sale", "purchase"]}
+              showTransactionType={false} // Hidden for Stock Register
               dateFilter={dateFilter}
               onDateFilterChange={setDateFilter}
               onPageReset={() => setCurrentPage(1)}
@@ -164,18 +153,18 @@ const ItemSummaryPage = () => {
           
           {isLoading || isFetching ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400">
-               <Loader2 className="animate-spin w-8 h-8 mb-2 text-sky-500" />
-               <span className="text-xs font-medium">Loading items...</span>
+               <Loader2 className="animate-spin w-8 h-8 mb-2 text-indigo-500" />
+               <span className="text-xs font-medium">Loading stock register...</span>
             </div>
           ) : isError ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-500">
-              <p className="text-sm mb-3">Unable to load item summary</p>
+              <p className="text-sm mb-3">Unable to load stock data</p>
               <Button onClick={refetch} variant="outline" size="sm">Retry</Button>
             </div>
           ) : summaryData?.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400">
                <Layers className="w-10 h-10 mb-3 opacity-20" />
-               <p className="text-sm font-medium">No items found for selected filters</p>
+               <p className="text-sm font-medium">No items found for selected period</p>
             </div>
           ) : (
             <>
@@ -184,36 +173,49 @@ const ItemSummaryPage = () => {
                 <table className="w-full table-fixed border-collapse">
                   <TableColGroup />
                   <thead>
-                    {/* Top Group Headers - Sticky Row 1 */}
-                    <tr className="border-b border-slate-300">
-                      <th className="sticky top-0 z-30 bg-slate-50 border-r border-slate-300"></th>
-                      <th className="sticky top-0 z-30 bg-slate-50 border-r border-slate-300"></th>
-                      <th className="sticky top-0 z-30 bg-slate-50 border-r border-slate-300"></th>
-                      
-                      {/* Dynamic Header 1 (Main) */}
-                      <th colSpan={2} className={`sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold uppercase tracking-wider border-r border-white ${config.mainHeaderClass}`}>
-                        {config.mainHeader}
+                    {/* 
+                       Complex Header with RowSpans 
+                       Sticky positioning requires z-index management
+                    */}
+                    <tr className="border-b border-slate-300 bg-slate-50">
+                      {/* Fixed Columns (RowSpan 2) */}
+                      <th rowSpan={2} className="sticky top-0 z-30 px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle">
+                        #
                       </th>
-                      
-                      {/* Dynamic Header 2 (Return) */}
-                      <th colSpan={2} className={`sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold uppercase tracking-wider ${config.returnHeaderClass}`}>
-                        {config.returnHeader}
+                      <th rowSpan={2} className="sticky top-0 z-30 px-3 py-2 text-left text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle">
+                        Item Name
+                      </th>
+                      <th rowSpan={2} className="sticky top-0 z-30 px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle">
+                        Unit
+                      </th>
+                      <th rowSpan={2} className="sticky top-0 z-30 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle">
+                        Opening<br/>Quantity
+                      </th>
+                      <th rowSpan={2} className="sticky top-0 z-30 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle">
+                        In-ward<br/>Quantity
+                      </th>
+                      <th rowSpan={2} className="sticky top-0 z-30 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle">
+                        Out-ward<br/>Quantity
+                      </th>
+
+                      {/* Grouped Header (ColSpan 3) */}
+                      <th colSpan={3} className="sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold text-slate-700 uppercase tracking-wider border-b border-slate-300 bg-indigo-50/50">
+                        Closing Balance
                       </th>
                     </tr>
 
-                    {/* Sub Headers - Sticky Row 2 (Top offset = approx height of Row 1 ~29px) */}
-                    <tr>
-                      <th className="sticky top-[29px] z-20 px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100 border-b border-slate-300">#</th>
-                      <th className="sticky top-[29px] z-20 px-3 py-2 text-left text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100 border-b border-slate-300">Item</th>
-                      <th className="sticky top-[29px] z-20 px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100 border-b border-slate-300">Unit</th>
-                      
-                      {/* Main Cols */}
-                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-slate-50/95 border-r border-slate-300 border-b border-slate-300">Qty</th>
-                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-slate-50/95 border-r border-slate-300 border-b border-slate-300">Amount</th>
-                      
-                      {/* Return Cols */}
-                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-orange-50/95 border-r border-slate-300 border-b border-slate-300">Qty</th>
-                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-orange-50/95 border-b border-slate-300">Amount</th>
+                    {/* Sub-Header Row */}
+                    <tr className="border-b border-slate-300">
+                      {/* These columns are pushed by rowSpan above, so we only define the Closing sub-cols */}
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-indigo-50/30 border-l border-slate-300">
+                        Quantity
+                      </th>
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-indigo-50/30">
+                        Rate
+                      </th>
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-indigo-50/30">
+                        Amount
+                      </th>
                     </tr>
                   </thead>
 
@@ -241,20 +243,30 @@ const ItemSummaryPage = () => {
                           </span>
                         </td>
                         
-                        {/* Main Transaction Data */}
-                        <td className="px-3 py-3 text-right text-xs text-slate-700 font-mono tracking-tight bg-slate-50/30 border-r border-slate-300">
-                          {row[config.mainQtyKey]?.toLocaleString() ?? "-"}
-                        </td>
-                        <td className="px-3 py-3 text-right text-xs font-semibold text-slate-800 font-mono tracking-tight bg-slate-50/30 border-r border-slate-300">
-                          {row[config.mainAmtKey] ? formatINR(row[config.mainAmtKey]) : "-"}
+                        {/* Opening */}
+                        <td className="px-3 py-3 text-right text-xs text-slate-600 font-mono tracking-tight border-r border-slate-300">
+                          {row.openingQuantity?.toLocaleString() ?? 0}
                         </td>
 
-                        {/* Return Transaction Data */}
-                        <td className="px-3 py-3 text-right text-xs text-orange-600 font-mono tracking-tight bg-orange-50/5 border-r border-slate-300">
-                          {row[config.returnQtyKey]?.toLocaleString() ?? "-"}
+                        {/* In-ward */}
+                        <td className="px-3 py-3 text-right text-xs text-emerald-600 font-mono tracking-tight bg-emerald-50/5 border-r border-slate-300">
+                          {row.totalIn?.toLocaleString() ?? 0}
                         </td>
-                        <td className="px-3 py-3 text-right text-xs font-medium text-orange-600 font-mono tracking-tight bg-orange-50/5">
-                          {row[config.returnAmtKey] ? formatINR(row[config.returnAmtKey]) : "-"}
+
+                        {/* Out-ward */}
+                        <td className="px-3 py-3 text-right text-xs text-orange-600 font-mono tracking-tight bg-orange-50/5 border-r border-slate-300">
+                          {row.totalOut?.toLocaleString() ?? 0}
+                        </td>
+
+                        {/* Closing Balance Section */}
+                        <td className="px-3 py-3 text-right text-xs font-semibold text-indigo-700 font-mono tracking-tight bg-indigo-50/5 border-r border-slate-300">
+                          {row.closingQuantity?.toLocaleString() ?? 0}
+                        </td>
+                        <td className="px-3 py-3 text-right text-xs text-slate-600 font-mono tracking-tight bg-indigo-50/5 border-r border-slate-300">
+                          {row.lastPurchaseRate ? formatINR(row.lastPurchaseRate) : "-"}
+                        </td>
+                        <td className="px-3 py-3 text-right text-xs font-semibold text-slate-800 font-mono tracking-tight bg-indigo-50/5">
+                          {row.closingBalance ? formatINR(row.closingBalance) : "-"}
                         </td>
                       </tr>
                     ))}
@@ -300,4 +312,4 @@ const ItemSummaryPage = () => {
   );
 };
 
-export default ItemSummaryPage;
+export default StockRegister;

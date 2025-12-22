@@ -99,15 +99,37 @@ const OutstandingTransactionsList = ({
     };
   };
 
+  const getTransactionTypeStyle = (type) => {
+    switch (type) {
+      case "sale":
+        return { label: "Sale", className: "bg-blue-50 text-blue-700 border-blue-100" };
+      case "purchase":
+        return { label: "Purchase", className: "bg-purple-50 text-purple-700 border-purple-100" };
+      case "sales_return":
+        return { label: "Sales Ret", className: "bg-amber-50 text-amber-700 border-amber-100" };
+      case "purchase_return":
+        return { label: "Purch Ret", className: "bg-orange-50 text-orange-700 border-orange-100" };
+      case "opening_balance":
+        return { label: "Opening", className: "bg-gray-100 text-gray-700 border-gray-200" };
+      case "advance_receipt":
+        return { label: "Adv. Rect", className: "bg-green-50 text-green-700 border-green-100" };
+      case "advance_payment":
+        return { label: "Adv. Pay", className: "bg-indigo-50 text-indigo-700 border-indigo-100" };
+      default:
+        return { label: type?.replace("_", " ") || "-", className: "bg-slate-50 text-slate-600 border-slate-100" };
+    }
+  };
+
   // Define column widths for strict alignment
   const TableColGroup = () => (
     <colgroup>
       <col style={{ width: "50px" }} />   {/* # */}
+      <col style={{ width: "100px" }} />  {/* Type */}
       <col style={{ width: "140px" }} />  {/* Ref No */}
-      <col style={{ width: "120px" }} />  {/* Date */}
-      <col style={{ width: "130px" }} />  {/* Total */}
-      <col style={{ width: "130px" }} />  {/* Paid */}
-      <col style={{ width: "160px" }} />  {/* Balance */}
+      <col style={{ width: "110px" }} />  {/* Date */}
+      <col style={{ width: "120px" }} />  {/* Total */}
+      <col style={{ width: "120px" }} />  {/* Paid */}
+      <col style={{ width: "150px" }} />  {/* Balance */}
     </colgroup>
   );
 
@@ -185,6 +207,7 @@ const OutstandingTransactionsList = ({
                     {/* Sticky Header Row */}
                     <tr>
                       <th className="sticky top-0 z-20 bg-slate-50 px-3 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">#</th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-3 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Type</th>
                       <th className="sticky top-0 z-20 bg-slate-50 px-3 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Ref No.</th>
                       <th className="sticky top-0 z-20 bg-slate-50 px-3 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Date</th>
                       <th className="sticky top-0 z-20 bg-slate-50 px-3 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Total</th>
@@ -196,6 +219,8 @@ const OutstandingTransactionsList = ({
                   <tbody className="divide-y divide-slate-200 bg-white">
                     {transactions.map((transaction, index) => {
                       const styles = getOutstandingStyle(transaction.outstandingType);
+                      const typeStyle = getTransactionTypeStyle(transaction.transactionType);
+                      
                       return (
                         <tr
                           key={transaction._id}
@@ -203,6 +228,11 @@ const OutstandingTransactionsList = ({
                         >
                           <td className="px-3 py-3.5 text-xs text-slate-400 text-center border-r border-slate-200">
                             {(currentPage - 1) * pageSize + index + 1}
+                          </td>
+                          <td className="px-3 py-3.5 text-center border-r border-slate-200">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold border capitalize whitespace-nowrap ${typeStyle.className}`}>
+                                {typeStyle.label}
+                            </span>
                           </td>
                           <td className="px-3 py-3.5 text-xs font-medium text-slate-700 truncate border-r border-slate-200">
                             {transaction.transactionNumber || "-"}
@@ -239,7 +269,7 @@ const OutstandingTransactionsList = ({
                   <TableColGroup />
                   <tfoot>
                     <tr>
-                      <td colSpan={5} className="px-4 py-3 text-xs font-bold text-slate-600 text-right uppercase tracking-wide border-r border-slate-300">
+                      <td colSpan={6} className="px-4 py-3 text-xs font-bold text-slate-600 text-right uppercase tracking-wide  border-slate-300">
                          Total Outstanding:
                       </td>
                       <td className="px-3 py-3">

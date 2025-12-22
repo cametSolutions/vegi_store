@@ -1,5 +1,3 @@
-////// /////////////////check the readme file//////////////////////////////////
-
 // services/ItemLedgerService.js
 import mongoose from "mongoose";
 import ItemLedger from "../../model/ItemsLedgerModel.js";
@@ -8,6 +6,46 @@ import AdjustmentEntry from "../../model/AdjustmentEntryModel.js";
 import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
 
 const toObjectId = (id) => new mongoose.Types.ObjectId(id);
+
+/* =========================================================================
+   🎯 STOCK MOVEMENT HELPER
+   ========================================================================= */
+
+/**
+ * Get stock movement conditions for aggregation
+ * 
+ * When transactionType is NOT specified, use natural stock movement:
+ * - INWARD: purchase, sales_return
+ * - OUTWARD: sale, purchase_return
+ * 
+ * @param {string|null} transactionType - 'sale', 'purchase', or null
+ * @returns {Object} Aggregation conditions for in/out calculations
+ */
+const getStockMovementConditions = (transactionType) => {
+  if (transactionType === 'sale') {
+    // Sale filter: sale = OUT, sales_return = IN
+    return {
+      inCondition: { $eq: ['$transactionType', 'sales_return'] },
+      outCondition: { $eq: ['$transactionType', 'sale'] }
+    };
+  } else if (transactionType === 'purchase') {
+    // Purchase filter: purchase = IN, purchase_return = OUT
+    return {
+      inCondition: { $eq: ['$transactionType', 'purchase'] },
+      outCondition: { $eq: ['$transactionType', 'purchase_return'] }
+    };
+  } else {
+    // Stock register (default): purchase + sales_return = IN, sale + purchase_return = OUT
+    return {
+      inCondition: { 
+        $in: ['$transactionType', ['purchase', 'sales_return']] 
+      },
+      outCondition: { 
+        $in: ['$transactionType', ['sale', 'purchase_return']] 
+      }
+    };
+  }
+};
 
 /* =========================================================================
    📋 CORE UTILITY FUNCTIONS
@@ -388,6 +426,7 @@ export const getBatchOpeningBalances = async (
  * @param {ObjectId} companyId - Company ObjectId
  * @param {ObjectId} branchId - Branch ObjectId
  * @param {string[]} itemIds - Array of item ID strings
+ * @param {Date} startDate - Search for purchases from this date
  * @param {Date} endDate - Search for purchases up to this date
  * @returns {Object} Map of { itemId: lastPurchaseRate }
  */
@@ -409,8 +448,8 @@ export const getBatchLastPurchaseRates = async (
         item: { $in: itemIdObjs },
         transactionType: { $in: ["purchase", "purchase_return"] },
         transactionDate: { 
-          $gte: startDate,  // ✅ Add this (from report start)
-          $lte: endDate     // Up to report end
+          $gte: startDate,
+          $lte: endDate
         }
       },
     },
@@ -515,6 +554,29 @@ export const getBatchAdjustedLedgers = async ({
   } else if (transactionType === "purchase") {
     baseMatch.transactionType = { $in: ["purchase", "purchase_return"] };
   }
+
+  // Get stock movement conditions based on transactionType
+  const getMovementConditions = () => {
+    if (transactionType === 'sale') {
+      return {
+        inCondition: { $eq: ['$transactionType', 'sales_return'] },
+        outCondition: { $eq: ['$transactionType', 'sale'] }
+      };
+    } else if (transactionType === 'purchase') {
+      return {
+        inCondition: { $eq: ['$transactionType', 'purchase'] },
+        outCondition: { $eq: ['$transactionType', 'purchase_return'] }
+      };
+    } else {
+      // Stock register logic
+      return {
+        inCondition: { $in: ['$transactionType', ['purchase', 'sales_return']] },
+        outCondition: { $in: ['$transactionType', ['sale', 'purchase_return']] }
+      };
+    }
+  };
+
+  const { inCondition, outCondition } = getMovementConditions();
 
   const ledgers = await ItemLedger.aggregate([
     { $match: baseMatch },
@@ -700,8 +762,8 @@ export const getBatchAdjustedLedgers = async ({
         totalIn: {
           $sum: {
             $cond: [
-              { $eq: ["$movementType", "in"] },
-              "$effectiveQuantity", // Use adjusted quantity
+              inCondition,
+              "$effectiveQuantity",
               0,
             ],
           },
@@ -709,8 +771,8 @@ export const getBatchAdjustedLedgers = async ({
         totalOut: {
           $sum: {
             $cond: [
-              { $eq: ["$movementType", "out"] },
-              "$effectiveQuantity", // Use adjusted quantity
+              outCondition,
+              "$effectiveQuantity",
               0,
             ],
           },
@@ -718,8 +780,8 @@ export const getBatchAdjustedLedgers = async ({
         amountIn: {
           $sum: {
             $cond: [
-              { $eq: ["$movementType", "in"] },
-              "$effectiveAmountAfterTax", // Use adjusted amount
+              inCondition,
+              "$effectiveAmountAfterTax",
               0,
             ],
           },
@@ -727,8 +789,8 @@ export const getBatchAdjustedLedgers = async ({
         amountOut: {
           $sum: {
             $cond: [
-              { $eq: ["$movementType", "out"] },
-              "$effectiveAmountAfterTax", // Use adjusted amount
+              outCondition,
+              "$effectiveAmountAfterTax",
               0,
             ],
           },
@@ -875,7 +937,7 @@ export const checkIfDirtyPeriodExists = async ({
     company: companyId,
     branch: branchId,
     originalTransactionDate: {
-      $gte: new Date(startDate), // Only in report period (not dirty period)
+      $gte: new Date(startDate),
       $lte: new Date(endDate),
     },
     status: "active",
@@ -900,8 +962,8 @@ export const checkIfDirtyPeriodExists = async ({
   if (reportStartDate.getDate() !== 1) {
     console.log("⚠️  Report starts mid-month, opening needs calculation");
     return {
-      isDirty: true, // Opening needs calculation
-      needsFullRefold: false, // But ledger can be simple!
+      isDirty: true,
+      needsFullRefold: false,
       reason: "Mid-month start (hybrid path eligible)",
     };
   }
@@ -1102,6 +1164,10 @@ export const getSimpleLedgerReport = async ({
      This is the key difference - no adjustment lookups needed
      ----------------------------------------------------------------------- */
   console.time("Query 4: Simple ledger aggregation");
+
+  // Get stock movement conditions based on transactionType
+  const { inCondition, outCondition } = getStockMovementConditions(transactionType);
+
   const ledgers = await ItemLedger.aggregate([
     { $match: baseMatch },
 
@@ -1117,8 +1183,8 @@ export const getSimpleLedgerReport = async ({
         totalIn: {
           $sum: {
             $cond: [
-              { $eq: ["$movementType", "in"] },
-              "$quantity", // Use original quantity (no adjustments)
+              inCondition,
+              "$quantity",
               0,
             ],
           },
@@ -1126,8 +1192,8 @@ export const getSimpleLedgerReport = async ({
         totalOut: {
           $sum: {
             $cond: [
-              { $eq: ["$movementType", "out"] },
-              "$quantity", // Use original quantity (no adjustments)
+              outCondition,
+              "$quantity",
               0,
             ],
           },
@@ -1135,7 +1201,7 @@ export const getSimpleLedgerReport = async ({
         amountIn: {
           $sum: {
             $cond: [
-              { $eq: ["$movementType", "in"] },
+              inCondition,
               { $add: [{ $multiply: ["$quantity", "$rate"] }, "$taxAmount"] },
               0,
             ],
@@ -1144,7 +1210,7 @@ export const getSimpleLedgerReport = async ({
         amountOut: {
           $sum: {
             $cond: [
-              { $eq: ["$movementType", "out"] },
+              outCondition,
               { $add: [{ $multiply: ["$quantity", "$rate"] }, "$taxAmount"] },
               0,
             ],
@@ -1365,17 +1431,23 @@ export const getHybridLedgerReport = async ({
   console.log(`Processing ${itemIds.length} items`);
 
   /* -----------------------------------------------------------------------
-     QUERY 2: Calculate opening balances (handles dirty period)
-     This is the "dirty" part - needs calculation
+     QUERY 2: Calculate opening balances with dirty period
+     Uses getBatchOpeningBalances which handles adjustments/movements
      ----------------------------------------------------------------------- */
-  console.time("Query 2: Opening balances with dirty period calculation");
+  console.time("Query 2: Calculate opening balances");
   const openingBalances = await getBatchOpeningBalances(
-    companyId,
-    branchId,
+    company,
+    branch,
     itemIds,
-    new Date(startDate) // Calculates movements before this date
+    startDate
   );
-  console.timeEnd("Query 2: Opening balances with dirty period calculation");
+  console.timeEnd("Query 2: Calculate opening balances");
+
+  console.log(
+    `Opening balances calculated for ${
+      Object.keys(openingBalances).length
+    } items`
+  );
 
   /* -----------------------------------------------------------------------
      QUERY 3: Get last purchase rates
@@ -1395,6 +1467,10 @@ export const getHybridLedgerReport = async ({
      No adjustments in report period, so simple aggregation works
      ----------------------------------------------------------------------- */
   console.time("Query 4: Simple ledger for report period");
+
+  // Get stock movement conditions based on transactionType
+  const { inCondition, outCondition } = getStockMovementConditions(transactionType);
+
   const ledgers = await ItemLedger.aggregate([
     { $match: baseMatch },
 
@@ -1408,18 +1484,18 @@ export const getHybridLedgerReport = async ({
         transactions: { $push: "$$ROOT" },
         totalIn: {
           $sum: {
-            $cond: [{ $eq: ["$movementType", "in"] }, "$quantity", 0],
+            $cond: [inCondition, "$quantity", 0],
           },
         },
         totalOut: {
           $sum: {
-            $cond: [{ $eq: ["$movementType", "out"] }, "$quantity", 0],
+            $cond: [outCondition, "$quantity", 0],
           },
         },
         amountIn: {
           $sum: {
             $cond: [
-              { $eq: ["$movementType", "in"] },
+              inCondition,
               { $add: [{ $multiply: ["$quantity", "$rate"] }, "$taxAmount"] },
               0,
             ],
@@ -1428,7 +1504,7 @@ export const getHybridLedgerReport = async ({
         amountOut: {
           $sum: {
             $cond: [
-              { $eq: ["$movementType", "out"] },
+              outCondition,
               { $add: [{ $multiply: ["$quantity", "$rate"] }, "$taxAmount"] },
               0,
             ],
@@ -1468,7 +1544,7 @@ export const getHybridLedgerReport = async ({
     };
   });
 
-  // Handle items with no transactions
+  // Handle items with no transactions in the period
   itemIds.forEach((id) => {
     const itemKey = id.toString();
     if (!ledgerMap[itemKey]) {
@@ -1534,23 +1610,24 @@ export const getHybridLedgerReport = async ({
 };
 
 /* =========================================================================
-   🔄 PATH 3: FULL REFOLD (Dirty opening, adjustments in ledger)
+   🔄 PATH 3: FULL REFOLD (Adjustments in report period)
    ========================================================================= */
 
 /**
- * Get full refold ledger report with adjustments (FULL REFOLD PATH)
+ * Refold ledgers with adjustments (FULL REFOLD)
  *
  * Used when:
- * - Items missing monthly balance OR adjustments exist in report period
+ * - Items missing monthly balance data
+ * - OR adjustments exist in report period
  *
  * Process:
- * 1. Calculate opening with dirty period
- * 2. Ledger with FULL $lookup to adjustments (expensive!)
- * 3. Apply adjustment deltas to quantities/amounts
- * 4. Calculate summaries with effective values
+ * 1. Calculate opening balances (handles dirty period)
+ * 2. Get ledger data WITH $lookup to adjustments (expensive!)
+ * 3. Apply adjustment deltas to calculate effective values
+ * 4. Calculate summaries
  *
  * Performance: ~300-350ms for 15 items
- * (Slowest path due to $lookup operations)
+ * (Slowest path due to $lookup, but necessary when adjustments exist)
  *
  * @param {Object} params - Parameters object
  * @returns {Object} Report data { items, pagination, filters }
@@ -1594,7 +1671,9 @@ export const refoldLedgersWithAdjustments = async ({
     };
   }
 
-  // QUERY 1: Get paginated item list
+  /* -----------------------------------------------------------------------
+     QUERY 1: Get paginated item list (same as other paths)
+     ----------------------------------------------------------------------- */
   console.time("Query 1: Item list");
   const itemFacet = await ItemLedger.aggregate([
     { $match: baseMatch },
@@ -1642,18 +1721,25 @@ export const refoldLedgersWithAdjustments = async ({
   }
 
   const itemIds = itemsPage.map((row) => row._id.toString());
+  const itemIdObjs = itemIds.map((id) => toObjectId(id));
 
-  // QUERY 2: Get ALL opening balances at once (with dirty period handling)
-  console.time("Query 2: Opening balances");
+  console.log(`Processing ${itemIds.length} items`);
+
+  /* -----------------------------------------------------------------------
+     QUERY 2: Calculate opening balances
+     ----------------------------------------------------------------------- */
+  console.time("Query 2: Calculate opening balances");
   const openingBalances = await getBatchOpeningBalances(
-    companyId,
-    branchId,
+    company,
+    branch,
     itemIds,
-    new Date(startDate)
+    startDate
   );
-  console.timeEnd("Query 2: Opening balances");
+  console.timeEnd("Query 2: Calculate opening balances");
 
-  // QUERY 3: Get ALL last purchase rates at once
+  /* -----------------------------------------------------------------------
+     QUERY 3: Get last purchase rates
+     ----------------------------------------------------------------------- */
   console.time("Query 3: Last purchase rates");
   const lastPurchaseRates = await getBatchLastPurchaseRates(
     companyId,
@@ -1664,9 +1750,12 @@ export const refoldLedgersWithAdjustments = async ({
   );
   console.timeEnd("Query 3: Last purchase rates");
 
-  // QUERY 4: Get ALL ledger data with adjustments ($lookup)
-  console.time("Query 4: Ledger with adjustments");
-  const ledgerData = await getBatchAdjustedLedgers({
+  /* -----------------------------------------------------------------------
+     QUERY 4: Get adjusted ledger data (with $lookup)
+     This is the expensive part!
+     ----------------------------------------------------------------------- */
+  console.time("Query 4: Adjusted ledger data");
+  const ledgerMap = await getBatchAdjustedLedgers({
     companyId,
     branchId,
     itemIds,
@@ -1676,12 +1765,12 @@ export const refoldLedgersWithAdjustments = async ({
     lastPurchaseRates,
     transactionType,
   });
-  console.timeEnd("Query 4: Ledger with adjustments");
+  console.timeEnd("Query 4: Adjusted ledger data");
 
   // Combine results
   const ledgersPerItem = itemsPage.map((row) => {
     const itemKey = row._id.toString();
-    const data = ledgerData[itemKey];
+    const data = ledgerMap[itemKey];
 
     return {
       _id: row._id,
@@ -1716,62 +1805,4 @@ export const refoldLedgersWithAdjustments = async ({
       searchTerm: searchTerm || null,
     },
   };
-};
-
-/* =========================================================================
-   ⚠️ DEPRECATED FUNCTIONS (Keep for backward compatibility)
-   ========================================================================= */
-
-export const getOpeningBalance = async (
-  company,
-  branch,
-  itemObj,
-  selectedDate
-) => {
-  console.warn(
-    "⚠️ getOpeningBalance is deprecated. Use getBatchOpeningBalances instead."
-  );
-  const result = await getBatchOpeningBalances(
-    company,
-    branch,
-    [itemObj],
-    selectedDate
-  );
-  return result[itemObj.toString()] || 0;
-};
-
-export const getAdjustedItemLedger = async ({
-  companyId,
-  branchId,
-  itemId,
-  startDate,
-  endDate,
-  openingQuantity,
-  transactionType = null,
-}) => {
-  console.warn(
-    "⚠️ getAdjustedItemLedger is deprecated. Use getBatchAdjustedLedgers instead."
-  );
-
-  const openingBalances = { [itemId.toString()]: openingQuantity };
-  const lastPurchaseRates = await getBatchLastPurchaseRates(
-    companyId,
-    branchId,
-    [itemId],
-    startDate,
-    endDate
-  );
-
-  const result = await getBatchAdjustedLedgers({
-    companyId,
-    branchId,
-    itemIds: [itemId],
-    startDate,
-    endDate,
-    openingBalances,
-    lastPurchaseRates,
-    transactionType,
-  });
-
-  return result[itemId.toString()];
 };

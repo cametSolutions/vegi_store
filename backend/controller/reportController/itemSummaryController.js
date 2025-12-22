@@ -1,4 +1,4 @@
-// controllers/ItemLedgerController.js
+// / controllers/ItemLedgerController.js
 import { 
   refoldLedgersWithAdjustments,
   getSimpleLedgerReport,
@@ -6,6 +6,7 @@ import {
   checkIfDirtyPeriodExists
 } from "../../services/itemLedger/ItemLedgerService.js";
 import ItemLedger from "../../model/ItemsLedgerModel.js";
+
 
 /**
  * Get Item Summary Report
@@ -21,6 +22,10 @@ import ItemLedger from "../../model/ItemsLedgerModel.js";
  * PATH 3 (FULL REFOLD): Missing data or adjustments in report period
  *   → refoldLedgersWithAdjustments() → ~300-350ms
  * 
+ * Stock Movement Logic (when transactionType is NOT specified):
+ * - INWARD: Purchase + Sales Return (stock coming in)
+ * - OUTWARD: Sale + Purchase Return (stock going out)
+ * 
  * @route GET /api/items/summary-report
  * @query {string} company - Company ID (required)
  * @query {string} branch - Branch ID (required)
@@ -34,7 +39,7 @@ import ItemLedger from "../../model/ItemsLedgerModel.js";
  */
 export const getItemSummaryReport = async (req, res) => {
   const startTime = Date.now();
-  
+
   try {
     /* -----------------------------------------------------------------------
        STEP 1: Extract and validate parameters
@@ -50,6 +55,7 @@ export const getItemSummaryReport = async (req, res) => {
       searchTerm,
     } = req.query;
 
+
     // Validation
     if (!startDate || !endDate || !company || !branch) {
       return res.status(400).json({ 
@@ -57,11 +63,14 @@ export const getItemSummaryReport = async (req, res) => {
       });
     }
 
+
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = Math.min(parseInt(limit, 10) || 50, 200);
 
+
     const parsedStartDate = new Date(startDate);
     const parsedEndDate = new Date(endDate);
+
 
     /* -----------------------------------------------------------------------
        STEP 2: Get item IDs for dirty check (quick query)
@@ -73,13 +82,16 @@ export const getItemSummaryReport = async (req, res) => {
       transactionDate: { $gte: parsedStartDate, $lte: parsedEndDate },
     };
 
+
     if (transactionType === "sale") {
       baseMatch.transactionType = { $in: ["sale", "sales_return"] };
     } else if (transactionType === "purchase") {
       baseMatch.transactionType = { $in: ["purchase", "purchase_return"] };
     }
 
+
     const itemIdsForCheck = await ItemLedger.distinct("item", baseMatch);
+
 
     // Handle empty result
     if (itemIdsForCheck.length === 0) {
@@ -101,6 +113,7 @@ export const getItemSummaryReport = async (req, res) => {
       });
     }
 
+
     /* -----------------------------------------------------------------------
        STEP 3: Check dirty period status
        Determines which path to use
@@ -113,8 +126,10 @@ export const getItemSummaryReport = async (req, res) => {
       endDate: parsedEndDate
     });
 
+
     let serviceResult;
     let pathUsed;
+
 
     /* -----------------------------------------------------------------------
        STEP 4: Route to appropriate service based on dirty status
@@ -129,7 +144,7 @@ export const getItemSummaryReport = async (req, res) => {
          ------------------------------------------------------------------- */
       console.log('🚀 Using FAST PATH');
       pathUsed = "FAST_PATH";
-      
+
       serviceResult = await getSimpleLedgerReport({
         company,
         branch,
@@ -140,7 +155,7 @@ export const getItemSummaryReport = async (req, res) => {
         limit: limitNum,
         searchTerm: searchTerm?.trim() || null,
       });
-      
+
     } else if (dirtyStatus.isDirty && !dirtyStatus.needsFullRefold) {
       /* -------------------------------------------------------------------
          PATH 2: HYBRID PATH
@@ -150,7 +165,7 @@ export const getItemSummaryReport = async (req, res) => {
          ------------------------------------------------------------------- */
       console.log('⚡ Using HYBRID PATH (opening calc + simple ledger)');
       pathUsed = "HYBRID_PATH";
-      
+
       serviceResult = await getHybridLedgerReport({
         company,
         branch,
@@ -161,7 +176,7 @@ export const getItemSummaryReport = async (req, res) => {
         limit: limitNum,
         searchTerm: searchTerm?.trim() || null,
       });
-      
+
     } else {
       /* -------------------------------------------------------------------
          PATH 3: FULL REFOLD
@@ -171,7 +186,7 @@ export const getItemSummaryReport = async (req, res) => {
          ------------------------------------------------------------------- */
       console.log('🔄 Using FULL REFOLD');
       pathUsed = "FULL_REFOLD";
-      
+
       serviceResult = await refoldLedgersWithAdjustments({
         company,
         branch,
@@ -184,12 +199,14 @@ export const getItemSummaryReport = async (req, res) => {
       });
     }
 
+
     /* -----------------------------------------------------------------------
        STEP 5: Shape response (same format for all paths)
        Controller doesn't care which path was used - format is identical
        ----------------------------------------------------------------------- */
     const shapedItems = serviceResult.items.map((item) => {
       const { summary } = item;
+
 
       return {
         itemId: item._id,
@@ -208,9 +225,11 @@ export const getItemSummaryReport = async (req, res) => {
       };
     });
 
+
     const executionTime = Date.now() - startTime;
-    
+
     console.log(`✅ Item Summary Report - ${shapedItems.length} items in ${executionTime}ms (${pathUsed})`);
+
 
     /* -----------------------------------------------------------------------
        STEP 6: Send response

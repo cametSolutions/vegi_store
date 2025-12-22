@@ -3,7 +3,7 @@ import { queryOptions, infiniteQueryOptions } from "@tanstack/react-query";
 import { itemServices } from "../../api/services/items.service";
 
 export const itemMasterQueries = {
-  all: () => ["reports","item"],
+  all: () => ["item"],
 
   search: (
     searchTerm,

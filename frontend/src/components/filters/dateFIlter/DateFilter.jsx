@@ -1,6 +1,6 @@
 // components/dateFilter/DateFilter.jsx
 import React, { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, Check, ChevronRight } from "lucide-react";
+import { Calendar as CalendarIcon, Check, ArrowRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button"; // Assuming you have this from shadcn
+import { Button } from "@/components/ui/button"; 
 import {
   DATE_FILTERS,
   getDateRange,
@@ -27,6 +27,7 @@ const DateFilter = ({
   const [localStart, setLocalStart] = useState(customStartDate || "");
   const [localEnd, setLocalEnd] = useState(customEndDate || "");
 
+  // Sync local state with props when dropdown opens or props change
   useEffect(() => {
     setLocalStart(customStartDate || "");
   }, [customStartDate]);
@@ -39,17 +40,26 @@ const DateFilter = ({
     if (onFilterChange) onFilterChange(filterType);
   };
 
-  const handleCustomChange = (field, value) => {
-    const nextStart = field === "start" ? value : localStart;
-    const nextEnd = field === "end" ? value : localEnd;
+  // Only updates local state, does NOT trigger API
+  const handleInputChange = (field, value) => {
+    if (field === "start") setLocalStart(value);
+    if (field === "end") setLocalEnd(value);
+  };
 
-    setLocalStart(nextStart);
-    setLocalEnd(nextEnd);
+  // Trigger API only on Submit
+  const handleApplyCustomRange = (e) => {
+    e.preventDefault();
+    e.stopPropagation(); // Prevent dropdown from closing immediately if you want, but usually we want close on apply
+    
+    // Switch to 'custom' filter mode if not already
+    if (selectedFilter !== DATE_FILTERS.CUSTOM) {
+      if (onFilterChange) onFilterChange(DATE_FILTERS.CUSTOM);
+    }
 
     if (onCustomRangeChange) {
       onCustomRangeChange({
-        startDate: nextStart || null,
-        endDate: nextEnd || null,
+        startDate: localStart || null,
+        endDate: localEnd || null,
       });
     }
   };
@@ -123,7 +133,7 @@ const DateFilter = ({
                 type="date"
                 className="w-full h-8 text-xs border border-slate-200 rounded px-2 bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-600"
                 value={localStart}
-                onChange={(e) => handleCustomChange("start", e.target.value)}
+                onChange={(e) => handleInputChange("start", e.target.value)}
               />
             </div>
             <div className="space-y-1">
@@ -132,10 +142,22 @@ const DateFilter = ({
                 type="date"
                 className="w-full h-8 text-xs border border-slate-200 rounded px-2 bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-600"
                 value={localEnd}
-                onChange={(e) => handleCustomChange("end", e.target.value)}
+                onChange={(e) => handleInputChange("end", e.target.value)}
               />
             </div>
           </div>
+
+          {/* Apply Button - Only visible when Custom is active */}
+          {isCustom && (
+            <Button 
+              size="sm" 
+              onClick={handleApplyCustomRange}
+              className="w-full mt-3 h-7 text-xs bg-sky-600 hover:bg-sky-700 text-white"
+            >
+              Apply Range
+              <ArrowRight className="w-3 h-3 ml-1.5 opacity-70" />
+            </Button>
+          )}
         </div>
 
         <DropdownMenuSeparator className="bg-slate-100 my-1" />
