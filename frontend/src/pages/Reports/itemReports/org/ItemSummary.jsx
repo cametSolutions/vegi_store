@@ -43,7 +43,6 @@ const ItemSummaryPage = () => {
       dispatch(setFilter({ key: "transactionType", value: "sale" }));
     }
     if (!filters.startDate || !filters.endDate) {
-      
       const range = getDateRange(DATE_FILTERS.TODAY);
       dispatch(setFilter({ key: "startDate", value: range.start }));
       dispatch(setFilter({ key: "endDate", value: range.end }));
@@ -93,12 +92,12 @@ const ItemSummaryPage = () => {
     returnQtyKey: isSale ? "totalIn" : "totalOut",
     returnAmtKey: isSale ? "amountIn" : "amountOut",
     
-    // Header Colors
+    // Header Colors - darkened borders for better definition
     mainHeaderClass: isSale ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-blue-50 text-blue-700 border-blue-300",
     returnHeaderClass: "bg-orange-50 text-orange-700 border-orange-300",
   };
 
-  // --- Strict Column Width Definition (Closing cols removed) ---
+  // --- Strict Column Width Definition ---
   const TableColGroup = () => (
     <colgroup>
       <col style={{ width: "50px" }} />  {/* # */}
@@ -202,7 +201,7 @@ const ItemSummaryPage = () => {
                       </th>
                     </tr>
 
-                    {/* Sub Headers - Sticky Row 2 */}
+                    {/* Sub Headers - Sticky Row 2 (Top offset = approx height of Row 1 ~29px) */}
                     <tr>
                       <th className="sticky top-[29px] z-20 px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100 border-b border-slate-300">#</th>
                       <th className="sticky top-[29px] z-20 px-3 py-2 text-left text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100 border-b border-slate-300">Item</th>

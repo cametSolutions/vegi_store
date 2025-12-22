@@ -12,7 +12,7 @@ const ItemsTable = ({ items, onRemoveItem, handleItemClickInItemsTable }) => {
 
   return (
     <div className="bg-white rounded-t shadow-sm">
-      <div className="h-[calc(100vh-368px)] overflow-y-auto border border-gray-200 rounded">
+      <div className="h-[calc(100vh-405px)] overflow-y-auto border border-gray-200 rounded">
         <table className="w-full text-[11px]">
           <thead>
             <tr>

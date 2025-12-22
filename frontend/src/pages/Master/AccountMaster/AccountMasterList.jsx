@@ -135,6 +135,7 @@ const AccountMasterList = ({ onEdit }) => {
                   <th className="p-2 text-left w-[30%]">Name</th>
                   <th className="p-2 text-center w-[25%]">Type</th>
                   <th className="p-2 text-center w-[20%]">Status</th>
+                  <th className="p-2 text-center w-[20%]">Price Level</th>
                   <th className="p-2 text-right pr-4 w-[25%]">Actions</th>
                 </tr>
               </thead>
@@ -176,6 +177,9 @@ const AccountMasterList = ({ onEdit }) => {
                         </td>
                         <td className="p-2 capitalize text-center w-[20%]">
                           {acc.status}
+                        </td>
+                        <td className="p-2 capitalize text-center w-[20%] truncate">
+                          {acc.priceLevel?.priceLevelName || "N/A"}
                         </td>
                         <td className="p-2 text-right space-x-2 w-[25%]">
                           <Button

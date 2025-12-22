@@ -455,7 +455,7 @@ const TransactionAccountSelector = ({
   // MAIN RENDER
   // ============================================================================
   return (
-    <div className="grid grid-cols-5 gap-x-1 gap-y-2 bg-white px-3">
+    <div className={`grid ${isPriceLevelNeeded? "grid-cols-5" : "grid-cols-4"} gap-x-1 gap-y-2 bg-white px-3`}>
       {/* ====================================================================== */}
       {/* ACCOUNT TYPE SELECTOR */}
       {/* ====================================================================== */}
@@ -470,7 +470,7 @@ const TransactionAccountSelector = ({
               type="radio"
               name="accountType"
               value="customer"
-              checked={accountType === "customer" || accountType==="supplier"}
+              checked={accountType === "customer" || accountType === "supplier"}
               onChange={(e) => handleAccountTypeChange(e.target.value)}
               className="mr-1 text-blue-600 scale-75 cursor-pointer"
             />
@@ -575,28 +575,31 @@ const TransactionAccountSelector = ({
       {/* ====================================================================== */}
       {/* PRICE LEVEL */}
       {/* ====================================================================== */}
-      <div>
-        <label className="block text-[11px] font-medium text-slate-700 mb-1">
-          Price Level
-        </label>
-        <select
-          value={priceLevel || ""}
-          disabled={!isPriceLevelNeeded}
-          onChange={handlePriceLevelChange}
-          className={` ${
-            !isPriceLevelNeeded ? "bg-slate-200" : ""
-          }  w-full px-2 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500
+
+      {isPriceLevelNeeded && (
+        <div>
+          <label className="block text-[11px] font-medium text-slate-700 mb-1">
+            Price Level
+          </label>
+          <select
+            value={priceLevel || ""}
+            disabled={!isPriceLevelNeeded}
+            onChange={handlePriceLevelChange}
+            className={` ${
+              !isPriceLevelNeeded ? "bg-slate-200" : ""
+            }  w-full px-2 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500
           
           `}
-        >
-          <option value="">Select price level</option>
-          {priceLevels.map((level) => (
-            <option key={level._id} value={level._id}>
-              {level.priceLevelName}
-            </option>
-          ))}
-        </select>
-      </div>
+          >
+            <option value="">Select price level</option>
+            {priceLevels.map((level) => (
+              <option key={level._id} value={level._id}>
+                {level.priceLevelName}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </div>
   );
 };

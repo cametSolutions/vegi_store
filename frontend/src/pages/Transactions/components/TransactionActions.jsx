@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Save, Eye, Trash2, X, FileText } from "lucide-react";
+import { Save, Trash2, X, Loader2 } from "lucide-react";
 import { useTransactionActions } from "../hooks/useTransactionActions";
 import { toast } from "sonner";
 
@@ -9,20 +9,16 @@ const TransactionActions = ({
   isEditMode = false,
   resetTransactionData,
   onCancel,
-  updateTransactionData,
   transactionType,
   // onView,
   // onDelete,
-  // onPrint,
 }) => {
   const { handleSave, isLoading } = useTransactionActions(
     transactionData,
     isEditMode
   );
 
-  
-
-  // 👇 Notify parent whenever loading changes
+  // Notify parent whenever loading changes
   useEffect(() => {
     if (onLoadingChange) {
       onLoadingChange(isLoading);
@@ -31,50 +27,69 @@ const TransactionActions = ({
 
   const handleSaveClick = async () => {
     // Validation
-    if (!transactionData.accountName.trim() && !transactionData.account) {
-      toast.error("Add a customer");
+    if (!transactionData.accountName?.trim() && !transactionData.account) {
+      toast.error("Customer Missing");
       return false;
     }
 
     if (transactionData.items.length === 0) {
-      toast.error("Please add at least one item");
+      toast.error("Items Missing");
       return false;
     }
-    await handleSave(); // save using your hook
-    if (resetTransactionData) resetTransactionData(transactionData?.transactionType); // 👈 reset after success
+    
+    await handleSave(); 
+    if (resetTransactionData) resetTransactionData(transactionData?.transactionType);
   };
 
-  // console.log("transaction actions component renders");
-
   return (
-    <div className="mt-2">
-      <div className="grid grid-cols-3 gap-2">
-        {/* Primary Action - Darkest Blue */}
+    <div className=" pt-2 border-t border-slate-100">
+      <div className="flex items-center gap-2">
+        
+        {/* Cancel (Secondary) */}
         <button
-          onClick={handleSaveClick}
-          className="bg-blue-700 hover:bg-blue-800 text-white px-2 py-2.5 rounded font-bold flex items-center justify-center gap-1 transition-colors text-[11px]"
+          onClick={onCancel}
+          disabled={isLoading}
+          className="h-10 px-3 rounded border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:border-slate-300 font-semibold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
         >
-          <Save className="w-3 h-3" />
-          {isEditMode ? "Update" : "Save"}
+          <X className="w-3 h-3" />
+          Cancel
         </button>
 
-        {/* Destructive - Red (Exception) */}
+        {/* Delete (Destructive) - Keep it even if unused for layout consistency */}
         <button
           // onClick={onDelete}
-          className="bg-red-600 hover:bg-red-700 text-white px-2 py-2.5 rounded font-bold flex items-center justify-center gap-1 transition-colors text-[11px]"
+          disabled={isLoading}
+          className="h-10 px-3 rounded border border-red-100 bg-white text-red-500 hover:bg-red-50 hover:border-red-200 font-semibold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
         >
           <Trash2 className="w-3 h-3" />
           Delete
         </button>
 
-        {/* Neutral - Light Blue */}
+        {/* Save (Primary - Fill remaining) */}
         <button
-          onClick={onCancel}
-          className="bg-gray-500 hover:bg-gray-600 text-white px-2 py-2.5 rounded font-bold flex items-center justify-center gap-1 transition-colors text-[11px]"
+          onClick={handleSaveClick}
+          disabled={isLoading}
+          className={`flex-1 h-10 px-4 rounded font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm text-white
+            ${isLoading 
+              ? "bg-blue-400 cursor-wait" 
+              : "bg-blue-600 hover:bg-blue-700 hover:shadow active:scale-[0.98]"
+            }`}
         >
-          <X className="w-3 h-3" />
-          Cancel
+          {isLoading ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <Save className="w-3 h-3" />
+          )}
+          <span>
+            {isLoading 
+              ? "Saving..." 
+              : isEditMode 
+                ? "Update" 
+                : "Save Transaction"
+            }
+          </span>
         </button>
+
       </div>
     </div>
   );

@@ -24,8 +24,8 @@ const AddItemForm = ({
     itemCode: "",
     itemName: "",
     unit: units[0]?.value || "",
-    quantity: "0",
-    rate: "0",
+    quantity: "",
+    rate: "",
     taxable: false,
     taxRate: "0",
     taxAmount: "0",
@@ -97,9 +97,9 @@ const AddItemForm = ({
             );
 
 
-            rate = priceLevelData?.rate || 0;
+            rate = priceLevelData?.rate || "";
           } else {
-            rate = 0;
+            rate = "";
           }
         }
 
@@ -166,9 +166,9 @@ const AddItemForm = ({
           pl.priceLevel._id === priceLevel ||
           pl.priceLevel.priceLevelName === priceLevel
       );
-      newRate = priceLevelData?.rate || "0";
+      newRate = priceLevelData?.rate || "";
     } else {
-      newRate = "0";
+      newRate = "";
     }
 
     // Only update if rate has changed
@@ -258,9 +258,9 @@ const AddItemForm = ({
   // Add item to the transaction and reset form
   const handleAddClick = () => {
     // Validate required fields
-    if (!localItem.itemCode || !localItem.itemName || !localItem.item) {
+    if (!localItem.itemCode || !localItem.itemName || !localItem.item || !localItem.quantity) {
       toast.error("Validation Error", {
-        description: "Please fill in itemCode and itemName fields",
+        description: "Name, Code, and Quantity are required",
       });
       return;
     }

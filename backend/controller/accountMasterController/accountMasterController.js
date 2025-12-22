@@ -227,8 +227,10 @@ export const getAccountsList = async (req, res) => {
         .sort({ accountName: 1 })
         .skip(querySkip)
         .limit(queryLimit)
+        .populate("priceLevel", "priceLevelName")
         .lean()
         .exec(),
+        
       AccountMasterModel.countDocuments(filter),
     ]);
 
