@@ -62,7 +62,7 @@ const Navbar = () => {
         },
         {
           label: "Stock Register",
-          path: "/reports/items-summary",
+          path: "/reports/stock-register",
           icon: Layers2,
         },
       ],
