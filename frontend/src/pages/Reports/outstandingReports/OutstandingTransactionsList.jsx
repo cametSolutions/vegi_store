@@ -269,7 +269,7 @@ const OutstandingTransactionsList = ({
                   <TableColGroup />
                   <tfoot>
                     <tr>
-                      <td colSpan={6} className="px-4 py-3 text-xs font-bold text-slate-600 text-right uppercase tracking-wide border-r border-slate-300">
+                      <td colSpan={6} className="px-4 py-3 text-xs font-bold text-slate-600 text-right uppercase tracking-wide  border-slate-300">
                          Total Outstanding:
                       </td>
                       <td className="px-3 py-3">
