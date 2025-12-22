@@ -23,7 +23,7 @@ const ItemMasterPanel = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-var(--header-height))] overflow-y-scroll   ">
+    <div className="flex h-[calc(100vh-var(--header-height))]     ">
       {/* Left Panel - Form */}
       <div className="w-1/2 overflow-y-auto border  bg-white shadow border-r-4">
         <ItemMasterForm

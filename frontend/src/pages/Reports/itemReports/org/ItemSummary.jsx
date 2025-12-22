@@ -43,6 +43,7 @@ const ItemSummaryPage = () => {
       dispatch(setFilter({ key: "transactionType", value: "sale" }));
     }
     if (!filters.startDate || !filters.endDate) {
+      
       const range = getDateRange(DATE_FILTERS.TODAY);
       dispatch(setFilter({ key: "startDate", value: range.start }));
       dispatch(setFilter({ key: "endDate", value: range.end }));
@@ -92,12 +93,12 @@ const ItemSummaryPage = () => {
     returnQtyKey: isSale ? "totalIn" : "totalOut",
     returnAmtKey: isSale ? "amountIn" : "amountOut",
     
-    // Header Colors - darkened borders for better definition
+    // Header Colors
     mainHeaderClass: isSale ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-blue-50 text-blue-700 border-blue-300",
     returnHeaderClass: "bg-orange-50 text-orange-700 border-orange-300",
   };
 
-  // --- Strict Column Width Definition ---
+  // --- Strict Column Width Definition (Closing cols removed) ---
   const TableColGroup = () => (
     <colgroup>
       <col style={{ width: "50px" }} />  {/* # */}
@@ -107,8 +108,6 @@ const ItemSummaryPage = () => {
       <col style={{ width: "130px" }} /> {/* Main Amt */}
       <col style={{ width: "100px" }} /> {/* Return Qty */}
       <col style={{ width: "130px" }} /> {/* Return Amt */}
-      <col style={{ width: "100px" }} /> {/* Closing Qty */}
-      <col style={{ width: "140px" }} /> {/* Closing Val */}
     </colgroup>
   );
 
@@ -198,17 +197,12 @@ const ItemSummaryPage = () => {
                       </th>
                       
                       {/* Dynamic Header 2 (Return) */}
-                      <th colSpan={2} className={`sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold uppercase tracking-wider border-r border-white ${config.returnHeaderClass}`}>
+                      <th colSpan={2} className={`sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold uppercase tracking-wider ${config.returnHeaderClass}`}>
                         {config.returnHeader}
-                      </th>
-
-                      {/* Closing Section */}
-                      <th colSpan={2} className="sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold text-slate-600 uppercase tracking-wider bg-slate-100 border-l border-slate-300">
-                        Closing Balance
                       </th>
                     </tr>
 
-                    {/* Sub Headers - Sticky Row 2 (Top offset = approx height of Row 1 ~29px) */}
+                    {/* Sub Headers - Sticky Row 2 */}
                     <tr>
                       <th className="sticky top-[29px] z-20 px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100 border-b border-slate-300">#</th>
                       <th className="sticky top-[29px] z-20 px-3 py-2 text-left text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100 border-b border-slate-300">Item</th>
@@ -220,11 +214,7 @@ const ItemSummaryPage = () => {
                       
                       {/* Return Cols */}
                       <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-orange-50/95 border-r border-slate-300 border-b border-slate-300">Qty</th>
-                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-orange-50/95 border-r border-slate-300 border-b border-slate-300">Amount</th>
-                      
-                      {/* Closing Cols */}
-                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-700 uppercase bg-slate-100 border-r border-slate-300 border-b border-slate-300">Qty</th>
-                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-700 uppercase bg-slate-100 border-b border-slate-300">Value</th>
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-orange-50/95 border-b border-slate-300">Amount</th>
                     </tr>
                   </thead>
 
@@ -264,20 +254,8 @@ const ItemSummaryPage = () => {
                         <td className="px-3 py-3 text-right text-xs text-orange-600 font-mono tracking-tight bg-orange-50/5 border-r border-slate-300">
                           {row[config.returnQtyKey]?.toLocaleString() ?? "-"}
                         </td>
-                        <td className="px-3 py-3 text-right text-xs font-medium text-orange-600 font-mono tracking-tight bg-orange-50/5 border-r border-slate-300">
+                        <td className="px-3 py-3 text-right text-xs font-medium text-orange-600 font-mono tracking-tight bg-orange-50/5">
                           {row[config.returnAmtKey] ? formatINR(row[config.returnAmtKey]) : "-"}
-                        </td>
-
-                         {/* Closing Data */}
-                        <td className="px-3 py-3 text-right border-r border-slate-300 bg-slate-50/30">
-                           <span className={`text-xs font-bold font-mono ${row.closingQuantity < 0 ? 'text-red-500' : 'text-slate-700'}`}>
-                             {row.closingQuantity?.toLocaleString() ?? 0}
-                           </span>
-                        </td>
-                        <td className="px-3 py-3 text-right bg-slate-50/30">
-                            <span className="text-xs font-bold text-slate-800 font-mono">
-                                {formatINR(row.closingBalance ?? 0)}
-                            </span>
                         </td>
                       </tr>
                     ))}
