@@ -1,4 +1,4 @@
-import Outstanding from "../../model/OutstandingModel.js";
+import Outstanding from "../../../model/OutstandingModel.js";
 import mongoose from "mongoose";
 
 

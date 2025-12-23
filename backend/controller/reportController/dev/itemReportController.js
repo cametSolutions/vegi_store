@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
-import ItemLedger from "../../model/ItemsLedgerModel.js";
-import ItemMonthlyBalance from "../../model/ItemMonthlyBalanceModel.js";
+import ItemLedger from "../../../model/ItemsLedgerModel.js";
+import ItemMonthlyBalance from "../../../model/ItemMonthlyBalanceModel.js";
 
 
 // Replace getItemLedgerDashboard with this - shows ALL individual ledgers
