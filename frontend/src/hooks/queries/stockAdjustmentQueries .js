@@ -1,6 +1,6 @@
 // hooks/queries/stockAdjustmentQueries.js
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
-import { stockAdjustmentServices } from "../../api/services/stockAdjustmentServices ";
+import { stockAdjustmentServices } from "../../api/services/stockAdjustmentServices";
 
 export const stockAdjustmentQueries = {
   all: () => ["stockAdjustments"],

@@ -1,30 +1,18 @@
-// api/services/stockAdjustment.service.js
+// api/services/stockAdjustmentServices.js
 import axios from "axios";
-import { api } from "../client/apiClient.js";
-import { createResourceApi } from "../client/apiFactory.js";
+import { createResourceApi } from "../client/apiFactory"; // NEW
+import { api } from "../client/apiClient";
 
-// Base stock adjustment API using the generic factory
-export const stockAdjustmentApi = createResourceApi("stock-adjustment", {
-  getAll: "getall",
-  update: "update",
-  delete: "delete",
-});
-
-// Stock Adjustment specific methods
 export const stockAdjustmentServices = {
-  // Inherit all base methods
-  ...stockAdjustmentApi,
-
-  // Create stock adjustment
   create: async (formData) => {
     try {
-      const response = await api.post(
-        `/stock-adjustment/create`,
-        formData
-      );
-
+      console.log("📤 API URL:", "/stock-adjustment/create");
+      console.log("📦 Payload:", formData);
+      const response = await api.post("/stock-adjustment/create", formData); // CHANGED
+      console.log("✅ Response:", response.data);
       return response.data;
     } catch (error) {
+      console.error("❌ API Error:", error.response?.data || error);
       if (axios.isAxiosError(error)) {
         throw new Error(error.response?.data?.message || error.message);
       }
@@ -32,7 +20,6 @@ export const stockAdjustmentServices = {
     }
   },
 
-  // Get all stock adjustments with pagination
   getAll: async (
     pageParam = 1,
     limit = 25,
@@ -41,10 +28,10 @@ export const stockAdjustmentServices = {
     branchId,
     sortBy = "adjustmentDate",
     sortOrder = "desc",
-    adjustmentType = "" // "add", "remove", or ""
+    adjustmentType = ""
   ) => {
     try {
-      const response = await api.get(`/stock-adjustment/getall`, {
+      const response = await createResourceApi.get("/stock-adjustment/getall", { // CHANGED
         params: {
           page: pageParam,
           limit,
@@ -56,7 +43,6 @@ export const stockAdjustmentServices = {
           adjustmentType,
         },
       });
-
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -66,19 +52,15 @@ export const stockAdjustmentServices = {
     }
   },
 
-  // Get stock adjustment by ID
+  // Update ALL methods to use stockAdjustmentApi instead of api
   getById: async (companyId, branchId, adjustmentId) => {
     try {
-      const response = await api.get(
+      const response = await createResourceApi.get(
         `/stock-adjustment/getDetails/${adjustmentId}`,
         {
-          params: {
-            companyId,
-            branchId,
-          },
+          params: { companyId, branchId },
         }
       );
-
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -88,14 +70,12 @@ export const stockAdjustmentServices = {
     }
   },
 
-  // Update stock adjustment
   update: async (id, formData) => {
     try {
-      const response = await api.put(
+      const response = await createResourceApi.put(
         `/stock-adjustment/edit/${id}`,
         formData
       );
-
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -105,19 +85,14 @@ export const stockAdjustmentServices = {
     }
   },
 
-  // Delete stock adjustment
   delete: async (id, companyId, branchId) => {
     try {
-      const response = await api.delete(
+      const response = await createResourceApi.delete(
         `/stock-adjustment/delete/${id}`,
         {
-          params: {
-            companyId,
-            branchId,
-          },
+          params: { companyId, branchId },
         }
       );
-
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -127,20 +102,14 @@ export const stockAdjustmentServices = {
     }
   },
 
-  // Get stock adjustment history for a specific item
   getItemHistory: async (itemId, companyId, branchId, limit = 10) => {
     try {
-      const response = await api.get(
+      const response = await createResourceApi.get(
         `/stock-adjustment/item-history/${itemId}`,
         {
-          params: {
-            companyId,
-            branchId,
-            limit,
-          },
+          params: { companyId, branchId, limit },
         }
       );
-
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {

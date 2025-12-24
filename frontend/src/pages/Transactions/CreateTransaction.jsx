@@ -1,32 +1,65 @@
-import React, { useEffect, useState } from "react";
-import AddItemFormComponent from "../Transactions/components/AddItemForm";
-import ItemsTableComponent from "../Transactions/components/ItemsTable";
-import TransactionActionsComponent from "../Transactions/components/TransactionActions";
+import React, { useEffect, useMemo, useState } from "react";
+import TransactionAccountSelectorComponent from "./components/TransactionAccountSelector";
+import AddItemFormComponent from "./components/AddItemForm";
+import ItemsTableComponent from "./components/ItemsTable";
+import TransactionSummaryComponent from "./components/TransactionSummary";
+import TransactionActionsComponent from "./components/TransactionActions";
 import TransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
-import CustomMoonLoader from "../../components/loaders/CustomMoonLoader";
-import { useStockAdjustment } from "../stock/hooks/useStockAdjustment ";
-import { useStockAdjustmentActions } from "../stock/hooks/useStockAdjustmentActions ";
+import CustomMoonLoader from "../../components/loaders/CustomMoonLoader"; // Import the loader
+import { getTransactionType } from "./utils/transactionUtils";
+import { useTransaction } from "./hooks/useTransaction";
+import { useTransactionActions } from "./hooks/useTransactionActions";
+import { useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 
 // Memoized components
 const TransactionHeader = React.memo(TransactionHeaderComponent);
+const TransactionAccountSelector = React.memo(
+  TransactionAccountSelectorComponent
+);
+
+///
 const AddItemForm = React.memo(AddItemFormComponent);
 const ItemsTable = React.memo(ItemsTableComponent);
+const TransactionSummary = React.memo(TransactionSummaryComponent);
 const TransactionActions = React.memo(TransactionActionsComponent);
 
-const CreateStockAdjustment = () => {
+const CreateTransaction = () => {
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
 
   const {
-    stockAdjustmentData,
-    updateStockAdjustmentField,
+    transactionData,
+    updateTransactionData,
+    updateTransactionField,
     updateItemQuantity,
     removeItem,
+    handleDiscountChange,
+    handlePaidAmountChange,
     addItem,
     clickedItemInTable,
     handleItemClickInItemsTable,
-    resetStockAdjustmentData,
-  } = useStockAdjustment();
+    resetTransactionData,
+  } = useTransaction();
+
+  //// get current transaction type from the url////
+  const currentTransactionType = useMemo(
+    () => getTransactionType(location),
+    [location]
+  );
+
+  ////  for adding transaction type to the transaction data when the component loads or when the transaction type changes////
+  useEffect(() => {
+    resetTransactionData(currentTransactionType);
+    updateTransactionField("transactionType", currentTransactionType);
+  }, [currentTransactionType, updateTransactionField]);
+
+  // Reset transaction data when navigating away from this page
+  useEffect(() => {
+    return () => {
+      resetTransactionData(currentTransactionType);
+    };
+  }, [resetTransactionData]);
 
   const selectedCompanyFromStore = useSelector(
     (state) => state.companyBranch?.selectedCompany
@@ -35,122 +68,88 @@ const CreateStockAdjustment = () => {
     (state) => state.companyBranch?.selectedBranch
   );
 
-  // Initialize with default adjustment type
-  useEffect(() => {
-    updateStockAdjustmentField("adjustmentType", "add");
-  }, [updateStockAdjustmentField]);
-
-  // Reset stock adjustment data when navigating away from this page
-  useEffect(() => {
-    return () => {
-      resetStockAdjustmentData();
-    };
-  }, [resetStockAdjustmentData]);
-
-  const { handleSave } = useStockAdjustmentActions(stockAdjustmentData, false);
-
-  const onSave = async () => {
-    setIsLoading(true);
-    const success = await handleSave();
-    setIsLoading(false);
-
-    if (success) {
-      resetStockAdjustmentData();
-    }
-  };
-
-  console.log("stockAdjustmentData", stockAdjustmentData);
+  console.log("transactionData", transactionData);
 
   return (
     <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
       {/* Loader Overlay */}
       {isLoading && (
-        <div className="absolute inset-0 bg-white/60 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-white/60  z-50 flex items-center justify-center">
           <CustomMoonLoader />
         </div>
       )}
 
       {/* Header */}
       <TransactionHeader
-        currentTransactionType="stock_adjustment"
-        date={stockAdjustmentData.adjustmentDate}
-        updateTransactionField={updateStockAdjustmentField}
+        currentTransactionType={currentTransactionType}
+        date={transactionData.transactionDate}
+        updateTransactionField={updateTransactionField}
+        
       />
 
       {/* Main Content */}
       <div className="flex h-[calc(100vh-56px)]">
         <div className="flex-1 p-1 overflow-hidden flex flex-col">
           <div className="flex flex-col py-2 bg-white">
-            {/* Radio Buttons - Replaces TransactionAccountSelector */}
-            <div className="px-4 py-3 border-b border-gray-200">
-              <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="adjustmentType"
-                    value="add"
-                    checked={stockAdjustmentData.adjustmentType === "add"}
-                    onChange={(e) =>
-                      updateStockAdjustmentField("adjustmentType", e.target.value)
-                    }
-                    className="w-4 h-4 text-green-600 focus:ring-green-500"
-                  />
-                  <span className="text-sm font-medium text-gray-700">
-                    ⊕ Add To Stock
-                  </span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="adjustmentType"
-                    value="remove"
-                    checked={stockAdjustmentData.adjustmentType === "remove"}
-                    onChange={(e) =>
-                      updateStockAdjustmentField("adjustmentType", e.target.value)
-                    }
-                    className="w-4 h-4 text-red-600 focus:ring-red-500"
-                  />
-                  <span className="text-sm font-medium text-gray-700">
-                    ⊖ Remove From Stock
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            {/* Add Item Form */}
-            <AddItemForm
-              requireAccount={false}
-              items={stockAdjustmentData?.items}
+            <TransactionAccountSelector
+              accountType={transactionData?.accountType}
+              accountName={transactionData?.accountName}
+              openingBalance={transactionData?.openingBalance}
+              account={transactionData?.account}
+              transactionType={transactionData?.transactionType}
+              priceLevel={transactionData?.priceLevel}
+              priceLevelName={transactionData?.priceLevelName}
+              // transactionData={transactionData}
+              updateTransactionField={updateTransactionField}
+              updateTransactionData={updateTransactionData}
               branch={selectedBranchFromStore?._id}
               company={selectedCompanyFromStore?._id}
-              priceLevel={null}
-              updateTransactionField={updateStockAdjustmentField}
+            />
+
+            <AddItemForm
+              items={transactionData?.items}
+              branch={selectedBranchFromStore?._id}
+              company={selectedCompanyFromStore?._id}
+              priceLevel={transactionData?.priceLevel}
+              updateTransactionField={updateTransactionField}
               addItem={addItem}
               clickedItemInTable={clickedItemInTable}
-              transactionType={null}
-              account={null}
+              transactionType={transactionData?.transactionType}
+              account={transactionData?.account}
             />
           </div>
 
           <div className="flex-1">
-            {/* Items Table */}
             <ItemsTable
-              items={stockAdjustmentData?.items}
+              items={transactionData?.items}
               onUpdateQuantity={updateItemQuantity}
               onRemoveItem={removeItem}
               handleItemClickInItemsTable={handleItemClickInItemsTable}
             />
 
-            {/* Action Buttons */}
+            <TransactionSummary
+              total={transactionData.subtotal}
+              netAmount={transactionData.netAmount}
+              discount={transactionData.discount}
+              paidAmount={transactionData.paidAmount}
+              balanceAmount={transactionData.balanceAmount}
+              totalDue={transactionData.totalDue}
+              onDiscountChange={handleDiscountChange}
+              onPaidAmountChange={handlePaidAmountChange}
+              transactionType={transactionData.transactionType}
+            />
+
             <TransactionActions
-              onSave={onSave}
-              transactionData={stockAdjustmentData}
+              onSave={useTransactionActions?.handleSave}
+              transactionData={transactionData}
               onLoadingChange={setIsLoading}
-              resetTransactionData={resetStockAdjustmentData}
+              resetTransactionData={resetTransactionData}
+              // onView={useTransactionActions?.handleView}
+              // onDelete={useTransactionActions?.handleDelete}
               onCancel={() => {
-                resetStockAdjustmentData();
+                resetTransactionData(transactionData?.transactionType);
               }}
+              // onPrint={useTransactionActions?.handlePrint}
               isEditMode={false}
             />
           </div>
@@ -160,4 +159,4 @@ const CreateStockAdjustment = () => {
   );
 };
 
-export default CreateStockAdjustment;
+export default CreateTransaction;

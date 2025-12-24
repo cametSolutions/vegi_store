@@ -40,6 +40,18 @@ const CreateStockAdjustment = () => {
     updateStockAdjustmentField("adjustmentType", "add");
   }, [updateStockAdjustmentField]);
 
+// CreateStockAdjustment.jsx - Add this useEffect
+
+useEffect(() => {
+  if (selectedCompanyFromStore?._id) {
+    updateStockAdjustmentField("company", selectedCompanyFromStore._id);
+  }
+  if (selectedBranchFromStore?._id) {
+    updateStockAdjustmentField("branch", selectedBranchFromStore._id);
+  }
+}, [selectedCompanyFromStore, selectedBranchFromStore, updateStockAdjustmentField]);
+
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -151,8 +163,10 @@ const CreateStockAdjustment = () => {
           onLoadingChange={setIsLoading}
           resetTransactionData={resetStockAdjustmentData}
           isEditMode={false}
+          requireAccount={false}
           onCancel={() => {
             resetStockAdjustmentData();
+           
           }}
         />
       </div>

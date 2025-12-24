@@ -1,6 +1,6 @@
 // hooks/mutations/stockAdjustmentMutations.js
 import { toast } from "sonner";
-import { stockAdjustmentServices } from "../../api/services/stockAdjustmentServices ";
+import { stockAdjustmentServices } from "../../api/services/stockAdjustmentServices";
 
 export const stockAdjustmentMutations = {
   create: (queryClient) => ({

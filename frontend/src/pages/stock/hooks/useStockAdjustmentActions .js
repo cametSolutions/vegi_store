@@ -1,7 +1,7 @@
 // hooks/useStockAdjustmentActions.js
 import { useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { stockAdjustmentMutations } from "../../../hooks/mutations/stockAdjustmentMutations ";
+import { stockAdjustmentMutations } from "../../../hooks/mutations/stockAdjustmentMutations";
 import { useDispatch, useSelector } from "react-redux";
 import { convertStringNumbersToNumbers } from "../../Transactions/utils/stockadjustmentUtils";
 import { toast } from "sonner";
@@ -31,13 +31,18 @@ export const useStockAdjustmentActions = (
 
   const handleSave = useCallback(async () => {
     try {
-      // Validation
-      if (!stockAdjustmentData.reason || stockAdjustmentData.reason.trim() === "") {
-        toast.error("Please provide a reason for stock adjustment");
+      // Validation - NO REASON CHECK
+      if (!company || !branch) {
+        toast.error("Company and branch are required");
         return false;
       }
 
-      if (stockAdjustmentData.items.length === 0) {
+      if (!stockAdjustmentData.adjustmentType) {
+        toast.error("Please select adjustment type (Add/Remove)");
+        return false;
+      }
+
+      if (!stockAdjustmentData.items || stockAdjustmentData.items.length === 0) {
         toast.error("Please add at least one item to adjust");
         return false;
       }
@@ -60,17 +65,21 @@ export const useStockAdjustmentActions = (
       } else {
         // Create new adjustment
         await createMutation.mutateAsync({
-          formData: { ...convertedStockAdjustmentData, company, branch },
+          formData: { 
+            ...convertedStockAdjustmentData, 
+            company, 
+            branch 
+          },
         });
       }
 
       return true;
     } catch (error) {
       console.error("Error saving stock adjustment:", error);
-      toast.error("Failed to save stock adjustment");
+      toast.error(error.message || "Failed to save stock adjustment");
       return false;
     }
-  }, [stockAdjustmentData, isEditMode, createMutation, updateMutation]);
+  }, [stockAdjustmentData, isEditMode, createMutation, updateMutation, company, branch, dispatch]);
 
   return {
     handleSave,

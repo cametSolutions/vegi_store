@@ -95,43 +95,43 @@ const StockAdjustmentListTable = ({
         <tbody>
           {data.map((adjustment, index) => (
             <tr
-              key={adjustment._id || index}
+              key={adjustment?._id || index}
               onClick={() => onEditAdjustment(adjustment)}
               className={`border-b border-slate-200 hover:bg-blue-50 cursor-pointer transition-colors ${
-                editAdjustmentId === adjustment._id
+                editAdjustmentId === adjustment?._id
                   ? "bg-blue-100 border-l-4 border-l-blue-600"
                   : ""
               }`}
             >
               {/* Date */}
               <td className="px-3 py-2 text-[11px] text-slate-700">
-                {formatDate(adjustment.adjustmentDate)}
+                {formatDate(adjustment?.adjustmentDate)}
               </td>
 
               {/* Reference */}
               <td className="px-3 py-2 text-[11px] font-medium text-slate-800">
-                {adjustment.reference || adjustment.adjustmentNumber || "N/A"}
+                {adjustment?.reference || adjustment?.adjustmentNumber || "N/A"}
               </td>
 
               {/* Adjustment Type */}
               <td className="px-3 py-2 text-center">
                 <span
                   className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${getAdjustmentTypeColor(
-                    adjustment.adjustmentType
+                    adjustment?.adjustmentType
                   )}`}
                 >
-                  {adjustment.adjustmentType === "add" ? "ADD" : "REMOVE"}
+                  {adjustment?.adjustmentType === "add" ? "ADD" : "REMOVE"}
                 </span>
               </td>
 
               {/* Items Count */}
               <td className="px-3 py-2 text-center text-[11px] text-slate-700">
-                {adjustment.items?.length || 0}
+                {adjustment?.items?.length || 0}
               </td>
 
               {/* Total Amount */}
               <td className="px-3 py-2 text-right text-[11px] font-semibold text-slate-800">
-                ₹{(adjustment.totalAmount || 0).toFixed(2)}
+                ₹{(adjustment?.totalAmount || 0).toFixed(2)}
               </td>
             </tr>
           ))}

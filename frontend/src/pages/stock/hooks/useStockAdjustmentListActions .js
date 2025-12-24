@@ -19,12 +19,12 @@ export const useStockAdjustmentListActions = () => {
 
     const totals = adjustments.reduce(
       (acc, adjustment) => {
-        acc.totalAmount += parseFloat(adjustment.totalAmount || 0);
-        acc.totalItemsAdjusted += adjustment.items?.length || 0;
+        acc.totalAmount += parseFloat(adjustment?.totalAmount || 0);
+        acc.totalItemsAdjusted += adjustment?.items?.length || 0;
         
-        if (adjustment.adjustmentType === "add") {
+        if (adjustment?.adjustmentType === "add") {
           acc.totalAddAdjustments++;
-        } else if (adjustment.adjustmentType === "remove") {
+        } else if (adjustment?.adjustmentType === "remove") {
           acc.totalRemoveAdjustments++;
         }
 
