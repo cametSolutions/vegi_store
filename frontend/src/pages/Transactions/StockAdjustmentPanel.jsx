@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import CreateStockAdjustment from "./CreateStockAdjustment";
+import CreateStockAdjustment from "./CreateStockAdjustment ";
 import EditStockAdjustment from "./EditStockAdjustment";
-import StockAdjustmentList from "./components/StockAdjustmentList/StockAdjustmentList";
+import StockAdjustmentList from "./StockAdjustmentList";
 import { useSelector } from "react-redux";
 
 const StockAdjustmentPanel = () => {

@@ -29,6 +29,11 @@ import revaluationRoute from "./routes/revaluation/revaluation.js";
 import salesReturnRoutes from "./routes/transactions/sales_return_routes.js";
 import purchaseReturnRoutes from "./routes/transactions/purchase_return_routes.js";
 import purchaseRoutes from "./routes/transactions/purchaseRoutes.js";
+// app.js or server.js
+import stockAdjustmentRoutes from "./routes/stockAdjustmentRoutes/stockAdjustmentRoutes.js";
+
+// Add this line with your other routes
+
 
 /// Initialize Cron Jobs
 import { initializeCronJobs } from "./jobs/schedulers/cronScheduler.js";
@@ -118,7 +123,7 @@ app.use("/api/dev", authMiddleware, devRoutes);
 app.use("/api/job", authMiddleware, jobRoutes);
 app.use("/api/reports", authMiddleware, reportRoutes);
 app.use("/api/revaluation", authMiddleware, revaluationRoute);
-
+app.use("/api/transaction/stock_adjustment", authMiddleware,stockAdjustmentRoutes);
 // ----------------- Production Build Serving -----------------
 if (process.env.NODE_ENV === "production") {
   console.log("Environment:", process.env.NODE_ENV);

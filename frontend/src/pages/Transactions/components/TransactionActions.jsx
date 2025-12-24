@@ -10,6 +10,7 @@ const TransactionActions = ({
   resetTransactionData,
   onCancel,
   transactionType,
+  requireAccount = true,
   // onView,
   // onDelete,
 }) => {
@@ -27,10 +28,15 @@ const TransactionActions = ({
 
   const handleSaveClick = async () => {
     // Validation
-    if (!transactionData.accountName?.trim() && !transactionData.account) {
-      toast.error("Customer Missing");
-      return false;
+     if (requireAccount && !transactionData?.account) {
+      toast.error("Please select a customer/supplier");
+      return;
     }
+
+    // if (!transactionData.accountName?.trim() && !transactionData.account) {
+    //   toast.error("Add a customer");
+    //   return false;
+    // }
 
     if (transactionData.items.length === 0) {
       toast.error("Items Missing");
