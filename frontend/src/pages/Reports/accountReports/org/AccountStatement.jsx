@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import OutstandingPartiesList from "../../outstandingReports/OutstandingPartiesList";
-
+import AccountStatementDetail from "./AccountStatementDetail";
 
 
 const AccountStatement = () => {
@@ -20,27 +20,33 @@ const AccountStatement = () => {
 
   if (!companyId || !branchId) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-red-500">Please select a company and branch</p>
+      <div className="flex items-center justify-center h-[calc(100vh-104px)]">
+        <p className="text-slate-500 text-sm">Please select a company and branch</p>
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-104px)] flex bg-gray-50 gap-1">
-      <OutstandingPartiesList
-        companyId={companyId}
-        branchId={branchId}
-        selectedParty={selectedParty}
-        onSelectParty={setSelectedParty}
-        fetchFullAccounts={true}
-      />
-{/* 
-      <OutstandingTransactionsList
-        companyId={companyId}
-        branchId={branchId}
-        selectedParty={selectedParty}
-      /> */}
+    <div className="h-[calc(100vh-104px)] flex bg-white overflow-hidden">
+      {/* Left Side: Party List */}
+      <div className="flex-none z-10 shadow-lg">
+        <OutstandingPartiesList
+          companyId={companyId}
+          branchId={branchId}
+          selectedParty={selectedParty}
+          onSelectParty={setSelectedParty}
+          fetchFullAccounts={true}
+        />
+      </div>
+
+      {/* Right Side: Account Statement Detail */}
+      <div className="flex-1 min-w-0 bg-slate-50 relative">
+        <AccountStatementDetail 
+          companyId={companyId}
+          branchId={branchId}
+          selectedParty={selectedParty}
+        />
+      </div>
     </div>
   );
 };

@@ -16,7 +16,7 @@ router.get("/items-summary",getItemSummaryReport)
 /// Account Reports
 router.get("/account-ledger",getAccountLedgerReport)
 router.get("/account-monthly-summary",getAccountMonthlySummary)
-router.get("/account-summary",getAccountSummaryReport)
+router.get("/account-statement",getAccountSummaryReport)
 router.get("/outstanding-report",getOutstandingReport)
 router.get("/outstanding-summary",getOutstandingSummary)
 router.get("/transaction-summary/:companyId/:branchId/:transactionType",getTransactionSummary)

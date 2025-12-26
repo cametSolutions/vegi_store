@@ -6,6 +6,7 @@ import {
   checkIfDirtyPeriodExists
 } from '../../services/accountLeger/accountLegerService.js';
 import AccountLedger from '../../model/AccountLedgerModel.js';
+import mongoose from 'mongoose';
 
 
 const toObjectId = (id) => new mongoose.Types.ObjectId(id);

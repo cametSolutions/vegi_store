@@ -118,7 +118,40 @@ export const accountMasterService = {
           accountType,
           page,
           limit,
-      
+        },
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
+
+  getAccountStatement: async (
+    startDate,
+    endDate,
+    company,
+    branch,
+    account, // ✅ NEW: Single account ID (optional)
+    transactionType,
+    page = 1,
+    limit = 50,
+    searchTerm
+  ) => {
+    try {
+      const response = await api.get("/reports/account-statement", {
+        params: {
+          startDate,
+          endDate,
+          company,
+          branch,
+          account,
+          transactionType,
+          page,
+          limit,
+          searchTerm,
         },
       });
       return response.data;
