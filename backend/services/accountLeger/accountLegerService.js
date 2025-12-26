@@ -5,34 +5,7 @@ import AccountMonthlyBalance from '../../model/AccountMonthlyBalanceModel.js';
 import AdjustmentEntry from '../../model/AdjustmentEntryModel.js';
 import AccountMasterModel from '../../model/masters/AccountMasterModel.js';
 
-
-
 const toObjectId = (id) => new mongoose.Types.ObjectId(id);
-
-// =============================================================================
-// DEBIT/CREDIT CONDITIONS HELPER
-// sale, purchase_return, payment → DEBIT
-// purchase, sales_return, receipt → CREDIT
-// =============================================================================
-const getDebitCreditConditions = (transactionType) => {
-  if (transactionType === 'sale') {
-    return { 
-      debitCondition: { $eq: ['$transactionType', 'sale'] }, 
-      creditCondition: { $eq: ['$transactionType', 'purchase_return'] } 
-    };
-  } else if (transactionType === 'purchase') {
-    return { 
-      debitCondition: { $eq: ['$transactionType', 'purchase_return'] }, 
-      creditCondition: { $eq: ['$transactionType', 'purchase'] } 
-    };
-  } else {
-    // Default: All transactions
-    return { 
-      debitCondition: { $in: ['$transactionType', ['sale', 'purchase_return', 'payment']] }, 
-      creditCondition: { $in: ['$transactionType', ['purchase', 'sales_return', 'receipt']] } 
-    };
-  }
-};
 
 // =============================================================================
 // CORE UTILITY FUNCTIONS
@@ -234,11 +207,15 @@ export const getBatchOpeningBalances = async (company, branch, accountIds, selec
     return {
       affectedAccount: id,
       originalTransactionDate: { 
-        $gte: startDate, 
-        $lt: dirtyPeriodEnd 
+        $gte: BASE_START_DATE,
+        $lt: selectedDate, 
+        // $lt: dirtyPeriodEnd 
       }
     };
   });
+
+  console.log("adjustmentMatchConditions", adjustmentMatchConditions);
+  
   
   const adjustmentMovements = await AdjustmentEntry.aggregate([
     { 
@@ -427,20 +404,16 @@ export const getBatchAdjustedLedgers = async (companyId, branchId, accountIds, s
   
   // Apply transaction type filter if specified
   if (transactionType === 'sale') {
-    baseMatch.transactionType = { $in: ['sale', 'purchase_return'] };
+    baseMatch.transactionType = { $in: ['sale', 'purchasereturn'] };
   } else if (transactionType === 'purchase') {
-    baseMatch.transactionType = { $in: ['purchase', 'sales_return'] };
+    baseMatch.transactionType = { $in: ['purchase', 'salesreturn'] };
   }
-  
-  // Get debit/credit conditions
-  const { debitCondition, creditCondition } = getDebitCreditConditions(transactionType);
   
   const ledgers = await AccountLedger.aggregate([
     { $match: baseMatch },
     
-    
     // -------------------------------------------------------------------
-    // $lookup: Join with adjustment_entries to get deltas
+    // $lookup: Join with adjustmententries to get deltas
     // This is expensive! Only used when adjustments exist
     // -------------------------------------------------------------------
     {
@@ -486,12 +459,12 @@ export const getBatchAdjustedLedgers = async (companyId, branchId, accountIds, s
         totalAmountDelta: { $ifNull: [{ $arrayElemAt: ['$adjustments.totalAmountDelta', 0] }, 0] },
         
         // Effective amount = original + delta
-        effectiveAmount: { $add: ['$amount', '$totalAmountDelta'] },
+        effectiveAmount: { $add: ['$amount', { $ifNull: [{ $arrayElemAt: ['$adjustments.totalAmountDelta', 0] }, 0] }] },
         
         // Signed amount for balance calculation: debit=+, credit=-
         signedAmount: {
           $multiply: [
-            { $add: ['$amount', '$totalAmountDelta'] },
+            { $add: ['$amount', { $ifNull: [{ $arrayElemAt: ['$adjustments.totalAmountDelta', 0] }, 0] }] },
             { $cond: [{ $eq: ['$ledgerSide', 'debit'] }, 1, -1] }
           ]
         },
@@ -501,31 +474,51 @@ export const getBatchAdjustedLedgers = async (companyId, branchId, accountIds, s
     },
     
     // Remove adjustment array from output (heavy)
-    { $project: { adjustments: 0 } },
+    // { $project: { adjustments: 0 } },
     
     { $sort: { account: 1, transactionDate: 1, createdAt: 1 } },
     
     // -------------------------------------------------------------------
     // Group by account to calculate summaries
+    // ✅ FIX: Inline conditions instead of using helper function
     // -------------------------------------------------------------------
     {
       $group: {
         _id: '$account',
-        transactions: { $push: '$$ROOT' }, // Keep all transactions
+        transactions: { $push: '$$ROOT' },
         totalDebit: {
           $sum: {
-            $cond: [debitCondition, '$effectiveAmount', 0]
+            $cond: [
+              transactionType === 'sale'
+                ? { $eq: ['$transactionType', 'sale'] }
+                : transactionType === 'purchase'
+                ? { $eq: ['$transactionType', 'purchasereturn'] }
+                : { $in: ['$transactionType', ['sale', 'purchasereturn', 'payment']] },
+              '$effectiveAmount',
+              0
+            ]
           }
         },
         totalCredit: {
           $sum: {
-            $cond: [creditCondition, '$effectiveAmount', 0]
+            $cond: [
+              transactionType === 'sale'
+                ? { $eq: ['$transactionType', 'purchasereturn'] }
+                : transactionType === 'purchase'
+                ? { $eq: ['$transactionType', 'purchase'] }
+                : { $in: ['$transactionType', ['purchase', 'salesreturn', 'receipt']] },
+              '$effectiveAmount',
+              0
+            ]
           }
         },
         transactionCount: { $sum: 1 }
       }
     }
   ]);
+
+  console.log("ledgers",ledgers[0 ].transactions);
+  
   
   // Convert to map
   const ledgerMap = {};
@@ -611,13 +604,13 @@ export const getSimpleLedgerReport = async (
   };
   
   if (transactionType === 'sale') {
-    baseMatch.transactionType = { $in: ['sale', 'purchase_return'] };
+    baseMatch.transactionType = { $in: ['sale', 'purchasereturn'] };
   } else if (transactionType === 'purchase') {
-    baseMatch.transactionType = { $in: ['purchase', 'sales_return'] };
+    baseMatch.transactionType = { $in: ['purchase', 'salesreturn'] };
   }
   
   let searchStage = [];
-  if (searchTerm && !account) { // Skip search for single account mode
+  if (searchTerm && !account) {
     const regex = new RegExp(searchTerm, 'i');
     searchStage = [{ $match: { $or: [{ accountName: regex }] } }];
   }
@@ -707,30 +700,41 @@ export const getSimpleLedgerReport = async (
   
   // -----------------------------------------------------------------------
   // QUERY 3: Simple ledger aggregation (NO $lookup!)
-  // This is the key difference - no adjustment lookups needed
+  // ✅ FIX: Inline conditions instead of using helper function
   // -----------------------------------------------------------------------
   console.time('Query 3 - Simple ledger aggregation');
   
-  // Get debit/credit conditions based on transactionType
-  const { debitCondition, creditCondition } = getDebitCreditConditions(transactionType);
-  
   const ledgers = await AccountLedger.aggregate([
     { $match: { ...baseMatch, account: { $in: accountIdObjs } } },
-    // NO $lookup here! That's what makes this fast
     { $sort: { account: 1, transactionDate: 1, createdAt: 1 } },
-    // Group by account to calculate summaries
     {
       $group: {
         _id: '$account',
         transactions: { $push: '$$ROOT' },
         totalDebit: {
           $sum: {
-            $cond: [debitCondition, '$amount', 0]
+            $cond: [
+              transactionType === 'sale'
+                ? { $eq: ['$transactionType', 'sale'] }
+                : transactionType === 'purchase'
+                ? { $eq: ['$transactionType', 'purchasereturn'] }
+                : { $in: ['$transactionType', ['sale', 'purchasereturn', 'payment']] },
+              '$amount',
+              0
+            ]
           }
         },
         totalCredit: {
           $sum: {
-            $cond: [creditCondition, '$amount', 0]
+            $cond: [
+              transactionType === 'sale'
+                ? { $eq: ['$transactionType', 'purchasereturn'] }
+                : transactionType === 'purchase'
+                ? { $eq: ['$transactionType', 'purchase'] }
+                : { $in: ['$transactionType', ['purchase', 'salesreturn', 'receipt']] },
+              '$amount',
+              0
+            ]
           }
         },
         transactionCount: { $sum: 1 }
@@ -851,9 +855,9 @@ export const getHybridLedgerReport = async (
   };
   
   if (transactionType === 'sale') {
-    baseMatch.transactionType = { $in: ['sale', 'purchase_return'] };
+    baseMatch.transactionType = { $in: ['sale', 'purchasereturn'] };
   } else if (transactionType === 'purchase') {
-    baseMatch.transactionType = { $in: ['purchase', 'sales_return'] };
+    baseMatch.transactionType = { $in: ['purchase', 'salesreturn'] };
   }
   
   let searchStage = [];
@@ -863,7 +867,7 @@ export const getHybridLedgerReport = async (
   }
   
   // -----------------------------------------------------------------------
-  // QUERY 1: Get paginated account list (same as fast path)
+  // QUERY 1: Get paginated account list
   // -----------------------------------------------------------------------
   console.time('Query 1 - Account list');
   const itemFacet = await AccountLedger.aggregate([
@@ -915,10 +919,9 @@ export const getHybridLedgerReport = async (
   
   // -----------------------------------------------------------------------
   // QUERY 3: Simple ledger for report period (NO adjustments)
-  // Same as fast path - no $lookup needed since no adjustments
+  // ✅ FIX: Inline conditions instead of using helper function
   // -----------------------------------------------------------------------
   console.time('Query 3 - Simple ledger for report period');
-  const { debitCondition, creditCondition } = getDebitCreditConditions(transactionType);
   
   const ledgers = await AccountLedger.aggregate([
     { $match: { ...baseMatch, account: { $in: accountIdObjs } } },
@@ -929,12 +932,28 @@ export const getHybridLedgerReport = async (
         transactions: { $push: '$$ROOT' },
         totalDebit: {
           $sum: {
-            $cond: [debitCondition, '$amount', 0]
+            $cond: [
+              transactionType === 'sale'
+                ? { $eq: ['$transactionType', 'sale'] }
+                : transactionType === 'purchase'
+                ? { $eq: ['$transactionType', 'purchasereturn'] }
+                : { $in: ['$transactionType', ['sale', 'purchasereturn', 'payment']] },
+              '$amount',
+              0
+            ]
           }
         },
         totalCredit: {
           $sum: {
-            $cond: [creditCondition, '$amount', 0]
+            $cond: [
+              transactionType === 'sale'
+                ? { $eq: ['$transactionType', 'purchasereturn'] }
+                : transactionType === 'purchase'
+                ? { $eq: ['$transactionType', 'purchase'] }
+                : { $in: ['$transactionType', ['purchase', 'salesreturn', 'receipt']] },
+              '$amount',
+              0
+            ]
           }
         },
         transactionCount: { $sum: 1 }
@@ -1056,9 +1075,9 @@ export const refoldLedgersWithAdjustments = async (
   };
   
   if (transactionType === 'sale') {
-    baseMatch.transactionType = { $in: ['sale', 'purchase_return'] };
+    baseMatch.transactionType = { $in: ['sale', 'purchasereturn'] };
   } else if (transactionType === 'purchase') {
-    baseMatch.transactionType = { $in: ['purchase', 'sales_return'] };
+    baseMatch.transactionType = { $in: ['purchase', 'salesreturn'] };
   }
   
   let searchStage = [];
@@ -1068,7 +1087,7 @@ export const refoldLedgersWithAdjustments = async (
   }
   
   // -----------------------------------------------------------------------
-  // QUERY 1: Get paginated account list (same as other paths)
+  // QUERY 1: Get paginated account list
   // -----------------------------------------------------------------------
   console.time('Query 1 - Account list');
   const itemFacet = await AccountLedger.aggregate([
