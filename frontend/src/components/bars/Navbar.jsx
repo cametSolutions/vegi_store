@@ -10,7 +10,8 @@ import {
   Tags,
   FileBarChart,
   Layers,
-  Layers2
+  Layers2,
+  ClipboardMinus,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -45,6 +46,11 @@ const Navbar = () => {
       path: "#", // Placeholder
       hasDropdown: true,
       dropdownItems: [
+        {
+          label: "Account Statement",
+          path: "/reports/account-statement",
+          icon: ClipboardMinus,
+        },
         {
           label: "Outstanding Summary",
           path: "/reports/outstanding-summary",
@@ -81,7 +87,6 @@ const Navbar = () => {
           label: "Price Level",
           path: "/master/price-level",
           icon: Tags,
-       
         },
       ],
     },

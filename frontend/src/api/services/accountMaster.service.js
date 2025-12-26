@@ -32,28 +32,35 @@ export const accountMasterService = {
     }
   },
 
-list: async (
-  searchTerm = "",
-  companyId,
-  branchId = null,
-  accountType = null,
-  limit = 30,
-  filters = {},
-  skip = 0  // New param for pagination offset
-) => {
-  try {
-    const response = await api.get("/accountmaster/list", {
-      params: { searchTerm, companyId, branchId, accountType, limit, skip, ...filters },
-    });
-    return response.data;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || error.message);
+  list: async (
+    searchTerm = "",
+    companyId,
+    branchId = null,
+    accountType = null,
+    limit = 30,
+    filters = {},
+    skip = 0 // New param for pagination offset
+  ) => {
+    try {
+      const response = await api.get("/accountmaster/list", {
+        params: {
+          searchTerm,
+          companyId,
+          branchId,
+          accountType,
+          limit,
+          skip,
+          ...filters,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("An unexpected error occurred");
     }
-    throw new Error("An unexpected error occurred");
-  }
-},
-
+  },
 
   // Create new account master
   create: async (data) => {
@@ -91,6 +98,35 @@ list: async (
         throw new Error(error.response?.data?.message || error.message);
       }
       throw new Error("Error deleting account");
+    }
+  },
+
+  listWithOutstanding: async (
+    searchTerm = "",
+    companyId,
+    branchId = null,
+    accountType = null,
+    page,
+    limit = 30
+  ) => {
+    try {
+      const response = await api.get("/accountmaster/listWithOutstanding", {
+        params: {
+          searchTerm,
+          companyId,
+          branchId,
+          accountType,
+          page,
+          limit,
+      
+        },
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("An unexpected error occurred");
     }
   },
 };

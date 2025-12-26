@@ -12,6 +12,13 @@ list: (searchTerm = "", companyId, branchId = null, accountType = null, limit = 
   staleTime: 5 * 60 * 1000,
   initialPageParam: 0, // Add this for v5
 }),
+listWithOutstanding: ( companyId, branchId = null, accountType = null, page,limit=30,searchTerm) => queryOptions({
+  queryKey: ["reports", ...accountMasterQueries.all(), 'listWithOutstanding', companyId, searchTerm],
+  queryFn: ({ pageParam = 0 }) => accountMasterService.listWithOutstanding(searchTerm, companyId, branchId, accountType, page,limit),
+  enabled: !!companyId,
+  staleTime: 5 * 60 * 1000,
+  initialPageParam: 0, // Add this for v5
+}),
 
   search: (searchTerm, companyId,branchId,accountType,limit=25,filters={}, options = {},) => queryOptions({
     queryKey: [...accountMasterQueries.all(), 'search', searchTerm, companyId,branchId,accountType, limit,filters],

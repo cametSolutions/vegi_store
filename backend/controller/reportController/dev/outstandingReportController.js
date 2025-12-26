@@ -362,22 +362,22 @@ export const getOutstandingParties = async (req, res) => {
         }
       }] : []),
 
-      {
-        $addFields: {
-          daysOverdue: {
-            $cond: {
-              if: { $and: [{ $ne: ['$dueDate', null] }, { $ne: ['$dueDate', undefined] }] },
-              then: {
-                $divide: [
-                  { $subtract: [new Date(), '$dueDate'] },
-                  1000 * 60 * 60 * 24
-                ]
-              },
-              else: 0
-            }
-          }
-        }
-      },
+      // {
+      //   $addFields: {
+      //     daysOverdue: {
+      //       $cond: {
+      //         if: { $and: [{ $ne: ['$dueDate', null] }, { $ne: ['$dueDate', undefined] }] },
+      //         then: {
+      //           $divide: [
+      //             { $subtract: [new Date(), '$dueDate'] },
+      //             1000 * 60 * 60 * 24
+      //           ]
+      //         },
+      //         else: 0
+      //       }
+      //     }
+      //   }
+      // },
 
       // Group by account (party)
       {
@@ -448,9 +448,9 @@ export const getOutstandingParties = async (req, res) => {
           },
           
           transactionCount: { $sum: 1 },
-          oldestTransactionDate: { $min: '$transactionDate' },
-          newestTransactionDate: { $max: '$transactionDate' },
-          maxDaysOverdue: { $max: '$daysOverdue' },
+          // oldestTransactionDate: { $min: '$transactionDate' },
+          // newestTransactionDate: { $max: '$transactionDate' },
+          // maxDaysOverdue: { $max: '$daysOverdue' },
           accountTypes: { $addToSet: '$accountType' }, // This creates an array
           
           transactions: {
@@ -465,7 +465,7 @@ export const getOutstandingParties = async (req, res) => {
               paidAmount: '$paidAmount',
               closingBalanceAmount: '$closingBalanceAmount',
               outstandingType: '$outstandingType',
-              daysOverdue: '$daysOverdue',
+              // daysOverdue: '$daysOverdue',
               status: '$status'
             }
           }
@@ -498,98 +498,98 @@ export const getOutstandingParties = async (req, res) => {
           
           absOutstanding: { $abs: '$totalOutstanding' },
           
-          aging: {
-            current: {
-              $sum: {
-                $map: {
-                  input: '$transactions',
-                  as: 'txn',
-                  in: {
-                    $cond: [
-                      { $lte: ['$$txn.daysOverdue', 0] },
-                      '$$txn.closingBalanceAmount',
-                      0
-                    ]
-                  }
-                }
-              }
-            },
-            days1_30: {
-              $sum: {
-                $map: {
-                  input: '$transactions',
-                  as: 'txn',
-                  in: {
-                    $cond: [
-                      {
-                        $and: [
-                          { $gt: ['$$txn.daysOverdue', 0] },
-                          { $lte: ['$$txn.daysOverdue', 30] }
-                        ]
-                      },
-                      '$$txn.closingBalanceAmount',
-                      0
-                    ]
-                  }
-                }
-              }
-            },
-            days31_60: {
-              $sum: {
-                $map: {
-                  input: '$transactions',
-                  as: 'txn',
-                  in: {
-                    $cond: [
-                      {
-                        $and: [
-                          { $gt: ['$$txn.daysOverdue', 30] },
-                          { $lte: ['$$txn.daysOverdue', 60] }
-                        ]
-                      },
-                      '$$txn.closingBalanceAmount',
-                      0
-                    ]
-                  }
-                }
-              }
-            },
-            days61_90: {
-              $sum: {
-                $map: {
-                  input: '$transactions',
-                  as: 'txn',
-                  in: {
-                    $cond: [
-                      {
-                        $and: [
-                          { $gt: ['$$txn.daysOverdue', 60] },
-                          { $lte: ['$$txn.daysOverdue', 90] }
-                        ]
-                      },
-                      '$$txn.closingBalanceAmount',
-                      0
-                    ]
-                  }
-                }
-              }
-            },
-            days90Plus: {
-              $sum: {
-                $map: {
-                  input: '$transactions',
-                  as: 'txn',
-                  in: {
-                    $cond: [
-                      { $gt: ['$$txn.daysOverdue', 90] },
-                      '$$txn.closingBalanceAmount',
-                      0
-                    ]
-                  }
-                }
-              }
-            }
-          }
+          // aging: {
+          //   current: {
+          //     $sum: {
+          //       $map: {
+          //         input: '$transactions',
+          //         as: 'txn',
+          //         in: {
+          //           $cond: [
+          //             { $lte: ['$$txn.daysOverdue', 0] },
+          //             '$$txn.closingBalanceAmount',
+          //             0
+          //           ]
+          //         }
+          //       }
+          //     }
+          //   },
+          //   days1_30: {
+          //     $sum: {
+          //       $map: {
+          //         input: '$transactions',
+          //         as: 'txn',
+          //         in: {
+          //           $cond: [
+          //             {
+          //               $and: [
+          //                 { $gt: ['$$txn.daysOverdue', 0] },
+          //                 { $lte: ['$$txn.daysOverdue', 30] }
+          //               ]
+          //             },
+          //             '$$txn.closingBalanceAmount',
+          //             0
+          //           ]
+          //         }
+          //       }
+          //     }
+          //   },
+          //   days31_60: {
+          //     $sum: {
+          //       $map: {
+          //         input: '$transactions',
+          //         as: 'txn',
+          //         in: {
+          //           $cond: [
+          //             {
+          //               $and: [
+          //                 { $gt: ['$$txn.daysOverdue', 30] },
+          //                 { $lte: ['$$txn.daysOverdue', 60] }
+          //               ]
+          //             },
+          //             '$$txn.closingBalanceAmount',
+          //             0
+          //           ]
+          //         }
+          //       }
+          //     }
+          //   },
+          //   days61_90: {
+          //     $sum: {
+          //       $map: {
+          //         input: '$transactions',
+          //         as: 'txn',
+          //         in: {
+          //           $cond: [
+          //             {
+          //               $and: [
+          //                 { $gt: ['$$txn.daysOverdue', 60] },
+          //                 { $lte: ['$$txn.daysOverdue', 90] }
+          //               ]
+          //             },
+          //             '$$txn.closingBalanceAmount',
+          //             0
+          //           ]
+          //         }
+          //       }
+          //     }
+          //   },
+          //   days90Plus: {
+          //     $sum: {
+          //       $map: {
+          //         input: '$transactions',
+          //         as: 'txn',
+          //         in: {
+          //           $cond: [
+          //             { $gt: ['$$txn.daysOverdue', 90] },
+          //             '$$txn.closingBalanceAmount',
+          //             0
+          //           ]
+          //         }
+          //       }
+          //     }
+          //   }
+          // }
         }
       },
 
@@ -627,16 +627,16 @@ export const getOutstandingParties = async (req, res) => {
       totalCr: Math.round(party.totalCr * 100) / 100,
       netOutstanding: Math.round((party.totalDr + party.totalCr) * 100) / 100,
       transactionCount: party.transactionCount,
-      oldestTransactionDate: party.oldestTransactionDate,
-      newestTransactionDate: party.newestTransactionDate,
-      maxDaysOverdue: Math.round(party.maxDaysOverdue),
-      aging: {
-        current: Math.round(party.aging.current * 100) / 100,
-        days1_30: Math.round(party.aging.days1_30 * 100) / 100,
-        days31_60: Math.round(party.aging.days31_60 * 100) / 100,
-        days61_90: Math.round(party.aging.days61_90 * 100) / 100,
-        days90Plus: Math.round(party.aging.days90Plus * 100) / 100
-      }
+      // oldestTransactionDate: party.oldestTransactionDate,
+      // newestTransactionDate: party.newestTransactionDate,
+      // maxDaysOverdue: Math.round(party.maxDaysOverdue),
+      // aging: {
+      //   current: Math.round(party.aging.current * 100) / 100,
+      //   days1_30: Math.round(party.aging.days1_30 * 100) / 100,
+      //   days31_60: Math.round(party.aging.days31_60 * 100) / 100,
+      //   days61_90: Math.round(party.aging.days61_90 * 100) / 100,
+      //   days90Plus: Math.round(party.aging.days90Plus * 100) / 100
+      // }
     }));
 
     // Calculate summary - simpler approach without $setUnion

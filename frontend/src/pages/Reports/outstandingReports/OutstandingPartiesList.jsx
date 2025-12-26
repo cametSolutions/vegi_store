@@ -13,12 +13,14 @@ import {
 import { formatINR } from "../../../../../shared/utils/currency";
 import ErrorDisplay from "@/components/errors/ErrorDisplay";
 import { outstandingQueries } from "../../../hooks/queries/outstandingQueries";
+import { accountMasterQueries } from "../../../hooks/queries/accountMaster.queries";
 
 const OutstandingPartiesList = ({
   companyId,
   branchId,
   selectedParty,
   onSelectParty,
+  fetchFullAccounts = false,
 }) => {
   const listContainerRef = useRef(null);
   const selectedPartyRef = useRef(null);
@@ -36,24 +38,44 @@ const OutstandingPartiesList = ({
     return () => clearTimeout(t);
   }, [searchTerm]);
 
+  // Determine which query to run based on props
+  const queryOptions = fetchFullAccounts
+    ? accountMasterQueries.listWithOutstanding(
+        companyId,
+        branchId,
+        null, // Default to customer if not specified, or pass as prop if needed
+        currentPage,
+        pageSize,
+        debouncedSearchTerm
+      )
+    : outstandingQueries.partiesList(
+        companyId,
+        branchId,
+        null,
+        currentPage,
+        pageSize,
+        debouncedSearchTerm,
+        "all"
+      );
+
   const { data, isLoading, isError, error, refetch } = useQuery({
-    ...outstandingQueries.partiesList(
-      companyId,
-      branchId,
-      null,
-      currentPage,
-      pageSize,
-      debouncedSearchTerm,
-      "all"
-    ),
+    ...queryOptions,
     enabled: !!companyId && !!branchId,
+    keepPreviousData: true, // Better UX during pagination
   });
 
-  const parties = data?.data?.parties || [];
-  const totalPages = data?.data?.summary?.totalPages || 0;
-  const totalCount = data?.data?.summary?.totalParties || 0;
+  // Normalize data structure handling
+  // If fetchFullAccounts is true, the structure matches the new controller (data.parties)
+  // If false, it matches the original outstanding list structure
+  const parties = data?.data?.parties || data?.data || [];
+  
+  // Handle summary safely (some endpoints might return it differently)
+  const summary = data?.data?.summary || {};
+  const totalPages = summary.totalPages || Math.ceil((summary.totalCount || 0) / pageSize) || 1;
+  const totalCount = summary.totalParties || summary.totalCount || 0;
 
   useEffect(() => {
+    // Auto-select first party if none selected
     if (!selectedParty && parties.length > 0) {
       onSelectParty(parties[0]);
     } else if (parties.length === 0) {
@@ -72,16 +94,26 @@ const OutstandingPartiesList = ({
   }, [selectedParty?.partyId]);
 
   const getPartyDisplay = (party) => {
-    const amount = party.totalOutstanding;
-    const isReceivable = amount >= 0;
+    // Handle both field names: totalOutstanding (new api) or just outstanding (old api)
+    const amount = party.totalOutstanding ?? party.outstanding ?? 0;
+    
+    // Logic: Net > 0 is Receivable (DR), Net < 0 is Payable (CR)
+    // The API returns absolute values for display, so we check netPositionType or raw val
+    let isReceivable = true;
+    
+    if (party.netPositionType) {
+        isReceivable = party.netPositionType === 'receivable';
+    } else {
+        // Fallback for APIs that might return signed numbers
+        isReceivable = amount >= 0;
+    }
+
     const absAmount = Math.abs(amount);
 
     return {
       displayAmount: formatINR(absAmount),
-      // Softened text colors (Teal/Rose)
       amountClass: isReceivable ? "text-teal-600" : "text-rose-600",
       badge: isReceivable ? "DR" : "CR",
-      // Very light pastel backgrounds
       badgeClass: isReceivable
         ? "bg-teal-50 text-teal-700 ring-1 ring-teal-100"
         : "bg-rose-50 text-rose-700 ring-1 ring-rose-100",
@@ -99,19 +131,18 @@ const OutstandingPartiesList = ({
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
   return (
-    <div className="w-80 bg-white flex flex-col border-r border-slate-100 h-full font-sans text-sm   border-b">
-      {/* Header - Transparent/Clean look */}
+    <div className="w-80 bg-white flex flex-col border-r border-slate-100 h-full font-sans text-sm border-b">
+      {/* Header */}
       <div className="flex-none bg-white z-10 border-b border-slate-300">
         <div className="px-4 py-4 flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-slate-800 text-base">
-              Outstanding
+              {fetchFullAccounts ? "Parties" : "Outstanding"}
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Payables & receivables
+              {fetchFullAccounts ? "Select party to view details" : "Payables & receivables"}
             </p>
           </div>
-          {/* Subtle button interaction */}
           <button className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
             <Filter className="w-4 h-4" />
           </button>
@@ -125,7 +156,6 @@ const OutstandingPartiesList = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search..."
-              // Light Slate background for input
               className="w-full pl-9 pr-3 py-2.5 bg-slate-200 border border-transparent focus:bg-white focus:border-sky-200 focus:ring-4 focus:ring-sky-50 rounded-sm text-slate-700 text-sm placeholder:text-slate-400 focus:outline-none transition-all duration-200"
               disabled={isLoading || isError}
             />
@@ -133,7 +163,7 @@ const OutstandingPartiesList = ({
         </div>
       </div>
 
-      {/* List Container - Soft Scrollbar */}
+      {/* List Container */}
       <div
         className="flex-1 overflow-y-auto custom-scrollbar"
         ref={listContainerRef}
@@ -160,14 +190,15 @@ const OutstandingPartiesList = ({
           <ul className="flex flex-col gap-1 p-2">
             {parties.map((party) => {
               const displayInfo = getPartyDisplay(party);
-              const isSelected = selectedParty?.partyId === party.partyId;
+              // Use partyId from new API or _id from old API
+              const pId = party.partyId || party._id;
+              const isSelected = selectedParty?.partyId === pId || selectedParty?._id === pId;
 
               return (
                 <li
-                  key={party.partyId}
+                  key={pId}
                   ref={isSelected ? selectedPartyRef : null}
                   onClick={() => onSelectParty(party)}
-                  // Card-like list items with rounded corners
                   className={`group relative p-3 rounded-sm cursor-pointer transition-all duration-200  ${
                     isSelected
                       ? "bg-sky-100/80 border-sky-100 shadow-sm"
@@ -181,12 +212,11 @@ const OutstandingPartiesList = ({
                           isSelected ? "text-slate-900" : "text-slate-700"
                         }`}
                       >
-                        {party.partyName}
+                        {party.partyName || party.accountName}
                       </h3>
-                      {/* Sub-info */}
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[10px] text-slate-400 font-mono bg-slate-50 px-1 rounded">
-                          #{party?.partyType}
+                          #{party.partyType || party.accountType}
                         </span>
                       </div>
                     </div>
@@ -207,20 +237,20 @@ const OutstandingPartiesList = ({
                       </span>
                     </div>
                   </div>
-
-                  {/* Dual Role Context - very subtle */}
+                  
+                  {/* Optional: Show dual balance if both exist */}
                   {party.partyType === "both" && (
-                    <div className="mt-3 pt-2 border-t border-slate-100/50 flex items-center justify-between text-[10px]">
+                     <div className="mt-3 pt-2 border-t border-slate-100/50 flex items-center justify-between text-[10px]">
                       <span className="text-slate-400">
                         Cust:{" "}
                         <span className="text-slate-600">
-                          {formatINR(Math.abs(party.customerOutstanding))}
+                          {formatINR(Math.abs(party.customerOutstanding || 0))}
                         </span>
                       </span>
                       <span className="text-slate-400">
                         Supp:{" "}
                         <span className="text-slate-600">
-                          {formatINR(Math.abs(party.supplierOutstanding))}
+                          {formatINR(Math.abs(party.supplierOutstanding || 0))}
                         </span>
                       </span>
                     </div>
@@ -232,7 +262,7 @@ const OutstandingPartiesList = ({
         )}
       </div>
 
-      {/* Minimal Footer */}
+      {/* Footer */}
       <div className="flex-none py-3 mb-1 px-4 bg-slate-50 border border-b-2 border-gray-300 rounded-b-sm shadow-lg">
         <div className="flex items-center justify-between">
           <button
