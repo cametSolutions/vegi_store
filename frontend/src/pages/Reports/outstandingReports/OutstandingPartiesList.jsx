@@ -9,6 +9,7 @@ import {
   Filter,
   ArrowUpRight,
   ArrowDownLeft,
+  X,
 } from "lucide-react";
 import { formatINR } from "../../../../../shared/utils/currency";
 import ErrorDisplay from "@/components/errors/ErrorDisplay";
@@ -156,9 +157,17 @@ const OutstandingPartiesList = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search..."
-              className="w-full pl-9 pr-3 py-2.5 bg-slate-200 border border-transparent focus:bg-white focus:border-sky-200 focus:ring-4 focus:ring-sky-50 rounded-sm text-slate-700 text-sm placeholder:text-slate-400 focus:outline-none transition-all duration-200"
+              className="w-full pl-9 pr-8 py-2.5 bg-slate-200 border border-transparent focus:bg-white focus:border-sky-200 focus:ring-4 focus:ring-sky-50 rounded-sm text-slate-700 text-sm placeholder:text-slate-400 focus:outline-none transition-all duration-200"
               disabled={isLoading || isError}
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-300/50 rounded-full transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </div>

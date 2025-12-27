@@ -34,7 +34,7 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 20;
-  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.TODAY);
+  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.THIS_MONTH);
 
   // 2. Set Default Date Range
   useEffect(() => {
@@ -228,7 +228,7 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
             <>
               {/* Scrollable Table Body */}
               <div className="flex-1 overflow-y-auto custom-scrollbar relative">
-                <table className="w-full table-fixed border-collapse">
+                <table className="w-full h-full table-fixed border-collapse">
                   <TableColGroup />
                   <thead>
                     <tr className="border-b border-slate-300 bg-slate-50">
@@ -300,6 +300,10 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                                     ? "By Purchase"
                                     : txn.transactionType === "payment"
                                     ? "By Payment"
+                                    : txn.transactionType === "sales_return"
+                                    ? "By Sales Return"
+                                    : txn.transactionType === "purchase_return"
+                                    ? "By Purchase Return"
                                     : txn.transactionType}
                                 </span>
                                 {txn.transactionNumber && (
@@ -333,32 +337,29 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                         </tr>
                       </React.Fragment>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Fixed Footer: Total Closing Balance (Always Visible) */}
-              {(pagination.page === pagination.totalPages ||
-                pagination.totalPages === 0) && (
-                <div className="flex-none border-t-2 border-slate-300 bg-slate-50 z-30 shadow-[0_-2px_4px_rgba(0,0,0,0.02)]">
-                  <table className="w-full table-fixed">
-                    <TableColGroup />
+                    {/* Spacer row to push footer to bottom */}
+                    <tr className="h-full border-none bg-white">
+                      <td colSpan={4} className="p-0"></td>
+                    </tr>
+                </tbody>
+                  {(pagination.page === pagination.totalPages ||
+                    pagination.totalPages === 0) && (
                     <tfoot>
                       <tr>
                         <td
                           colSpan={2}
-                          className="px-4 py-3 text-right text-xs font-bold text-slate-800 uppercase tracking-tight border-r border-slate-300"
+                          className="sticky bottom-0 z-30 px-4 py-3 text-right text-xs font-bold text-slate-800 uppercase tracking-tight border-r border-t-2 border-slate-300 bg-slate-50"
                         >
                           Total Closing Balance
                         </td>
-                        <td className="px-4 py-3 text-right text-sm font-bold text-indigo-700 font-mono tracking-tight border-r border-slate-300 bg-indigo-50/20">
+                        <td className="sticky bottom-0 z-30 px-4 py-3 text-right text-sm font-bold text-indigo-700 font-mono tracking-tight border-r border-t-2 border-slate-300 bg-indigo-50">
                           {statementData.summary?.closingBalance > 0
                             ? formatINR(
                                 Math.abs(statementData.summary.closingBalance)
                               )
                             : ""}
                         </td>
-                        <td className="px-4 py-3 text-right text-sm font-bold text-indigo-700 font-mono tracking-tight bg-indigo-50/20">
+                        <td className="sticky bottom-0 z-30 px-4 py-3 text-right text-sm font-bold text-indigo-700 font-mono tracking-tight border-t-2 border-slate-300 bg-indigo-50">
                           {statementData.summary?.closingBalance < 0
                             ? formatINR(
                                 Math.abs(statementData.summary.closingBalance)
@@ -367,9 +368,12 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                         </td>
                       </tr>
                     </tfoot>
-                  </table>
-                </div>
-              )}
+                  )}
+                </table>
+              </div>
+
+
+
 
               {/* Pagination Footer */}
               <div className="flex-none px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between z-40">
