@@ -80,6 +80,9 @@ export const getAccountSummaryReport = async (req, res) => {
       parsedEndDate
     );
 
+    console.log("dirty status",dirtyStatus);
+    
+
     let serviceResult;
     let pathUsed;
 
