@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { api } from "@/api/client/apiClient";
-import { formatDateShort } from "../../../../../shared/utils/date";
+import { formatDateShort } from "../../../../../../shared/utils/date";
 
 const AccountLedgerDashboard = () => {
   const [ledgerData, setLedgerData] = useState([]);

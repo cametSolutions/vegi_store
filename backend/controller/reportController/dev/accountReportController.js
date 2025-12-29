@@ -1,6 +1,6 @@
-import AccountLedger from "../../model/AccountLedgerModel.js";
-import AccountMonthlyBalance from "../../model/AccountMonthlyBalanceModel.js";
-import AccountMaster from "../../model/masters/AccountMasterModel.js";
+import AccountLedger from "../../../model/AccountLedgerModel.js";
+import AccountMonthlyBalance from "../../../model/AccountMonthlyBalanceModel.js";
+import AccountMaster from "../../../model/masters/AccountMasterModel.js";
 
 
 export const getAccountLedgerReport = async (req, res) => {

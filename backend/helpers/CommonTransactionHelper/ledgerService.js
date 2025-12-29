@@ -24,6 +24,9 @@ export const createAccountLedger = async (data, session) => {
       createdBy,
     } = data;
 
+    console.log("call came herr");
+    
+
     // Get last running balance for this account
     const lastBalance = await AccountLedger.getLastBalance(
       account,
@@ -63,6 +66,10 @@ export const createAccountLedger = async (data, session) => {
       ],
       { session }
     );
+
+
+    console.log('leger entry ',ledgerEntry);
+    
 
     return ledgerEntry[0];
   } catch (error) {
