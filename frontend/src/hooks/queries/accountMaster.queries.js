@@ -107,7 +107,8 @@ export const accountMasterQueries = {
   transactionType,
   page = 1,
   limit = 50,
-  searchTerm
+  searchTerm,
+  summaryOnly=false
 ) =>
   queryOptions({
     queryKey: [
@@ -123,6 +124,7 @@ export const accountMasterQueries = {
       page,
       limit,
       searchTerm,
+      summaryOnly
     ],
     queryFn: ({ pageParam = 0 }) => {
       // // ✅ DEBUG LOG
@@ -148,7 +150,8 @@ export const accountMasterQueries = {
         transactionType,
         page,
         limit,
-        searchTerm
+        searchTerm,
+        summaryOnly
       );
     },
     enabled: !!company, // Ensure company exists

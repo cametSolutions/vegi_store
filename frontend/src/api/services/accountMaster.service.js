@@ -138,7 +138,8 @@ export const accountMasterService = {
     transactionType,
     page = 1,
     limit = 50,
-    searchTerm
+    searchTerm,
+    summaryOnly
   ) => {
     try {
       const response = await api.get("/reports/account-statement", {
@@ -152,6 +153,7 @@ export const accountMasterService = {
           page,
           limit,
           searchTerm,
+          summaryOnly
         },
       });
       return response.data;

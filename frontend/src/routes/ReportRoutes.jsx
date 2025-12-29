@@ -14,6 +14,7 @@ import ItemSummary from "@/pages/Reports/itemReports/org/ItemSummary";
 import OutstandingSummary from "@/pages/Reports/outstandingReports/OutstandingSummary";
 import StockRegister from "@/pages/Reports/itemReports/org/StockRegister";
 import AccountStatement from "@/pages/Reports/accountReports/org/AccountStatement";
+import AccountSummary from "@/pages/Reports/accountReports/org/AccountSummary";
 
 export default function TransactionRoutes() {
   return (
@@ -37,6 +38,7 @@ export default function TransactionRoutes() {
 
       <Route path="account-report" element={<AccountLedgerDashboard />} />
       <Route path="account-statement" element={<AccountStatement />} />
+      <Route path="account-summary" element={<AccountSummary />} />
       <Route
         path="account-monthly-report"
         element={<AccountMonthlyBalanceDashboard />}

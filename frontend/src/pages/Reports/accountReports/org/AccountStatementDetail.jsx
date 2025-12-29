@@ -103,7 +103,7 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
 
       let dr = 0;
       let cr = 0;
-      const amount = Math.abs(txn.amount);
+      const amount = Math.abs(txn.effectiveAmount);
       const type = txn.transactionType?.toLowerCase();
 
       const drTypes = ["sale", "purchase_return", "payment", "sales_payment"];
@@ -341,39 +341,54 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                     <tr className="h-full border-none bg-white">
                       <td colSpan={4} className="p-0"></td>
                     </tr>
-                </tbody>
-                  {(pagination.page === pagination.totalPages ||
-                    pagination.totalPages === 0) && (
-                    <tfoot>
-                      <tr>
-                        <td
-                          colSpan={2}
-                          className="sticky bottom-0 z-30 px-4 py-3 text-right text-xs font-bold text-slate-800 uppercase tracking-tight border-r border-t-2 border-slate-300 bg-slate-50"
-                        >
-                          Total Closing Balance
-                        </td>
-                        <td className="sticky bottom-0 z-30 px-4 py-3 text-right text-sm font-bold text-indigo-700 font-mono tracking-tight border-r border-t-2 border-slate-300 bg-indigo-50">
-                          {statementData.summary?.closingBalance > 0
-                            ? formatINR(
-                                Math.abs(statementData.summary.closingBalance)
-                              )
-                            : ""}
-                        </td>
-                        <td className="sticky bottom-0 z-30 px-4 py-3 text-right text-sm font-bold text-indigo-700 font-mono tracking-tight border-t-2 border-slate-300 bg-indigo-50">
-                          {statementData.summary?.closingBalance < 0
-                            ? formatINR(
-                                Math.abs(statementData.summary.closingBalance)
-                              )
-                            : ""}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  )}
+                  </tbody>
+                  {(pagination.page === pagination.totalPages || pagination.totalPages === 0) && (
+  <tfoot>
+    {/* 1. Total Dr/Cr Row - Fixed above the Closing Balance */}
+    {/* We use bottom-[45px] because the row below it is approx 45px tall */}
+    <tr>
+      <td
+        colSpan={2}
+        className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-600 uppercase tracking-tight border-r border-t-2 border-slate-300 bg-slate-50"
+      >
+        Total Amount
+      </td>
+      <td className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-700 font-mono tracking-tight border-r border-t-2 border-slate-300 bg-slate-50">
+        {statementData.summary?.totalDebit > 0
+          ? formatINR(statementData.summary.totalDebit)
+          : "0.00"}
+      </td>
+      <td className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-700 font-mono tracking-tight border-t-2 border-slate-300 bg-slate-50">
+        {statementData.summary?.totalCredit > 0
+          ? formatINR(statementData.summary.totalCredit)
+          : "0.00"}
+      </td>
+    </tr>
+
+    {/* 2. Total Closing Balance Row - Fixed at the very bottom */}
+    <tr>
+      <td
+        colSpan={2}
+        className="sticky bottom-0 z-30 px-4 py-3 text-right text-xs font-bold text-slate-800 uppercase tracking-tight border-r border-t border-slate-300 bg-indigo-50"
+      >
+        Total Closing Balance
+      </td>
+      <td className="sticky bottom-0 z-30 px-4 py-3 text-right text-sm font-bold text-indigo-700 font-mono tracking-tight border-r border-t border-slate-300 bg-indigo-50">
+        {statementData.summary?.closingBalance > 0
+          ? formatINR(Math.abs(statementData.summary.closingBalance))
+          : ""}
+      </td>
+      <td className="sticky bottom-0 z-30 px-4 py-3 text-right text-sm font-bold text-indigo-700 font-mono tracking-tight border-t border-slate-300 bg-indigo-50">
+        {statementData.summary?.closingBalance < 0
+          ? formatINR(Math.abs(statementData.summary.closingBalance))
+          : ""}
+      </td>
+    </tr>
+  </tfoot>
+)}
+
                 </table>
               </div>
-
-
-
 
               {/* Pagination Footer */}
               <div className="flex-none px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between z-40">

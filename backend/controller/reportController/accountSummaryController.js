@@ -8,12 +8,11 @@ import {
 import AccountLedger from '../../model/AccountLedgerModel.js';
 import mongoose from 'mongoose';
 
-
 const toObjectId = (id) => new mongoose.Types.ObjectId(id);
 
 export const getAccountSummaryReport = async (req, res) => {
   const startTime = Date.now();
-  
+
   try {
     // STEP 1: Extract and validate parameters
     const { 
@@ -21,13 +20,14 @@ export const getAccountSummaryReport = async (req, res) => {
       endDate, 
       company, 
       branch, 
-      account,        // ✅ NEW: Single account ID (optional)
+      account,        // ✅ Single account ID (optional)
       transactionType, 
       page = 1, 
       limit = 50, 
-      searchTerm 
+      searchTerm,
+      summaryOnly = false  // ✅ NEW: Skip returning transactions, only return totals
     } = req.query;
-    
+
     if (!startDate || !endDate || !company || !branch) {
       return res.status(400).json({ error: 'Missing required parameters: startDate, endDate, company, branch' });
     }
@@ -36,7 +36,8 @@ export const getAccountSummaryReport = async (req, res) => {
     const limitNum = Math.min(parseInt(limit, 10) || 50, 200);
     const parsedStartDate = new Date(startDate);
     const parsedEndDate = new Date(endDate);
-    const singleAccount = account ? toObjectId(account) : null; // ✅ Single account mode
+    const singleAccount = account ? toObjectId(account) : null;
+    const parsedSummaryOnly = summaryOnly === 'true' || summaryOnly === true;
 
     // STEP 2: Get account IDs for dirty check
     const baseMatch = { 
@@ -44,15 +45,15 @@ export const getAccountSummaryReport = async (req, res) => {
       branch,
       transactionDate: { $gte: parsedStartDate, $lte: parsedEndDate }
     };
-    
+
     if (singleAccount) {
-      baseMatch.account = singleAccount; // ✅ Single account filter
+      baseMatch.account = singleAccount;
     }
-    if (transactionType === 'sale') baseMatch.transactionType = { $in: ['sale', 'purchase_return'] };
-    else if (transactionType === 'purchase') baseMatch.transactionType = { $in: ['purchase', 'sales_return'] };
+    if (transactionType === 'sale') baseMatch.transactionType = { $in: ['sale', 'purchasereturn'] };
+    else if (transactionType === 'purchase') baseMatch.transactionType = { $in: ['purchase', 'salesreturn'] };
 
     const accountIdsForCheck = await AccountLedger.distinct('account', baseMatch);
-    
+
     if (accountIdsForCheck.length === 0) {
       return res.json({
         items: [],
@@ -64,7 +65,8 @@ export const getAccountSummaryReport = async (req, res) => {
           startDate: parsedStartDate, 
           endDate: parsedEndDate, 
           transactionType: transactionType || 'all', 
-          searchTerm: searchTerm || null 
+          searchTerm: searchTerm || null,
+          summaryOnly: parsedSummaryOnly
         }
       });
     }
@@ -88,7 +90,8 @@ export const getAccountSummaryReport = async (req, res) => {
       serviceResult = await getSimpleLedgerReport(
         company, branch, parsedStartDate, parsedEndDate,
         transactionType || null, pageNum, limitNum, searchTerm?.trim() || null,
-        singleAccount // ✅ Pass single account
+        singleAccount,
+        parsedSummaryOnly
       );
     } 
     else if (dirtyStatus.isDirty && !dirtyStatus.needsFullRefold) {
@@ -97,7 +100,8 @@ export const getAccountSummaryReport = async (req, res) => {
       serviceResult = await getHybridLedgerReport(
         company, branch, parsedStartDate, parsedEndDate,
         transactionType || null, pageNum, limitNum, searchTerm?.trim() || null,
-        singleAccount
+        singleAccount,
+        parsedSummaryOnly
       );
     } 
     else {
@@ -106,7 +110,8 @@ export const getAccountSummaryReport = async (req, res) => {
       serviceResult = await refoldLedgersWithAdjustments(
         company, branch, parsedStartDate, parsedEndDate,
         transactionType || null, pageNum, limitNum, searchTerm?.trim() || null,
-        singleAccount
+        singleAccount,
+        parsedSummaryOnly
       );
     }
 
@@ -114,25 +119,29 @@ export const getAccountSummaryReport = async (req, res) => {
     const shapedItems = serviceResult.items.map(item => ({
       accountId: item.accountId,
       accountName: item.accountName,
+      email: item.email || null,           // ✅ Include email
+      phoneNo: item.phoneNo || null,           // ✅ Include phoneNo
       openingBalance: item.openingBalance,
       summary: {
         totalDebit: item.summary.totalDebit,
         totalCredit: item.summary.totalCredit,
         closingBalance: item.summary.closingBalance,
-        transactionCount: item.summary.transactionCount
+        transactionCount: item.summary.transactionCount,
+        breakdown: item.summary.breakdown
       },
-      transactions: item.transactions
+      ...(parsedSummaryOnly ? {} : { transactions: item.transactions })
     }));
 
     const executionTime = Date.now() - startTime;
-    console.log(`Account Summary Report - ${shapedItems.length} accounts in ${executionTime}ms [${pathUsed}]${singleAccount ? ' (SINGLE)' : ''}`);
+    console.log(`Account Summary Report - ${shapedItems.length} accounts in ${executionTime}ms [${pathUsed}]${singleAccount ? ' (SINGLE)' : ''}${parsedSummaryOnly ? ' (SUMMARY)' : ''}`);
 
     res.json({
       items: shapedItems,
       pagination: serviceResult.pagination,
       filters: {
         ...serviceResult.filters,
-        account: singleAccount ? singleAccount.toString() : null
+        account: singleAccount ? singleAccount.toString() : null,
+        summaryOnly: parsedSummaryOnly
       },
       ...(process.env.NODE_ENV === 'development' && {
         debug: { executionTimeMs: executionTime, pathUsed, reason: dirtyStatus.reason }
@@ -147,4 +156,3 @@ export const getAccountSummaryReport = async (req, res) => {
     });
   }
 };
-
