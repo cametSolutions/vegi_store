@@ -113,6 +113,7 @@ app.use("/api/branch", authMiddleware, branchRoute);
 app.use("/api/user", authMiddleware, userRoute);
 app.use("/api/pricelevel", authMiddleware, pricelevelRoute);
 app.use("/api/accountmaster", authMiddleware, acccountmasterRoute);
+app.use("/api/transaction/stock_adjustment", authMiddleware,stockAdjustmentRoutes);
 app.use("/api/transaction/sale", authMiddleware, saleRoutes);
 app.use("/api/transaction/purchase", authMiddleware, purchaseRoutes);
 app.use("/api/transaction/sales_return", authMiddleware, salesReturnRoutes);
@@ -123,7 +124,7 @@ app.use("/api/dev", authMiddleware, devRoutes);
 app.use("/api/job", authMiddleware, jobRoutes);
 app.use("/api/reports", authMiddleware, reportRoutes);
 app.use("/api/revaluation", authMiddleware, revaluationRoute);
-app.use("/api/transaction/stock_adjustment", authMiddleware,stockAdjustmentRoutes);
+
 // ----------------- Production Build Serving -----------------
 if (process.env.NODE_ENV === "production") {
   console.log("Environment:", process.env.NODE_ENV);

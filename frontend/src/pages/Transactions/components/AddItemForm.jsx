@@ -240,36 +240,57 @@ const AddItemForm = ({
     }
   };
 
-  const handleAddClick = () => {
-    // Validate required fields
-    if (!localItem.itemCode || !localItem.itemName || !localItem.item || !localItem.quantity) {
-      toast.error("Validation Error", {
-        description: "Name, Code, and Quantity are required",
-      });
-      return;
-    }
+// Update the handleAddClick function in your AddItemForm component
 
-    const newItems = addItem(items, localItem);
-    updateTransactionField("items", newItems);
-
-    setLocalItem({
-      item: null,
-      itemCode: "",
-      itemName: "",
-      unit: units[0]?.value || "",
-      priceLevels: [],
-      quantity: "",
-      rate: "",
-      baseAmount: "0",
-      amountAfterTax: "0",
-      taxable: false,
-      taxRate: "0",
-      taxAmount: "0",
+const handleAddClick = () => {
+  // Validate required fields
+  if (!localItem.itemCode || !localItem.itemName || !localItem.item || !localItem.quantity) {
+    toast.error("Validation Error", {
+      description: "Name, Code, and Quantity are required",
     });
-    setSearchTerm("");
+    return;
+  }
 
-    setTimeout(() => codeInputRef.current?.focus(), 0);
+  // ✅ CALCULATE AMOUNTS BEFORE ADDING
+  const quantity = parseFloat(localItem.quantity) || 0;
+  const rate = parseFloat(localItem.rate) || 0;
+  const baseAmount = quantity * rate;
+  const taxRate = parseFloat(localItem.taxRate) || 0;
+  const taxAmount = localItem.taxable ? (baseAmount * taxRate) / 100 : 0;
+  const amountAfterTax = baseAmount + taxAmount;
+
+  // Create item with calculated amounts
+  const itemToAdd = {
+    ...localItem,
+    quantity: localItem.quantity,
+    rate: localItem.rate,
+    baseAmount: baseAmount.toFixed(2),
+    taxAmount: taxAmount.toFixed(2),
+    amountAfterTax: amountAfterTax.toFixed(2),
   };
+
+  const newItems = addItem(items, itemToAdd);
+  updateTransactionField("items", newItems);
+
+  // Reset form
+  setLocalItem({
+    item: null,
+    itemCode: "",
+    itemName: "",
+    unit: units[0]?.value || "",
+    priceLevels: [],
+    quantity: "",
+    rate: "",
+    baseAmount: "0",
+    amountAfterTax: "0",
+    taxable: false,
+    taxRate: "0",
+    taxAmount: "0",
+  });
+  setSearchTerm("");
+
+  setTimeout(() => codeInputRef.current?.focus(), 0);
+};
 
   const handleAddButtonKeyDown = (e) => {
     if (e.key === "Enter") {

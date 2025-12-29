@@ -1,10 +1,13 @@
 // controllers/stockAdjustmentController.js
 import mongoose from "mongoose";
 import StockAdjustment from "../../model/StockAdjustmentModel.js";
+
 import {
   processStockAdjustment,
   revertStockAdjustment,
 } from "../../helpers/stockAdjustmentHelpers/stockAdjustmentProcessor.js";
+
+import ItemMaster from "../../model/masters/ItemMasterModel.js";
 
 /**
  * GET /api/stock-adjustment/getall
@@ -184,19 +187,34 @@ export const getStockAdjustmentDetail = async (req, res) => {
  * PUT /api/stock-adjustment/edit/:adjustmentId
  * Edit stock adjustment
  */
+// controller/StockAdjustmentController.js
+
+// controller/StockAdjustmentController.js
+
 export const editStockAdjustment = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const { adjustmentId } = req.params;
+    const { id } = req.params;
     const updatedData = req.body;
     const userId = req.user.id;
 
-    // Fetch original
-    const originalAdjustment = await StockAdjustment.findById(
-      adjustmentId
-    ).session(session);
+    console.log("🔵 Backend - Edit received");
+    console.log("🔵 Backend - ID:", id);
+
+    if (!id || id === "undefined") {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: "Invalid adjustment ID",
+      });
+    }
+
+    // ✅ Fetch original adjustment
+    const originalAdjustment = await StockAdjustment.findById(id).session(
+      session
+    );
 
     if (!originalAdjustment) {
       await session.abortTransaction();
@@ -206,7 +224,9 @@ export const editStockAdjustment = async (req, res) => {
       });
     }
 
-    // Validate
+    console.log("✅ Found original adjustment");
+
+    // ✅ Validate - can't change company/branch
     if (
       originalAdjustment.company.toString() !== updatedData.company ||
       originalAdjustment.branch.toString() !== updatedData.branch
@@ -218,49 +238,118 @@ export const editStockAdjustment = async (req, res) => {
       });
     }
 
-    // Revert old
-    await revertStockAdjustment(originalAdjustment, userId, session);
+    // ✅ STEP 1: Revert old stock changes (ItemMaster only)
+    console.log("🔄 Step 1: Reverting old stock changes");
+    
+    for (const oldItem of originalAdjustment.items) {
+      const item = await ItemMaster.findById(oldItem.item).session(session);
 
-    // Process new
-    const result = await processStockAdjustment(
-      {
-        ...updatedData,
-        adjustmentNumber: originalAdjustment.adjustmentNumber,
-      },
-      userId,
-      session
-    );
+      if (!item) {
+        throw new Error(`ItemMaster not found: ${oldItem.itemName}`);
+      }
 
-    // Update document
-    originalAdjustment.adjustmentType = result.stockAdjustment.adjustmentType;
-    originalAdjustment.adjustmentDate = result.stockAdjustment.adjustmentDate;
-    originalAdjustment.reference = result.stockAdjustment.reference;
-    originalAdjustment.reason = result.stockAdjustment.reason;
-    originalAdjustment.items = result.stockAdjustment.items;
-    originalAdjustment.totalAmount = result.stockAdjustment.totalAmount;
+      const branchStock = item.stock.find(
+        (s) => s.branch.toString() === originalAdjustment.branch.toString()
+      );
+
+      if (!branchStock) {
+        throw new Error(
+          `Stock record not found for item: ${oldItem.itemName}`
+        );
+      }
+
+      // Reverse the old adjustment
+      const reverseQty =
+        originalAdjustment.adjustmentType === "add"
+          ? -oldItem.quantity // If it was added, subtract it now
+          : oldItem.quantity; // If it was removed, add it back
+
+      branchStock.currentStock += reverseQty;
+
+      console.log(
+        `🔄 Reverted ${oldItem.itemName}: ${originalAdjustment.adjustmentType === "add" ? "-" : "+"}${oldItem.quantity} = ${branchStock.currentStock}`
+      );
+
+      await item.save({ session });
+    }
+
+    console.log("✅ Step 1 complete: Old stock reverted");
+
+    // ✅ STEP 2: Apply new stock changes (ItemMaster only)
+    console.log("🔄 Step 2: Applying new stock changes");
+
+    for (const newItem of updatedData.items) {
+      const item = await ItemMaster.findById(newItem.item).session(session);
+
+      if (!item) {
+        throw new Error(`ItemMaster not found: ${newItem.itemName}`);
+      }
+
+      const branchStock = item.stock.find(
+        (s) => s.branch.toString() === updatedData.branch.toString()
+      );
+
+      if (!branchStock) {
+        throw new Error(
+          `Stock record not found for item: ${newItem.itemName}`
+        );
+      }
+
+      // Apply new adjustment
+      const adjustQty =
+        updatedData.adjustmentType === "add"
+          ? newItem.quantity // Add to stock
+          : -newItem.quantity; // Remove from stock
+
+      // Check for negative stock when removing
+      if (updatedData.adjustmentType === "remove") {
+        if (branchStock.currentStock < newItem.quantity) {
+          throw new Error(
+            `Insufficient stock for ${newItem.itemName}. Available: ${branchStock.currentStock}, Required: ${newItem.quantity}`
+          );
+        }
+      }
+
+      branchStock.currentStock += adjustQty;
+
+      console.log(
+        `✅ Updated ${newItem.itemName}: ${updatedData.adjustmentType === "add" ? "+" : "-"}${newItem.quantity} = ${branchStock.currentStock}`
+      );
+
+      await item.save({ session });
+    }
+
+    console.log("✅ Step 2 complete: New stock applied");
+
+    // ✅ STEP 3: Update stock adjustment document (don't touch ItemLedger)
+    console.log("🔄 Step 3: Updating stock adjustment document");
+
+    originalAdjustment.adjustmentType = updatedData.adjustmentType;
+    originalAdjustment.adjustmentDate = updatedData.adjustmentDate;
+    originalAdjustment.reference = updatedData.reference || "";
+    originalAdjustment.reason = updatedData.reason || "";
+    originalAdjustment.items = updatedData.items;
+    originalAdjustment.totalAmount = updatedData.totalAmount;
     originalAdjustment.updatedBy = userId;
 
     await originalAdjustment.save({ session });
 
-    // Delete duplicate
-    await StockAdjustment.deleteOne({ _id: result.stockAdjustment._id }).session(
-      session
-    );
+    console.log("✅ Step 3 complete: Document updated");
 
+    // ✅ Commit transaction
     await session.commitTransaction();
+
+    console.log("✅ Stock adjustment edited successfully");
 
     res.status(200).json({
       success: true,
       message: "Stock adjustment updated successfully",
-      data: {
-        stockAdjustment: originalAdjustment,
-        itemLedgers: result.itemLedgers,
-      },
+      data: originalAdjustment,
     });
   } catch (error) {
     await session.abortTransaction();
 
-    console.error("Stock adjustment edit error:", error);
+    console.error("❌ Backend - Stock adjustment edit error:", error);
 
     if (error.message.includes("Insufficient stock")) {
       return res.status(422).json({
@@ -278,6 +367,8 @@ export const editStockAdjustment = async (req, res) => {
     session.endSession();
   }
 };
+
+
 
 /**
  * DELETE /api/stock-adjustment/delete/:adjustmentId

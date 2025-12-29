@@ -31,6 +31,27 @@ const stockAdjustmentItemSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  // ✅ ADD THESE MISSING FIELDS
+  baseAmount: {
+    type: Number,
+    default: 0,
+  },
+  amountAfterTax: {
+    type: Number,
+    default: 0,
+  },
+  taxable: {
+    type: Boolean,
+    default: false,
+  },
+  taxRate: {
+    type: Number,
+    default: 0,
+  },
+  taxAmount: {
+    type: Number,
+    default: 0,
+  },
   remarks: String,
 });
 
@@ -150,5 +171,4 @@ stockAdjustmentSchema.pre("save", function (next) {
   next();
 });
 
-// ✅ Export the schema (not the model)
 export default stockAdjustmentSchema;

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import AddItemFormComponent from "../Transactions/components/AddItemForm";
 import ItemsTableComponent from "../Transactions/components/ItemsTable";
-import TransactionActionsComponent from "../Transactions/components/TransactionActions";
+import TransactionActionsComponent from "../Transactions/components/StockTransactionAction";
 import TransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
 import CustomMoonLoader from "../../components/loaders/CustomMoonLoader";
 import { useStockAdjustment } from "../stock/hooks/useStockAdjustment ";
@@ -12,7 +12,7 @@ import { useSelector } from "react-redux";
 const TransactionHeader = React.memo(TransactionHeaderComponent);
 const AddItemForm = React.memo(AddItemFormComponent);
 const ItemsTable = React.memo(ItemsTableComponent);
-const TransactionActions = React.memo(TransactionActionsComponent);
+const StockTransactionAction = React.memo(TransactionActionsComponent);
 
 const CreateStockAdjustment = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -157,7 +157,7 @@ useEffect(() => {
 
       {/* Action Buttons - Fixed at bottom - ✅ ALWAYS VISIBLE */}
       <div className="flex-shrink-0 bg-white border-t border-gray-200">
-        <TransactionActions
+        <StockTransactionAction
           onSave={onSave}
           transactionData={stockAdjustmentData}
           onLoadingChange={setIsLoading}

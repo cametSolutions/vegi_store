@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import AddItemFormComponent from "../Transactions/components/AddItemForm";
 import ItemsTableComponent from "../Transactions/components/ItemsTable";
-import TransactionActionsComponent from "../Transactions/components/TransactionActions";
+import TransactionActionsComponent from "../Transactions/components/StockTransactionAction";
 import TransactionHeaderComponent from "../CommonTransactionComponents/TransactionHeader";
 import CustomMoonLoader from "../../components/loaders/CustomMoonLoader";
 import { useStockAdjustment } from "../stock/hooks/useStockAdjustment ";
@@ -19,7 +19,9 @@ import {
 const TransactionHeader = React.memo(TransactionHeaderComponent);
 const AddItemForm = React.memo(AddItemFormComponent);
 const ItemsTable = React.memo(ItemsTableComponent);
-const TransactionActions = React.memo(TransactionActionsComponent);
+const StockTransactionAction = React.memo(TransactionActionsComponent);
+
+// EditStockAdjustment.jsx
 
 const EditStockAdjustment = ({
   editAdjustmentData,
@@ -48,20 +50,22 @@ const EditStockAdjustment = ({
     (state) => state.companyBranch?.selectedBranch
   );
 
-  // Set initial edit mode state
+  // ✅ Set initial edit mode state with _id
   useEffect(() => {
     updateStockAdjustmentData({
+      _id: editAdjustmentData._id, // ✅ Add this
       isEditMode: true,
       editAdjustmentId: editAdjustmentData._id,
     });
 
     dispatch(
       addStockAdjustmentDataToStore({
+        _id: editAdjustmentData._id, // ✅ Add this
         isEditMode: true,
         editAdjustmentId: editAdjustmentData._id,
       })
     );
-  }, [editAdjustmentData._id]);
+  }, [editAdjustmentData._id, updateStockAdjustmentData, dispatch]);
 
   // Fetch stock adjustment details
   const {
@@ -76,16 +80,19 @@ const EditStockAdjustment = ({
     ),
   });
 
-  // Update data when response changes
+  // ✅ Update data when response changes - preserve _id
   useEffect(() => {
     if (adjustmentResponse) {
+      console.log("🟢 Adjustment response:", adjustmentResponse);
+      
       updateStockAdjustmentData({
         ...adjustmentResponse,
+        _id: adjustmentResponse._id, // ✅ Explicitly set _id
         isEditMode: true,
         editAdjustmentId: editAdjustmentData._id,
       });
     }
-  }, [adjustmentResponse, updateStockAdjustmentData]);
+  }, [adjustmentResponse, updateStockAdjustmentData, editAdjustmentData._id]);
 
   // Handle error
   useEffect(() => {
@@ -111,6 +118,9 @@ const EditStockAdjustment = ({
   const { handleSave } = useStockAdjustmentActions(stockAdjustmentData, true);
 
   const onSave = async () => {
+    console.log("💾 onSave - stockAdjustmentData:", stockAdjustmentData);
+    console.log("💾 onSave - stockAdjustmentData._id:", stockAdjustmentData._id);
+    
     setIsLoading(true);
     const success = await handleSave();
     setIsLoading(false);
@@ -120,8 +130,6 @@ const EditStockAdjustment = ({
       onSuccess();
     }
   };
-
-  console.log("stockAdjustmentData in EditStockAdjustment:", stockAdjustmentData);
 
   return (
     <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
@@ -184,18 +192,17 @@ const EditStockAdjustment = ({
 
             {/* Add Item Form */}
             <AddItemForm
-  requireAccount={false} // ✅ Just add this line
-  items={stockAdjustmentData?.items}
-  branch={selectedBranchFromStore?._id}
-  company={selectedCompanyFromStore?._id}
-  priceLevel={null}
-  updateTransactionField={updateStockAdjustmentField}
-  addItem={addItem}
-  clickedItemInTable={clickedItemInTable}
-  transactionType={null}
-  account={null}
-/>
-
+              requireAccount={false}
+              items={stockAdjustmentData?.items}
+              branch={selectedBranchFromStore?._id}
+              company={selectedCompanyFromStore?._id}
+              priceLevel={null}
+              updateTransactionField={updateStockAdjustmentField}
+              addItem={addItem}
+              clickedItemInTable={clickedItemInTable}
+              transactionType={null}
+              account={null}
+            />
           </div>
 
           <div className="flex-1">
@@ -224,13 +231,14 @@ const EditStockAdjustment = ({
             </div>
 
             {/* Actions */}
-            <TransactionActions
+            <StockTransactionAction
               onSave={onSave}
               transactionData={stockAdjustmentData}
               onLoadingChange={setIsLoading}
               resetTransactionData={resetStockAdjustmentData}
               isEditMode={true}
               onCancel={handleCancel}
+              requireAccount={false}
             />
           </div>
         </div>
@@ -238,5 +246,8 @@ const EditStockAdjustment = ({
     </div>
   );
 };
+
+
+
 
 export default EditStockAdjustment;

@@ -23,7 +23,7 @@ export const stockAdjustmentMutations = {
 
       // Invalidate reports that depend on stock levels
       queryClient.invalidateQueries({
-        queryKey: ["reports"],
+        queryKey: ["reports"]
       });
 
       toast.success("Stock adjustment created successfully!");
@@ -38,49 +38,63 @@ export const stockAdjustmentMutations = {
     },
   }),
 
+
+
+
+
   update: (queryClient) => ({
-    mutationFn: ({ id, formData }) =>
-      stockAdjustmentServices.update(id, formData),
-
-    onSuccess: (response, variables) => {
-      const { company, branch, _id } = response?.data?.stockAdjustment;
-
-      // Invalidate specific stock adjustment query
-      queryClient.invalidateQueries({
-        queryKey: ["stockAdjustments", "getById", company, branch, _id],
-      });
-
-      // Invalidate stock adjustment list
-      queryClient.invalidateQueries({
-        queryKey: ["stockAdjustments", company, branch],
-      });
-
-      // Invalidate items since stock changed
-      queryClient.invalidateQueries({
-        queryKey: ["items"],
-      });
-
-      // Invalidate reports
-      queryClient.invalidateQueries({
-        queryKey: ["reports"],
-      });
-
-      toast.success("Stock adjustment updated successfully!");
-
-      // Also invalidate the specific adjustment query
-      queryClient.invalidateQueries({
-        queryKey: ["stockAdjustment", variables.id],
-      });
+    mutationFn: async ({ id, formData }) => {
+      console.log("🟡 ================================");
+      console.log("🟡 Mutation - mutationFn called");
+      console.log("🟡 Mutation - id:", id);
+      console.log("🟡 Mutation - id type:", typeof id);
+      console.log("🟡 Mutation - formData:", formData);
+      console.log("🟡 ================================");
+      
+      if (!id || id === "undefined") {
+        throw new Error("Invalid adjustment ID in mutation");
+      }
+      
+      const response = await stockAdjustmentServices.update(id, formData);
+      
+      console.log("🟡 Mutation - Response:", response);
+      
+      return response;
     },
 
-    onError: (error) => {
-      console.error("Stock adjustment update failed:", error);
+    onSuccess: (response, variables) => {
+      console.log("✅ ================================");
+      console.log("✅ Mutation Success");
+      console.log("✅ response:", response);
+      console.log("✅ variables:", variables);
+      console.log("✅ ================================");
+
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ["stockAdjustments"] });
+      queryClient.invalidateQueries({ queryKey: ["items"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+
+      toast.success("Stock adjustment updated successfully!");
+    },
+
+    onError: (error, variables) => {
+      console.error("❌ ================================");
+      console.error("❌ Mutation Error");
+      console.error("❌ error:", error);
+      console.error("❌ error.message:", error.message);
+      console.error("❌ error.response:", error.response);
+      console.error("❌ variables:", variables);
+      console.error("❌ ================================");
+      
       toast.error(
+        error?.message || 
         error?.response?.data?.message || 
         "Error updating stock adjustment. Please try again."
       );
     },
   }),
+
+
 
   delete: (queryClient) => ({
     mutationFn: ({ id, companyId, branchId }) =>

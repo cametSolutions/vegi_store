@@ -27,11 +27,19 @@ export const processStockAdjustment = async (
       adjustmentData.adjustmentNumber ||
       (await generateStockAdjustmentNumber(company, branch, session));
 
-    // Step 4: Process items
-    const processedItems = items.map((item) => ({
-      ...item,
-      amount: item.quantity * (item.rate || 0),
-    }));
+    // Step 4: Process items WITH all required fields for ledger
+    const processedItems = items.map((item) => {
+      const baseAmount = item.quantity * (item.rate || 0);
+      
+      return {
+        ...item,
+        amount: baseAmount,
+        baseAmount: baseAmount,        // ✅ Required for ItemLedger
+        amountAfterTax: baseAmount,    // ✅ Required for ItemLedger
+        taxRate: 0,                    // ✅ Required for ItemLedger
+        taxAmount: 0,                  // ✅ Required for ItemLedger
+      };
+    });
 
     const totalAmount = processedItems.reduce(
       (sum, item) => sum + item.amount,
@@ -55,12 +63,12 @@ export const processStockAdjustment = async (
 
     const createdAdjustment = stockAdjustment[0];
 
-    // Step 6: Create item ledgers
+    // Step 6: Create item ledgers (items now have all required fields)
     const itemLedgers = await createItemLedgers(
       {
         company: createdAdjustment.company,
         branch: createdAdjustment.branch,
-        items: createdAdjustment.items,
+        items: createdAdjustment.items, // ✅ Now includes baseAmount, amountAfterTax, taxRate, taxAmount
         transactionId: createdAdjustment._id,
         transactionNumber: createdAdjustment.adjustmentNumber,
         transactionDate: createdAdjustment.adjustmentDate,
@@ -138,11 +146,12 @@ export const revertStockAdjustment = async (
     await updateStock(items, reverseBehavior.stockDirection, branch, session);
 
     // Create reversing ledgers
+    // Note: items from originalAdjustment already have baseAmount, amountAfterTax, etc.
     const reversingItemLedgers = await createItemLedgers(
       {
         company: company,
         branch: branch,
-        items: items,
+        items: items, // ✅ Already has all required fields from original creation
         transactionId: originalAdjustment._id,
         transactionNumber: `REV-${originalAdjustment.adjustmentNumber}`,
         transactionDate: new Date(),

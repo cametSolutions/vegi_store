@@ -1,14 +1,15 @@
 // api/services/stockAdjustmentServices.js
 import axios from "axios";
-import { createResourceApi } from "../client/apiFactory"; // NEW
 import { api } from "../client/apiClient";
 
 export const stockAdjustmentServices = {
   create: async (formData) => {
     try {
-      console.log("📤 API URL:", "/stock-adjustment/create");
+      console.log("📤 Creating stock adjustment");
       console.log("📦 Payload:", formData);
-      const response = await api.post("/stock-adjustment/create", formData); // CHANGED
+      
+      const response = await api.post("/transaction/stock_adjustment/create", formData);
+      
       console.log("✅ Response:", response.data);
       return response.data;
     } catch (error) {
@@ -31,7 +32,7 @@ export const stockAdjustmentServices = {
     adjustmentType = ""
   ) => {
     try {
-      const response = await createResourceApi.get("/stock-adjustment/getall", { // CHANGED
+      const response = await api.get("/transaction/stock_adjustment/getall", {
         params: {
           page: pageParam,
           limit,
@@ -52,11 +53,10 @@ export const stockAdjustmentServices = {
     }
   },
 
-  // Update ALL methods to use stockAdjustmentApi instead of api
   getById: async (companyId, branchId, adjustmentId) => {
     try {
-      const response = await createResourceApi.get(
-        `/stock-adjustment/getDetails/${adjustmentId}`,
+      const response = await api.get(
+        `/transaction/stock_adjustment/getDetails/${adjustmentId}`,
         {
           params: { companyId, branchId },
         }
@@ -70,25 +70,67 @@ export const stockAdjustmentServices = {
     }
   },
 
-  update: async (id, formData) => {
-    try {
-      const response = await createResourceApi.put(
-        `/stock-adjustment/edit/${id}`,
-        formData
-      );
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.message || error.message);
-      }
-      throw new Error("An unexpected error occurred");
+ 
+
+// api/services/stockAdjustmentServices.js
+
+update: async (id, formData) => {
+  try {
+    console.log("🔵 ================================");
+    console.log("🔵 Service - update called");
+    console.log("🔵 Service - id:", id);
+    console.log("🔵 Service - id type:", typeof id);
+    console.log("🔵 Service - formData:", formData);
+    console.log("🔵 ================================");
+    
+    if (!id || id === "undefined" || id === undefined || id === null) {
+      throw new Error("Invalid adjustment ID");
     }
-  },
+
+    // Remove MongoDB fields
+    const { 
+      _id, 
+      __v, 
+      createdAt, 
+      updatedAt, 
+      status, 
+      adjustmentNumber,
+      createdBy,
+      ...updateData 
+    } = formData;
+
+    const url = `/transaction/stock_adjustment/edit/${id}`;
+    console.log("🔵 Service - Calling URL:", url);
+    console.log("🔵 Service - Update data:", updateData);
+
+    const response = await api.put(url, updateData);
+
+    console.log("✅ ================================");
+    console.log("✅ Service - Success");
+    console.log("✅ Service - response.data:", response.data);
+    console.log("✅ ================================");
+    
+    return response.data;
+  } catch (error) {
+    console.error("❌ ================================");
+    console.error("❌ Service Error");
+    console.error("❌ error:", error);
+    console.error("❌ error.response:", error.response);
+    console.error("❌ error.response.data:", error.response?.data);
+    console.error("❌ ================================");
+    
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || error.message);
+    }
+    throw error;
+  }
+},
+
 
   delete: async (id, companyId, branchId) => {
     try {
-      const response = await createResourceApi.delete(
-        `/stock-adjustment/delete/${id}`,
+      const response = await api.delete(
+        `/transaction/stock_adjustment/delete/${id}`,
         {
           params: { companyId, branchId },
         }
@@ -104,8 +146,8 @@ export const stockAdjustmentServices = {
 
   getItemHistory: async (itemId, companyId, branchId, limit = 10) => {
     try {
-      const response = await createResourceApi.get(
-        `/stock-adjustment/item-history/${itemId}`,
+      const response = await api.get(
+        `/transaction/stock_adjustment/item-history/${itemId}`,
         {
           params: { companyId, branchId, limit },
         }
