@@ -103,7 +103,9 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
 
       let dr = 0;
       let cr = 0;
-      const amount = Math.abs(txn.effectiveAmount);
+      console.log(txn);
+      
+      const amount = Math.abs(txn.effectiveAmount || txn.amount || 0);
       const type = txn.transactionType?.toLowerCase();
 
       const drTypes = ["sale", "purchase_return", "payment", "sales_payment"];
@@ -123,6 +125,10 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
         else cr = amount;
       }
 
+      console.log(amount, type);
+      console.log(dr, cr);
+      
+
       groups[dateKey].txns.push({ ...txn, dr, cr });
       groups[dateKey].totalDr += dr;
       groups[dateKey].totalCr += cr;
@@ -130,6 +136,9 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
 
     return Object.values(groups).sort((a, b) => a.date - b.date);
   }, [transactions]);
+
+  console.log(groupedTransactions);
+  
 
   const TableColGroup = () => (
     <colgroup>
