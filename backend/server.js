@@ -29,6 +29,7 @@ import revaluationRoute from "./routes/revaluation/revaluation.js";
 import salesReturnRoutes from "./routes/transactions/sales_return_routes.js";
 import purchaseReturnRoutes from "./routes/transactions/purchase_return_routes.js";
 import purchaseRoutes from "./routes/transactions/purchaseRoutes.js";
+import downloadRoutes from "./routes/downloadRoutes/downloadRoutes.js";
 
 /// Initialize Cron Jobs
 import { initializeCronJobs } from "./jobs/schedulers/cronScheduler.js";
@@ -118,6 +119,7 @@ app.use("/api/dev", authMiddleware, devRoutes);
 app.use("/api/job", authMiddleware, jobRoutes);
 app.use("/api/reports", authMiddleware, reportRoutes);
 app.use("/api/revaluation", authMiddleware, revaluationRoute);
+app.use("/api/download", authMiddleware, downloadRoutes);
 
 // ----------------- Production Build Serving -----------------
 if (process.env.NODE_ENV === "production") {
