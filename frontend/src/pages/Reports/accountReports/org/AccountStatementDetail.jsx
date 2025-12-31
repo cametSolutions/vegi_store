@@ -125,8 +125,8 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
         else cr = amount;
       }
 
-      console.log(amount, type);
-      console.log(dr, cr);
+      // console.log(amount, type);
+      // console.log(dr, cr);
       
 
       groups[dateKey].txns.push({ ...txn, dr, cr });
@@ -137,7 +137,7 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
     return Object.values(groups).sort((a, b) => a.date - b.date);
   }, [transactions]);
 
-  console.log(groupedTransactions);
+  // console.log(groupedTransactions);
   
 
   const TableColGroup = () => (

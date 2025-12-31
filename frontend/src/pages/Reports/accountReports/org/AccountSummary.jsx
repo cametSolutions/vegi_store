@@ -272,12 +272,12 @@ const AccountSummary = () => {
                       <th className="sticky top-0 z-30 bg-slate-50 border-r border-slate-300"></th>
                       <th className="sticky top-0 z-30 bg-slate-50 border-r border-slate-300"></th>
                       <th
-                        className={`sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold uppercase tracking-wider border-r border-white ${config.mainHeaderClass}`}
+                        className={`sticky top-0 z-30 py-1.5 text-right pr-3 text-[11px] font-bold uppercase tracking-wider border-r border-white ${config.mainHeaderClass}`}
                       >
                         {config.mainHeader}
                       </th>
                       <th
-                        className={`sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold uppercase tracking-wider ${config.returnHeaderClass}`}
+                        className={`sticky top-0 z-30 py-1.5 text-right pr-3 text-[11px] font-bold uppercase tracking-wider ${config.returnHeaderClass}`}
                       >
                         {config.returnHeader}
                       </th>

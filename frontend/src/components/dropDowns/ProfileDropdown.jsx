@@ -366,17 +366,16 @@ const ProfileDropdown = () => {
     <div className="ml-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-         <Button
-  variant="ghost"
-  className="relative h-9 w-9 rounded-full p-0 hover:bg-gray-800 transition-colors group"
->
-  <Avatar className="h-8 w-8 border border-gray-600 group-hover:border-gray-400 transition-colors">
-    <AvatarFallback className="bg-gray-700 text-[11px] font-bold text-gray-100 group-hover:bg-gray-600 group-hover:text-white transition-colors">
-      {initials}
-    </AvatarFallback>
-  </Avatar>
-</Button>
-
+          <Button
+            variant="ghost"
+            className="relative h-9 w-9 rounded-full p-0 hover:bg-gray-800 transition-colors group"
+          >
+            <Avatar className="h-8 w-8 border border-gray-600 group-hover:border-gray-400 transition-colors">
+              <AvatarFallback className="bg-gray-700 text-[11px] font-bold text-gray-100 group-hover:bg-gray-600 group-hover:text-white transition-colors">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+          </Button>
         </DropdownMenuTrigger>
 
         <DropdownMenuContent
