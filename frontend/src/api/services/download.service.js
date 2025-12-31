@@ -10,6 +10,8 @@ export const downloadServices = {
   // Initiate download - FIXED: GET request with query params, not POST with body
   initiateDownload: async (filters, format) => {
     try {
+      console.log(filters);
+      
       const response = await api.get("/download/account-summary/download", {
         params: { ...filters, format }, // This is correct for query params
       });
