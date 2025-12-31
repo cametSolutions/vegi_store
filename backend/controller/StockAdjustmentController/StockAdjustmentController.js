@@ -6,9 +6,9 @@ import {
   processStockAdjustment,
   revertStockAdjustment,
 } from "../../helpers/stockAdjustmentHelpers/stockAdjustmentProcessor.js";
-
+import AdjustmentEntry from "../../model/AdjustmentEntryModel.js";
 import ItemMaster from "../../model/masters/ItemMasterModel.js";
-
+import ItemMonthlyBalance from "../../model/ItemMonthlyBalanceModel.js";
 /**
  * GET /api/stock-adjustment/getall
  * Get all stock adjustments with pagination
@@ -23,6 +23,8 @@ export const getStockAdjustments = async (req, res) => {
     const sortBy = req.query.sortBy || "adjustmentDate";
     const sortOrder = req.query.sortOrder || "desc";
     const adjustmentType = req.query.adjustmentType || "";
+    const startDate = req.query.startDate; 
+    const endDate = req.query.endDate; 
 
     const sortDirection = sortOrder === "desc" ? -1 : 1;
     const sort = {
@@ -32,17 +34,59 @@ export const getStockAdjustments = async (req, res) => {
 
     const filter = {};
 
+    // ✅ FIXED: Search includes adjustmentType as string field + date parsing
     if (searchTerm) {
-      filter.$or = [
+      const searchConditions = [
         { adjustmentNumber: { $regex: searchTerm, $options: "i" } },
         { reference: { $regex: searchTerm, $options: "i" } },
         { reason: { $regex: searchTerm, $options: "i" } },
+        { adjustmentType: { $regex: searchTerm, $options: "i" } }, // ✅ Search adjustment type
       ];
+
+      // ✅ Try to parse searchTerm as a date and search adjustmentDate field
+      const parsedDate = new Date(searchTerm);
+      if (!isNaN(parsedDate.getTime())) {
+        // Valid date - search for adjustments on this date
+        const startOfDay = new Date(parsedDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        
+        const endOfDay = new Date(parsedDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        searchConditions.push({
+          adjustmentDate: {
+            $gte: startOfDay,
+            $lte: endOfDay
+          }
+        });
+      }
+
+      filter.$or = searchConditions;
     }
 
+    // ✅ Company and branch filters
     if (companyId) filter.company = companyId;
     if (branchId) filter.branch = branchId;
+    
+    // ✅ Adjustment type filter (from dropdown)
     if (adjustmentType) filter.adjustmentType = adjustmentType;
+
+    // ✅ Date range filter (from date pickers)
+    if (startDate || endDate) {
+      filter.adjustmentDate = {};
+      
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        filter.adjustmentDate.$gte = start;
+      }
+      
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        filter.adjustmentDate.$lte = end;
+      }
+    }
 
     const result = await StockAdjustment.getPaginatedAdjustments(
       filter,
@@ -183,13 +227,311 @@ export const getStockAdjustmentDetail = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/stock-adjustment/edit/:adjustmentId
- * Edit stock adjustment
- */
-// controller/StockAdjustmentController.js
 
-// controller/StockAdjustmentController.js
+
+
+
+
+
+
+const calculateStockAdjustmentDeltas = (originalAdjustment, updatedData) => {
+  const itemDeltas = [];
+  
+  // Create maps for quick lookup
+  const oldItemsMap = new Map();
+  originalAdjustment.items.forEach(item => {
+    oldItemsMap.set(item.item.toString(), {
+      ...item.toObject(),
+      // Convert to signed quantity based on adjustment type
+      signedQty: originalAdjustment.adjustmentType === "add" 
+        ? item.quantity 
+        : -item.quantity
+    });
+  });
+
+  const newItemsMap = new Map();
+  updatedData.items.forEach(item => {
+    newItemsMap.set(item.item.toString(), {
+      ...item,
+      // Convert to signed quantity based on adjustment type
+      signedQty: updatedData.adjustmentType === "add" 
+        ? item.quantity 
+        : -item.quantity
+    });
+  });
+
+  // Process all items (old and new)
+  const allItemIds = new Set([
+    ...oldItemsMap.keys(),
+    ...newItemsMap.keys()
+  ]);
+
+  allItemIds.forEach(itemId => {
+    const oldItem = oldItemsMap.get(itemId);
+    const newItem = newItemsMap.get(itemId);
+
+    let adjustmentType;
+    let delta = 0;
+    let oldQty = 0;
+    let newQty = 0;
+    let oldSignedQty = 0;
+    let newSignedQty = 0;
+
+    if (oldItem && newItem) {
+      // Item exists in both - calculate delta
+      oldQty = oldItem.quantity;
+      newQty = newItem.quantity;
+      oldSignedQty = oldItem.signedQty;
+      newSignedQty = newItem.signedQty;
+      
+      // Delta = new signed qty - old signed qty
+      delta = newSignedQty - oldSignedQty;
+      
+      if (delta === 0) {
+        adjustmentType = "unchanged";
+      } else {
+        adjustmentType = "quantity_changed";
+      }
+    } else if (newItem && !oldItem) {
+      // Item was added in edit
+      newQty = newItem.quantity;
+      newSignedQty = newItem.signedQty;
+      delta = newSignedQty;
+      adjustmentType = "added";
+    } else if (oldItem && !newItem) {
+      // Item was removed in edit
+      oldQty = oldItem.quantity;
+      oldSignedQty = oldItem.signedQty;
+      delta = -oldSignedQty; // Reverse the old adjustment
+      adjustmentType = "removed";
+    }
+
+    // Only add to deltas if there's a change
+    if (delta !== 0 || adjustmentType !== "unchanged") {
+      itemDeltas.push({
+        item: itemId,
+        itemName: (newItem || oldItem).itemName,
+        itemCode: (newItem || oldItem).itemCode,
+        adjustmentType,
+        oldQuantity: oldQty,
+        newQuantity: newQty,
+        oldSignedQuantity: oldSignedQty,
+        newSignedQuantity: newSignedQty,
+        quantityDelta: delta,
+      });
+    }
+  });
+
+  return itemDeltas;
+};
+
+/**
+ * Apply stock deltas to ItemMaster
+ */
+const applyStockDeltas = async (itemDeltas, branchId, session) => {
+  for (const delta of itemDeltas) {
+    if (delta.quantityDelta === 0) continue;
+
+    const item = await ItemMaster.findById(delta.item).session(session);
+    
+    if (!item) {
+      throw new Error(`ItemMaster not found: ${delta.itemName}`);
+    }
+
+    const branchStock = item.stock.find(
+      s => s.branch.toString() === branchId.toString()
+    );
+
+    if (!branchStock) {
+      throw new Error(`Stock record not found for item: ${delta.itemName}`);
+    }
+
+    // Check for negative stock
+    const newStock = branchStock.currentStock + delta.quantityDelta;
+    if (newStock < 0) {
+      throw new Error(
+        `Insufficient stock for ${delta.itemName}. ` +
+        `Current: ${branchStock.currentStock}, ` +
+        `Delta: ${delta.quantityDelta}, ` +
+        `Would result in: ${newStock}`
+      );
+    }
+
+    branchStock.currentStock = newStock;
+    await item.save({ session });
+
+    console.log(
+      `📦 Stock updated for ${delta.itemName}: ` +
+      `${branchStock.currentStock - delta.quantityDelta} → ` +
+      `${branchStock.currentStock} (delta: ${delta.quantityDelta >= 0 ? '+' : ''}${delta.quantityDelta})`
+    );
+  }
+};
+
+/**
+ * Mark Item Monthly Balances for recalculation
+ * If edited in September, mark Sep, Oct, Nov, Dec as needing recalculation
+ */
+const markItemMonthlyBalancesForRecalculation = async (
+  originalAdjustment,
+  itemDeltas,
+  session
+) => {
+  if (itemDeltas.length === 0) {
+    console.log("ℹ️  No item changes, skipping monthly balance marking");
+    return;
+  }
+
+  const adjustmentDate = new Date(originalAdjustment.adjustmentDate);
+  const editMonth = adjustmentDate.getMonth() + 1; // 1-12
+  const editYear = adjustmentDate.getFullYear();
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth() + 1;
+  const currentYear = currentDate.getFullYear();
+
+  console.log(`📅 Marking monthly balances from ${editYear}-${editMonth} onwards...`);
+
+  // Get all affected items
+  const affectedItemIds = itemDeltas
+    .filter(d => d.quantityDelta !== 0)
+    .map(d => d.item);
+
+  if (affectedItemIds.length === 0) {
+    console.log("ℹ️  No stock quantity changes, skipping monthly balance marking");
+    return;
+  }
+
+  // Calculate months to mark (from edit month to current month)
+  const monthsToMark = [];
+  
+  let year = editYear;
+  let month = editMonth;
+
+  while (year < currentYear || (year === currentYear && month <= currentMonth)) {
+    monthsToMark.push({
+      year,
+      month,
+      periodKey: `${year}-${String(month).padStart(2, '0')}`
+    });
+
+    month++;
+    if (month > 12) {
+      month = 1;
+      year++;
+    }
+  }
+
+  console.log(`📊 Months to mark: ${monthsToMark.map(m => m.periodKey).join(', ')}`);
+
+  // Mark all affected items for all months
+  for (const item of affectedItemIds) {
+    for (const period of monthsToMark) {
+      const result = await ItemMonthlyBalance.updateOne(
+        {
+          company: originalAdjustment.company,
+          branch: originalAdjustment.branch,
+          item: item,
+          year: period.year,
+          month: period.month,
+        },
+        {
+          $set: {
+            needsRecalculation: true,
+            lastUpdated: new Date()
+          }
+        },
+        { session }
+      );
+
+      if (result.matchedCount > 0) {
+        console.log(`   ✓ Marked ${period.periodKey} for item ${item}`);
+      }
+    }
+  }
+
+  console.log(`✅ Marked ${affectedItemIds.length} items across ${monthsToMark.length} months`);
+};
+const createStockAdjustmentEntry = async (
+  originalAdjustment,
+  updatedData,
+  itemDeltas,
+  userId,
+  session
+) => {
+  // Determine overall adjustment type
+  let adjustmentType = "item_change";
+  
+  // Check if adjustment type changed (add ↔ remove)
+  const typeChanged = originalAdjustment.adjustmentType !== updatedData.adjustmentType;
+  
+  // Check if amount changed
+  const amountChanged = originalAdjustment.totalAmount !== updatedData.totalAmount;
+  
+  if (typeChanged && amountChanged) {
+    adjustmentType = "mixed";
+  } else if (amountChanged && itemDeltas.length === 0) {
+    adjustmentType = "amount_change";
+  }
+
+  // Calculate amount delta
+  const oldAmount = originalAdjustment.totalAmount || 0;
+  const newAmount = updatedData.totalAmount || 0;
+  const amountDelta = newAmount - oldAmount;
+
+  // Generate adjustment number
+  const adjustmentNumber = await AdjustmentEntry.generateAdjustmentNumber(
+    originalAdjustment.company,
+    originalAdjustment.branch,
+    session
+  );
+
+  // Create adjustment entry
+  const adjustmentEntry = new AdjustmentEntry({
+    company: originalAdjustment.company,
+    branch: originalAdjustment.branch,
+    
+    // Original transaction reference
+    originalTransaction: originalAdjustment._id,
+    originalTransactionModel: "StockAdjustment",
+    originalTransactionNumber: originalAdjustment.adjustmentNumber,
+    originalTransactionDate: originalAdjustment.adjustmentDate,
+    
+    // Adjustment metadata
+    adjustmentNumber,
+    adjustmentDate: new Date(),
+    adjustmentType,
+    
+    // Amount details
+    amountDelta,
+    oldAmount,
+    newAmount,
+    
+    // Item adjustments
+    itemAdjustments: itemDeltas.map(delta => ({
+      item: delta.item,
+      itemName: delta.itemName,
+      itemCode: delta.itemCode,
+      adjustmentType: delta.adjustmentType,
+      oldQuantity: delta.oldQuantity,
+      newQuantity: delta.newQuantity,
+      quantityDelta: delta.quantityDelta,
+    })),
+    
+    // Audit
+    reason: updatedData.reason || "Stock adjustment edited",
+    notes: `Stock adjustment type changed from "${originalAdjustment.adjustmentType}" to "${updatedData.adjustmentType}"`,
+    editedBy: userId,
+    status: "active",
+    isSystemGenerated: true,
+  });
+
+  await adjustmentEntry.save({ session });
+
+  console.log(`✅ Adjustment entry created: ${adjustmentNumber}`);
+
+  return adjustmentEntry;
+};
+
 
 export const editStockAdjustment = async (req, res) => {
   const session = await mongoose.startSession();
@@ -200,7 +542,7 @@ export const editStockAdjustment = async (req, res) => {
     const updatedData = req.body;
     const userId = req.user.id;
 
-    console.log("🔵 Backend - Edit received");
+    console.log("🔵 Backend - Edit stock adjustment received");
     console.log("🔵 Backend - ID:", id);
 
     if (!id || id === "undefined") {
@@ -211,10 +553,10 @@ export const editStockAdjustment = async (req, res) => {
       });
     }
 
-    // ✅ Fetch original adjustment
-    const originalAdjustment = await StockAdjustment.findById(id).session(
-      session
-    );
+    // ========================================
+    // STEP 1: Fetch original adjustment
+    // ========================================
+    const originalAdjustment = await StockAdjustment.findById(id).session(session);
 
     if (!originalAdjustment) {
       await session.abortTransaction();
@@ -224,9 +566,11 @@ export const editStockAdjustment = async (req, res) => {
       });
     }
 
-    console.log("✅ Found original adjustment");
+    console.log("✅ Found original adjustment:", originalAdjustment.adjustmentNumber);
 
-    // ✅ Validate - can't change company/branch
+    // ========================================
+    // STEP 2: Validate - can't change company/branch
+    // ========================================
     if (
       originalAdjustment.company.toString() !== updatedData.company ||
       originalAdjustment.branch.toString() !== updatedData.branch
@@ -238,91 +582,66 @@ export const editStockAdjustment = async (req, res) => {
       });
     }
 
-    // ✅ STEP 1: Revert old stock changes (ItemMaster only)
-    console.log("🔄 Step 1: Reverting old stock changes");
-    
-    for (const oldItem of originalAdjustment.items) {
-      const item = await ItemMaster.findById(oldItem.item).session(session);
+    // ========================================
+    // STEP 3: Calculate deltas
+    // ========================================
+    console.log("🔄 Calculating stock deltas...");
+    const itemDeltas = calculateStockAdjustmentDeltas(
+      originalAdjustment,
+      updatedData
+    );
 
-      if (!item) {
-        throw new Error(`ItemMaster not found: ${oldItem.itemName}`);
-      }
-
-      const branchStock = item.stock.find(
-        (s) => s.branch.toString() === originalAdjustment.branch.toString()
-      );
-
-      if (!branchStock) {
-        throw new Error(
-          `Stock record not found for item: ${oldItem.itemName}`
-        );
-      }
-
-      // Reverse the old adjustment
-      const reverseQty =
-        originalAdjustment.adjustmentType === "add"
-          ? -oldItem.quantity // If it was added, subtract it now
-          : oldItem.quantity; // If it was removed, add it back
-
-      branchStock.currentStock += reverseQty;
-
+    console.log(`📊 Deltas calculated: ${itemDeltas.length} items affected`);
+    itemDeltas.forEach(delta => {
       console.log(
-        `🔄 Reverted ${oldItem.itemName}: ${originalAdjustment.adjustmentType === "add" ? "-" : "+"}${oldItem.quantity} = ${branchStock.currentStock}`
+        `   - ${delta.itemName}: ` +
+        `${delta.oldSignedQuantity >= 0 ? '+' : ''}${delta.oldSignedQuantity} → ` +
+        `${delta.newSignedQuantity >= 0 ? '+' : ''}${delta.newSignedQuantity} = ` +
+        `${delta.quantityDelta >= 0 ? '+' : ''}${delta.quantityDelta}`
       );
+    });
 
-      await item.save({ session });
+    // ========================================
+    // STEP 4: Apply stock deltas
+    // ========================================
+    if (itemDeltas.some(d => d.quantityDelta !== 0)) {
+      console.log("🔄 Applying stock deltas...");
+      await applyStockDeltas(
+        itemDeltas,
+        originalAdjustment.branch,
+        session
+      );
+      console.log("✅ Stock deltas applied");
+    } else {
+      console.log("ℹ️  No stock changes needed");
     }
 
-    console.log("✅ Step 1 complete: Old stock reverted");
+    // ========================================
+    // STEP 5: Create adjustment entry
+    // ========================================
+    console.log("🔄 Creating adjustment entry...");
+    const adjustmentEntry = await createStockAdjustmentEntry(
+      originalAdjustment,
+      updatedData,
+      itemDeltas,
+      userId,
+      session
+    );
 
-    // ✅ STEP 2: Apply new stock changes (ItemMaster only)
-    console.log("🔄 Step 2: Applying new stock changes");
+    // ========================================
+    // STEP 6: Mark Item Monthly Balances for Recalculation
+    // ========================================
+    console.log("🔄 Marking monthly balances for recalculation...");
+    await markItemMonthlyBalancesForRecalculation(
+      originalAdjustment,
+      itemDeltas,
+      session
+    );
 
-    for (const newItem of updatedData.items) {
-      const item = await ItemMaster.findById(newItem.item).session(session);
-
-      if (!item) {
-        throw new Error(`ItemMaster not found: ${newItem.itemName}`);
-      }
-
-      const branchStock = item.stock.find(
-        (s) => s.branch.toString() === updatedData.branch.toString()
-      );
-
-      if (!branchStock) {
-        throw new Error(
-          `Stock record not found for item: ${newItem.itemName}`
-        );
-      }
-
-      // Apply new adjustment
-      const adjustQty =
-        updatedData.adjustmentType === "add"
-          ? newItem.quantity // Add to stock
-          : -newItem.quantity; // Remove from stock
-
-      // Check for negative stock when removing
-      if (updatedData.adjustmentType === "remove") {
-        if (branchStock.currentStock < newItem.quantity) {
-          throw new Error(
-            `Insufficient stock for ${newItem.itemName}. Available: ${branchStock.currentStock}, Required: ${newItem.quantity}`
-          );
-        }
-      }
-
-      branchStock.currentStock += adjustQty;
-
-      console.log(
-        `✅ Updated ${newItem.itemName}: ${updatedData.adjustmentType === "add" ? "+" : "-"}${newItem.quantity} = ${branchStock.currentStock}`
-      );
-
-      await item.save({ session });
-    }
-
-    console.log("✅ Step 2 complete: New stock applied");
-
-    // ✅ STEP 3: Update stock adjustment document (don't touch ItemLedger)
-    console.log("🔄 Step 3: Updating stock adjustment document");
+    // ========================================
+    // STEP 7: Update stock adjustment document
+    // ========================================
+    console.log("🔄 Updating stock adjustment document...");
 
     originalAdjustment.adjustmentType = updatedData.adjustmentType;
     originalAdjustment.adjustmentDate = updatedData.adjustmentDate;
@@ -334,9 +653,11 @@ export const editStockAdjustment = async (req, res) => {
 
     await originalAdjustment.save({ session });
 
-    console.log("✅ Step 3 complete: Document updated");
+    console.log("✅ Stock adjustment document updated");
 
-    // ✅ Commit transaction
+    // ========================================
+    // STEP 8: Commit transaction
+    // ========================================
     await session.commitTransaction();
 
     console.log("✅ Stock adjustment edited successfully");
@@ -344,7 +665,15 @@ export const editStockAdjustment = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Stock adjustment updated successfully",
-      data: originalAdjustment,
+      data: {
+        stockAdjustment: originalAdjustment,
+        adjustmentEntry,
+        deltas: {
+          itemCount: itemDeltas.length,
+          totalDelta: itemDeltas.reduce((sum, d) => sum + d.quantityDelta, 0),
+          amountDelta: adjustmentEntry.amountDelta,
+        },
+      },
     });
   } catch (error) {
     await session.abortTransaction();
