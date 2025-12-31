@@ -75,12 +75,6 @@ export const downloadHelper = {
     XLSX.writeFile(workbook, `${fileName}.xlsx`);
   },
 
-
-
-// src/helper/downloadHelper/downloadHelper.js
-
-// ... imports
-
   generatePDF: (data, fileName, context = {}) => {
     const doc = new jsPDF();
     const type = context.type || 'sale';
@@ -94,7 +88,8 @@ export const downloadHelper = {
     const margin = 14;
 
     const config = {
-      title: isSale ? "Sales Account Summary" : "Purchase Account Summary",
+      title: "Account Summary",
+      analysisType: isSale ? "Sales Analysis" : "Purchase Analysis",
       mainHeader: isSale ? "Sales" : "Purchase",
       returnHeader: isSale ? "Sales Return" : "Purchase Return",
       mainKey: isSale ? "sale" : "purchase",
@@ -104,7 +99,6 @@ export const downloadHelper = {
     // ✅ DRAW BACKGROUND RECTANGLE
     // x=0, y=0, width=pageWidth, height=55 (adjust based on content)
     doc.setFillColor(248, 250, 252); // Very light slate/gray (slate-50)
-    // alternative: doc.setFillColor(243, 244, 246); // gray-100
     doc.rect(0, 0, pageWidth, 55, 'F'); // 'F' means Fill
 
     let y = 20;
@@ -122,7 +116,7 @@ export const downloadHelper = {
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139); 
     doc.setFont("helvetica", "normal");
-    doc.text("Customer & Vendor Ledger Analysis", margin, y);
+    doc.text(config.analysisType, margin, y);
     y += 8;
 
     // 3. Date Range
@@ -145,7 +139,6 @@ export const downloadHelper = {
     doc.setFontSize(9);
     doc.setTextColor(100, 116, 139);
     doc.text(`Generated: ${generatedStr}`, margin, y);
-
 
     // --- RIGHT SIDE: COMPANY INFO (Right Aligned) ---
     let rightY = 20;
@@ -187,8 +180,6 @@ export const downloadHelper = {
     }
 
     // --- DIVIDER LINE ---
-    // Now we can place the divider exactly at the bottom of our background block (y=55)
-    // Or just start the table there.
     const headerBottom = 55;
     
     doc.setDrawColor(226, 232, 240); 
@@ -221,9 +212,7 @@ export const downloadHelper = {
           valign: 'middle' 
       },
       headStyles: {
-          fillColor: [255, 255, 255], // White header since we have a gray bg above? 
-          // OR keep it light gray:
-          // fillColor: [241, 245, 249], 
+          fillColor: [255, 255, 255], 
           textColor: [15, 23, 42], 
           fontStyle: 'bold',
           lineColor: [203, 213, 225],
@@ -249,9 +238,6 @@ export const downloadHelper = {
 
     doc.save(`${fileName}.pdf`);
   },
-// ...
-
-
 
   generateFileName: (format, startDate = null, endDate = null) => {
     const now = new Date();

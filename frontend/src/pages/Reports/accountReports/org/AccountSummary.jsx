@@ -26,7 +26,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { accountMasterQueries } from "@/hooks/queries/accountMaster.queries";
 // import { useReportDownload } from "@/hooks/useReportDownload"; // ← Import download hook
 import DownloadButton from "@/components/DownloadButton/DownloadButton";
-import { useReportDownload } from "@/hooks/downloadHooks/useReportDownload";
+import { useReportDownload } from "@/hooks/downloadHooks/account/useSummaryDownload";
 
 const AccountSummary = () => {
   const dispatch = useDispatch();
