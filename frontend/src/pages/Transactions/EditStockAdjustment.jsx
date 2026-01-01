@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import AddItemFormComponent from "../Transactions/components/AddItemForm";
 import ItemsTableComponent from "../Transactions/components/ItemsTable";
 import TransactionActionsComponent from "../Transactions/components/StockTransactionAction";
@@ -6,8 +6,16 @@ import TransactionHeaderComponent from "../CommonTransactionComponents/Transacti
 import CustomMoonLoader from "../../components/loaders/CustomMoonLoader";
 import { useStockAdjustment } from "../stock/hooks/useStockAdjustment ";
 import { useStockAdjustmentActions } from "../stock/hooks/useStockAdjustmentActions ";
+import { useDispatch, useSelector } from "react-redux";
+import { useQuery } from "@tanstack/react-query";
 import TransactionSummaryComponent from "../Transactions/components/TransactionSummary";
-import { useSelector } from "react-redux";
+
+import { stockAdjustmentQueries } from "@/hooks/queries/stockAdjustmentQueries ";
+import { toast } from "sonner";
+import {
+  addStockAdjustmentDataToStore,
+  removeStockAdjustmentDataFromStore,
+} from "@/store/slices/stockAdjustmentSlice ";
 
 // Memoized components
 const TransactionHeader = React.memo(TransactionHeaderComponent);
@@ -16,17 +24,25 @@ const ItemsTable = React.memo(ItemsTableComponent);
 const StockTransactionAction = React.memo(TransactionActionsComponent);
 const TransactionSummary = React.memo(TransactionSummaryComponent);
 
-const CreateStockAdjustment = () => {
-  const [isLoading, setIsLoading] = useState(false);
+// EditStockAdjustment.jsx
+
+const EditStockAdjustment = ({
+  editAdjustmentData,
+  handleCancelEdit,
+  onSuccess,
+}) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const dispatch = useDispatch();
 
   const {
     stockAdjustmentData,
+    updateStockAdjustmentData,
     updateStockAdjustmentField,
     updateItemQuantity,
     removeItem,
-    addItem,
     handleDiscountChange,
     handlePaidAmountChange,
+    addItem,
     clickedItemInTable,
     handleItemClickInItemsTable,
     resetStockAdjustmentData,
@@ -39,50 +55,94 @@ const CreateStockAdjustment = () => {
     (state) => state.companyBranch?.selectedBranch
   );
 
-  // Initialize with default adjustment type
+  // ✅ Set initial edit mode state with _id
   useEffect(() => {
-    updateStockAdjustmentField("adjustmentType", "add");
-  }, [updateStockAdjustmentField]);
+    updateStockAdjustmentData({
+      _id: editAdjustmentData._id, // ✅ Add this
+      isEditMode: true,
+      editAdjustmentId: editAdjustmentData._id,
+    });
 
-  // Set company and branch
+    dispatch(
+      addStockAdjustmentDataToStore({
+        _id: editAdjustmentData._id, // ✅ Add this
+        isEditMode: true,
+        editAdjustmentId: editAdjustmentData._id,
+      })
+    );
+  }, [editAdjustmentData._id, updateStockAdjustmentData, dispatch]);
+
+  // Fetch stock adjustment details
+  const {
+    data: adjustmentResponse,
+    isLoading: adjustmentLoading,
+    isError: adjustmentError,
+  } = useQuery({
+    ...stockAdjustmentQueries.getStockAdjustmentById(
+      selectedCompanyFromStore._id,
+      selectedBranchFromStore._id,
+      editAdjustmentData._id
+    ),
+  });
+
+  // ✅ Update data when response changes - preserve _id
   useEffect(() => {
-    if (selectedCompanyFromStore?._id) {
-      updateStockAdjustmentField("company", selectedCompanyFromStore._id);
-    }
-    if (selectedBranchFromStore?._id) {
-      updateStockAdjustmentField("branch", selectedBranchFromStore._id);
-    }
-  }, [
-    selectedCompanyFromStore,
-    selectedBranchFromStore,
-    updateStockAdjustmentField,
-  ]);
+    if (adjustmentResponse) {
+      console.log("🟢 Adjustment response:", adjustmentResponse);
 
-  // Cleanup on unmount
+      updateStockAdjustmentData({
+        ...adjustmentResponse,
+        _id: adjustmentResponse._id, // ✅ Explicitly set _id
+        isEditMode: true,
+        editAdjustmentId: editAdjustmentData._id,
+      });
+    }
+  }, [adjustmentResponse, updateStockAdjustmentData, editAdjustmentData._id]);
+
+  // Handle error
+  useEffect(() => {
+    if (adjustmentError) {
+      toast.error("An error occurred while loading stock adjustment details");
+      handleCancel();
+    }
+  }, [adjustmentError]);
+
+  // Cleanup
   useEffect(() => {
     return () => {
       resetStockAdjustmentData();
     };
   }, [resetStockAdjustmentData]);
 
-  const { handleSave } = useStockAdjustmentActions(stockAdjustmentData, false);
+  const handleCancel = () => {
+    resetStockAdjustmentData();
+    handleCancelEdit();
+    dispatch(removeStockAdjustmentDataFromStore());
+  };
+
+  const { handleSave } = useStockAdjustmentActions(stockAdjustmentData, true);
 
   const onSave = async () => {
+    console.log("💾 onSave - stockAdjustmentData:", stockAdjustmentData);
+    console.log(
+      "💾 onSave - stockAdjustmentData._id:",
+      stockAdjustmentData._id
+    );
+
     setIsLoading(true);
     const success = await handleSave();
     setIsLoading(false);
 
     if (success) {
-      resetStockAdjustmentData();
+      handleCancel();
+      onSuccess();
     }
   };
-
-  console.log("stockAdjustmentData", stockAdjustmentData);
-
+  console.log(stockAdjustmentData);
   return (
-    <div className="h-[calc(100vh-100px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
-      {/* Loader Overlay */}
-      {isLoading && (
+    <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
+      {/* Loader */}
+      {(isLoading || adjustmentLoading) && (
         <div className="absolute inset-0 bg-white/60 z-50 flex items-center justify-center">
           <CustomMoonLoader />
         </div>
@@ -93,21 +153,23 @@ const CreateStockAdjustment = () => {
         currentTransactionType="stock_adjustment"
         date={stockAdjustmentData.transactionDate}
         updateTransactionField={updateStockAdjustmentField}
+        isEditMode={stockAdjustmentData.isEditMode}
+        transactionNumber={editAdjustmentData.transactionNumber}
       />
 
-      {/* Main Content - Same structure as CreateTransaction */}
-      <div className="flex ">
+      {/* Main Content */}
+      <div className="flex h-[calc(100vh-56px)]">
         <div className="flex-1 p-1 overflow-hidden flex flex-col">
           <div className="flex flex-col  bg-white">
-            {/* Radio Buttons - Add To Stock / Remove From Stock */}
             {/* Add To Stock / Remove From Stock Radio Buttons */}
-            <div className="px-3 py-6  border-b border-gray-200 ">
+            <div className="px-3 py-6 border-b border-gray-200 ">
               <div className="flex items-center gap-6">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <span className="text-xs font-medium text-gray-700">
                     Add To Stock
                   </span>
                   <input
+                    disabled
                     type="radio"
                     name="adjustmentType"
                     value="add"
@@ -127,6 +189,7 @@ const CreateStockAdjustment = () => {
                     Remove From Stock
                   </span>
                   <input
+                    disabled
                     type="radio"
                     name="adjustmentType"
                     value="remove"
@@ -137,7 +200,7 @@ const CreateStockAdjustment = () => {
                         e.target.value
                       )
                     }
-                    className="w-3 h-3  text-red-600 text-red-600 focus:ring-red-500"
+                    className="w-3 h-3 text-red-600 focus:ring-red-500"
                   />
                 </label>
               </div>
@@ -167,30 +230,28 @@ const CreateStockAdjustment = () => {
               handleItemClickInItemsTable={handleItemClickInItemsTable}
             />
 
-            {/* Transaction Summary */}
+            {/* Summary */}
             <TransactionSummary
-              total={stockAdjustmentData.subtotal}
-              netAmount={stockAdjustmentData.netAmount}
+              total={stockAdjustmentData.totalAmount}
+              netAmount={stockAdjustmentData.totalAmount}
               discount={stockAdjustmentData.discount}
               paidAmount={stockAdjustmentData.paidAmount}
-              balanceAmount={stockAdjustmentData.balanceAmount}
+              balanceAmount={stockAdjustmentData.totalAmount}
               totalDue={stockAdjustmentData.totalDue}
               onDiscountChange={handleDiscountChange}
               onPaidAmountChange={handlePaidAmountChange}
               transactionType={stockAdjustmentData.transactionType}
             />
 
-            {/* Action Buttons */}
+            {/* Actions */}
             <StockTransactionAction
               onSave={onSave}
               transactionData={stockAdjustmentData}
               onLoadingChange={setIsLoading}
               resetTransactionData={resetStockAdjustmentData}
-              isEditMode={false}
+              isEditMode={true}
+              onCancel={handleCancel}
               requireAccount={false}
-              onCancel={() => {
-                resetStockAdjustmentData();
-              }}
             />
           </div>
         </div>
@@ -199,4 +260,4 @@ const CreateStockAdjustment = () => {
   );
 };
 
-export default CreateStockAdjustment;
+export default EditStockAdjustment;

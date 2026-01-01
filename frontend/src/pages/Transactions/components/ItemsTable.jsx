@@ -9,7 +9,7 @@ const ItemsTable = ({ items, onRemoveItem, handleItemClickInItemsTable }) => {
   //   // console.log("item",item)
   //   handleItemClickInItemsTable(item)
   // }
-
+console.log(items)
   return (
     <div className="bg-white rounded-t shadow-sm">
       <div className="h-[calc(100vh-405px)] overflow-y-auto border border-gray-200 rounded">

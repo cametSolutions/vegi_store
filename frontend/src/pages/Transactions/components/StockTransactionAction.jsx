@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useEffect,useState } from "react";
 import { Save, Trash2, X, Loader2 } from "lucide-react";
-import { useTransactionActions } from "../hooks/useTransactionActions";
+import { useStockAdjustmentActions } from "../../stock/hooks/useStockAdjustmentActions ";
 import { toast } from "sonner";
 
 const TransactionActions = ({
@@ -11,13 +11,16 @@ const TransactionActions = ({
   onCancel,
   transactionType,
   requireAccount = true,
+   onSave,
   // onView,
   // onDelete,
 }) => {
-  const { handleSave, isLoading } = useTransactionActions(
-    transactionData,
-    isEditMode
-  );
+//   const { handleSave, isLoading } = useStockAdjustmentActions (
+//     transactionData,
+//     isEditMode
+//   );
+
+const [isLoading, setIsLoading] = useState(false);
 
   // Notify parent whenever loading changes
   useEffect(() => {
@@ -43,12 +46,19 @@ const TransactionActions = ({
       return false;
     }
     
-    await handleSave(); 
-    if (resetTransactionData) resetTransactionData(transactionData?.transactionType);
+    if (onSave) {
+      setIsLoading(true);
+      await onSave();
+      setIsLoading(false);
+    }
+
+    if (resetTransactionData) {
+      resetTransactionData(transactionData?.transactionType);
+    }
   };
 
   return (
-    <div className=" pt-2 border-t border-slate-100">
+    <div className=" pt-2 border-t border-slate-100 ">
       <div className="flex items-center gap-2">
         
         {/* Cancel (Secondary) */}
