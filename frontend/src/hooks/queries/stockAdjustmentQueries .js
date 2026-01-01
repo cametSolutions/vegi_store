@@ -11,7 +11,7 @@ export const stockAdjustmentQueries = {
     companyId,
     branchId,
     limit = 25,
-    sortBy = "adjustmentDate",
+    sortBy = "transactionDate",
     sortOrder = "desc",
     adjustmentType = "",
     options = {}

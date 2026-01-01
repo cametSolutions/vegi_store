@@ -23,8 +23,8 @@ export const processStockAdjustment = async (
     await updateStock(items, behavior.stockDirection, branch, session);
 
     // Step 3: Generate number
-    const adjustmentNumber =
-      adjustmentData.adjustmentNumber ||
+    const transactionNumber =
+      adjustmentData.transactionNumber ||
       (await generateStockAdjustmentNumber(company, branch, session));
 
     // Step 4: Process items WITH all required fields for ledger
@@ -51,7 +51,7 @@ export const processStockAdjustment = async (
       [
         {
           ...adjustmentData,
-          adjustmentNumber,
+          transactionNumber,
           items: processedItems,
           totalAmount,
           createdBy: userId,
@@ -70,8 +70,8 @@ export const processStockAdjustment = async (
         branch: createdAdjustment.branch,
         items: createdAdjustment.items, // ✅ Now includes baseAmount, amountAfterTax, taxRate, taxAmount
         transactionId: createdAdjustment._id,
-        transactionNumber: createdAdjustment.adjustmentNumber,
-        transactionDate: createdAdjustment.adjustmentDate,
+        transactionNumber: createdAdjustment.transactionNumber,
+        transactionDate: createdAdjustment.transactionDate,
         transactionType: "stock_adjustment",
         movementType: behavior.movementType,
         account: null,
@@ -87,7 +87,7 @@ export const processStockAdjustment = async (
         company: createdAdjustment.company,
         branch: createdAdjustment.branch,
         items: createdAdjustment.items,
-        transactionDate: createdAdjustment.adjustmentDate,
+        transactionDate: createdAdjustment.transactionDate,
         movementType: behavior.movementType,
       },
       session
@@ -153,7 +153,7 @@ export const revertStockAdjustment = async (
         branch: branch,
         items: items, // ✅ Already has all required fields from original creation
         transactionId: originalAdjustment._id,
-        transactionNumber: `REV-${originalAdjustment.adjustmentNumber}`,
+        transactionNumber: `REV-${originalAdjustment.transactionNumber}`,
         transactionDate: new Date(),
         transactionType: "stock_adjustment_reversal",
         movementType: reverseBehavior.movementType,

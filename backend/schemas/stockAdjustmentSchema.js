@@ -57,16 +57,25 @@ const stockAdjustmentItemSchema = new mongoose.Schema({
 
 const stockAdjustmentSchema = new mongoose.Schema(
   {
-    adjustmentNumber: {
-      type: String,
-      unique: true,
-      sparse: true,
-    },
-    adjustmentDate: {
-      type: Date,
-      required: true,
-      default: Date.now,
-    },
+    transactionType: {
+         type: String,
+         enum: ["sale", "purchase", "sales_return", "purchase_return","stock_adjustment"],
+         required: [true, "Transaction type is required"],
+       },
+   
+       transactionDate: {
+         type: Date,
+         required: [true, "Transaction date is required"],
+         default: Date.now,
+       },
+       transactionNumber: {
+         type: String,
+         required: [true, "Transaction number is required"],
+         default: function () {
+           const prefix = this.transactionType?.toUpperCase().slice(0, 3) || "TXN";
+           return `${prefix}-${nanoid(4)}`;
+         },
+       },
     adjustmentType: {
       type: String,
       enum: ["add", "remove"],
@@ -118,16 +127,17 @@ const stockAdjustmentSchema = new mongoose.Schema(
 );
 
 // Indexes
-stockAdjustmentSchema.index({ company: 1, branch: 1, adjustmentDate: -1 });
+stockAdjustmentSchema.index({ company: 1, branch: 1, transactionNumber: 1 });
+stockAdjustmentSchema.index({ company: 1, branch: 1, transactionDate: -1 });
 stockAdjustmentSchema.index({ company: 1, branch: 1, adjustmentType: 1 });
-stockAdjustmentSchema.index({ adjustmentNumber: 1 });
+stockAdjustmentSchema.index({ transactionNumber: 1 });
 
 // Static method for pagination
 stockAdjustmentSchema.statics.getPaginatedAdjustments = async function (
   filter,
   page = 1,
   limit = 25,
-  sort = { adjustmentDate: -1 }
+  sort = { transactionDate: -1 }
 ) {
   const skip = (page - 1) * limit;
 

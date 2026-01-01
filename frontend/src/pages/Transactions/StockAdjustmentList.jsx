@@ -45,7 +45,7 @@ const StockAdjustmentList = ({ onEditAdjustment, selectedAdjustment }) => {
       companyId,
       branchId,
       30,
-      "adjustmentDate",
+      "transactionDate",
       "desc",
       "",
       { refetchOnWindowFocus: false, retry: 2 }

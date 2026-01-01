@@ -6,6 +6,7 @@ import TransactionHeaderComponent from "../CommonTransactionComponents/Transacti
 import CustomMoonLoader from "../../components/loaders/CustomMoonLoader";
 import { useStockAdjustment } from "../stock/hooks/useStockAdjustment ";
 import { useStockAdjustmentActions } from "../stock/hooks/useStockAdjustmentActions ";
+import TransactionSummaryComponent from "../Transactions/components/TransactionSummary";
 import { useSelector } from "react-redux";
 
 // Memoized components
@@ -13,6 +14,7 @@ const TransactionHeader = React.memo(TransactionHeaderComponent);
 const AddItemForm = React.memo(AddItemFormComponent);
 const ItemsTable = React.memo(ItemsTableComponent);
 const StockTransactionAction = React.memo(TransactionActionsComponent);
+const TransactionSummary = React.memo(TransactionSummaryComponent);
 
 const CreateStockAdjustment = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -23,6 +25,8 @@ const CreateStockAdjustment = () => {
     updateItemQuantity,
     removeItem,
     addItem,
+    handleDiscountChange,
+    handlePaidAmountChange,
     clickedItemInTable,
     handleItemClickInItemsTable,
     resetStockAdjustmentData,
@@ -40,17 +44,15 @@ const CreateStockAdjustment = () => {
     updateStockAdjustmentField("adjustmentType", "add");
   }, [updateStockAdjustmentField]);
 
-// CreateStockAdjustment.jsx - Add this useEffect
-
-useEffect(() => {
-  if (selectedCompanyFromStore?._id) {
-    updateStockAdjustmentField("company", selectedCompanyFromStore._id);
-  }
-  if (selectedBranchFromStore?._id) {
-    updateStockAdjustmentField("branch", selectedBranchFromStore._id);
-  }
-}, [selectedCompanyFromStore, selectedBranchFromStore, updateStockAdjustmentField]);
-
+  // Set company and branch
+  useEffect(() => {
+    if (selectedCompanyFromStore?._id) {
+      updateStockAdjustmentField("company", selectedCompanyFromStore._id);
+    }
+    if (selectedBranchFromStore?._id) {
+      updateStockAdjustmentField("branch", selectedBranchFromStore._id);
+    }
+  }, [selectedCompanyFromStore, selectedBranchFromStore, updateStockAdjustmentField]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -74,8 +76,7 @@ useEffect(() => {
   console.log("stockAdjustmentData", stockAdjustmentData);
 
   return (
-    // ✅ ADDED: overflow-hidden to prevent page scroll
-    <div className="h-[calc(100vh-64px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col overflow-hidden relative">
+    <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
       {/* Loader Overlay */}
       {isLoading && (
         <div className="absolute inset-0 bg-white/60 z-50 flex items-center justify-center">
@@ -83,92 +84,105 @@ useEffect(() => {
         </div>
       )}
 
-      {/* Header - Fixed at top */}
-      <div className="flex-shrink-0">
-        <TransactionHeader
-          currentTransactionType="stock_adjustment"
-          date={stockAdjustmentData.adjustmentDate}
-          updateTransactionField={updateStockAdjustmentField}
-        />
-      </div>
+      {/* Header */}
+      <TransactionHeader
+        currentTransactionType="stock_adjustment"
+        date={stockAdjustmentData.transactionDate}
+        updateTransactionField={updateStockAdjustmentField}
+      />
 
-      {/* Radio Buttons - Fixed below header */}
-      <div className="flex-shrink-0 bg-white px-4 py-3 border-b border-gray-200">
-        <div className="flex items-center gap-6">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="adjustmentType"
-              value="add"
-              checked={stockAdjustmentData.adjustmentType === "add"}
-              onChange={(e) =>
-                updateStockAdjustmentField("adjustmentType", e.target.value)
-              }
-              className="w-4 h-4 text-green-600 focus:ring-green-500"
-            />
-            <span className="text-sm font-medium text-gray-700">
-              ⊕ Add To Stock
-            </span>
-          </label>
+      {/* Main Content - Same structure as CreateTransaction */}
+      <div className="flex h-[calc(100vh-56px)]">
+        <div className="flex-1 p-1 overflow-hidden flex flex-col">
+          <div className="flex flex-col py-2 bg-white">
+            {/* Radio Buttons - Add To Stock / Remove From Stock */}
+            <div className="px-4 py-3 border-b border-gray-200">
+              <div className="flex items-center gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="adjustmentType"
+                    value="add"
+                    checked={stockAdjustmentData.adjustmentType === "add"}
+                    onChange={(e) =>
+                      updateStockAdjustmentField("adjustmentType", e.target.value)
+                    }
+                    className="w-4 h-4 text-green-600 focus:ring-green-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    Add To Stock
+                  </span>
+                </label>
 
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="adjustmentType"
-              value="remove"
-              checked={stockAdjustmentData.adjustmentType === "remove"}
-              onChange={(e) =>
-                updateStockAdjustmentField("adjustmentType", e.target.value)
-              }
-              className="w-4 h-4 text-red-600 focus:ring-red-500"
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="adjustmentType"
+                    value="remove"
+                    checked={stockAdjustmentData.adjustmentType === "remove"}
+                    onChange={(e) =>
+                      updateStockAdjustmentField("adjustmentType", e.target.value)
+                    }
+                    className="w-4 h-4 text-red-600 focus:ring-red-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    Remove From Stock
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {/* Add Item Form */}
+            <AddItemForm
+              requireAccount={false}
+              items={stockAdjustmentData?.items}
+              branch={selectedBranchFromStore?._id}
+              company={selectedCompanyFromStore?._id}
+              priceLevel={null}
+              updateTransactionField={updateStockAdjustmentField}
+              addItem={addItem}
+              clickedItemInTable={clickedItemInTable}
+              transactionType={null}
+              account={null}
             />
-            <span className="text-sm font-medium text-gray-700">
-              ⊖ Remove From Stock
-            </span>
-          </label>
+          </div>
+
+          <div className="flex-1">
+            {/* Items Table */}
+            <ItemsTable
+              items={stockAdjustmentData?.items}
+              onUpdateQuantity={updateItemQuantity}
+              onRemoveItem={removeItem}
+              handleItemClickInItemsTable={handleItemClickInItemsTable}
+            />
+
+            {/* Transaction Summary */}
+            <TransactionSummary
+              total={stockAdjustmentData.subtotal}
+              netAmount={stockAdjustmentData.netAmount}
+              discount={stockAdjustmentData.discount}
+              paidAmount={stockAdjustmentData.paidAmount}
+              balanceAmount={stockAdjustmentData.balanceAmount}
+              totalDue={stockAdjustmentData.totalDue}
+              onDiscountChange={handleDiscountChange}
+              onPaidAmountChange={handlePaidAmountChange}
+              transactionType={stockAdjustmentData.transactionType}
+            />
+
+            {/* Action Buttons */}
+            <StockTransactionAction
+              onSave={onSave}
+              transactionData={stockAdjustmentData}
+              onLoadingChange={setIsLoading}
+              resetTransactionData={resetStockAdjustmentData}
+              isEditMode={false}
+              requireAccount={false}
+              onCancel={() => {
+                resetStockAdjustmentData();
+              }}
+            />
+          </div>
         </div>
-      </div>
-
-      {/* Add Item Form - Fixed */}
-      <div className="flex-shrink-0">
-        <AddItemForm
-          requireAccount={false}
-          items={stockAdjustmentData?.items}
-          branch={selectedBranchFromStore?._id}
-          company={selectedCompanyFromStore?._id}
-          priceLevel={null}
-          updateTransactionField={updateStockAdjustmentField}
-          addItem={addItem}
-          clickedItemInTable={clickedItemInTable}
-          transactionType={null}
-          account={null}
-        />
-      </div>
-
-      {/* Items Table - Scrollable middle section - ✅ ONLY THIS SECTION SCROLLS */}
-      <div className="flex-1 overflow-auto min-h-0">
-        <ItemsTable
-          items={stockAdjustmentData?.items}
-          onUpdateQuantity={updateItemQuantity}
-          onRemoveItem={removeItem}
-          handleItemClickInItemsTable={handleItemClickInItemsTable}
-        />
-      </div>
-
-      {/* Action Buttons - Fixed at bottom - ✅ ALWAYS VISIBLE */}
-      <div className="flex-shrink-0 bg-white border-t border-gray-200">
-        <StockTransactionAction
-          onSave={onSave}
-          transactionData={stockAdjustmentData}
-          onLoadingChange={setIsLoading}
-          resetTransactionData={resetStockAdjustmentData}
-          isEditMode={false}
-          requireAccount={false}
-          onCancel={() => {
-            resetStockAdjustmentData();
-           
-          }}
-        />
       </div>
     </div>
   );

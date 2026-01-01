@@ -27,7 +27,7 @@ export const stockAdjustmentServices = {
     searchTerm = "",
     companyId,
     branchId,
-    sortBy = "adjustmentDate",
+    sortBy = "transactionDate",
     sortOrder = "desc",
     adjustmentType = ""
   ) => {
@@ -94,7 +94,7 @@ update: async (id, formData) => {
       createdAt, 
       updatedAt, 
       status, 
-      adjustmentNumber,
+      transactionNumber,
       createdBy,
       ...updateData 
     } = formData;

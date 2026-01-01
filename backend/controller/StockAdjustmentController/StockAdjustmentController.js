@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import StockAdjustment from "../../model/StockAdjustmentModel.js";
 
 import {
+
   processStockAdjustment,
   revertStockAdjustment,
 } from "../../helpers/stockAdjustmentHelpers/stockAdjustmentProcessor.js";
@@ -20,7 +21,7 @@ export const getStockAdjustments = async (req, res) => {
     const searchTerm = req.query.searchTerm || "";
     const companyId = req.query.companyId;
     const branchId = req.query.branchId;
-    const sortBy = req.query.sortBy || "adjustmentDate";
+    const sortBy = req.query.sortBy || "transactionDate";
     const sortOrder = req.query.sortOrder || "desc";
     const adjustmentType = req.query.adjustmentType || "";
     const startDate = req.query.startDate; 
@@ -37,13 +38,13 @@ export const getStockAdjustments = async (req, res) => {
     // ✅ FIXED: Search includes adjustmentType as string field + date parsing
     if (searchTerm) {
       const searchConditions = [
-        { adjustmentNumber: { $regex: searchTerm, $options: "i" } },
+        { transactionNumber: { $regex: searchTerm, $options: "i" } },
         { reference: { $regex: searchTerm, $options: "i" } },
         { reason: { $regex: searchTerm, $options: "i" } },
         { adjustmentType: { $regex: searchTerm, $options: "i" } }, // ✅ Search adjustment type
       ];
 
-      // ✅ Try to parse searchTerm as a date and search adjustmentDate field
+      // ✅ Try to parse searchTerm as a date and search transactionDate field
       const parsedDate = new Date(searchTerm);
       if (!isNaN(parsedDate.getTime())) {
         // Valid date - search for adjustments on this date
@@ -54,7 +55,7 @@ export const getStockAdjustments = async (req, res) => {
         endOfDay.setHours(23, 59, 59, 999);
         
         searchConditions.push({
-          adjustmentDate: {
+          transactionDate: {
             $gte: startOfDay,
             $lte: endOfDay
           }
@@ -73,18 +74,18 @@ export const getStockAdjustments = async (req, res) => {
 
     // ✅ Date range filter (from date pickers)
     if (startDate || endDate) {
-      filter.adjustmentDate = {};
+      filter.transactionDate = {};
       
       if (startDate) {
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
-        filter.adjustmentDate.$gte = start;
+        filter.transactionDate.$gte = start;
       }
       
       if (endDate) {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        filter.adjustmentDate.$lte = end;
+        filter.transactionDate.$lte = end;
       }
     }
 
@@ -382,9 +383,9 @@ const markItemMonthlyBalancesForRecalculation = async (
     return;
   }
 
-  const adjustmentDate = new Date(originalAdjustment.adjustmentDate);
-  const editMonth = adjustmentDate.getMonth() + 1; // 1-12
-  const editYear = adjustmentDate.getFullYear();
+  const transactionDate = new Date(originalAdjustment.transactionDate);
+  const editMonth = transactionDate.getMonth() + 1; // 1-12
+  const editYear = transactionDate.getFullYear();
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
@@ -479,7 +480,7 @@ const createStockAdjustmentEntry = async (
   const amountDelta = newAmount - oldAmount;
 
   // Generate adjustment number
-  const adjustmentNumber = await AdjustmentEntry.generateAdjustmentNumber(
+  const adjustmentNumber  = await AdjustmentEntry.generateAdjustmentNumber(
     originalAdjustment.company,
     originalAdjustment.branch,
     session
@@ -493,11 +494,11 @@ const createStockAdjustmentEntry = async (
     // Original transaction reference
     originalTransaction: originalAdjustment._id,
     originalTransactionModel: "StockAdjustment",
-    originalTransactionNumber: originalAdjustment.adjustmentNumber,
-    originalTransactionDate: originalAdjustment.adjustmentDate,
+    originalTransactionNumber: originalAdjustment.transactionNumber,
+    originalTransactionDate: originalAdjustment.transactionDate,
     
     // Adjustment metadata
-    adjustmentNumber,
+    adjustmentNumber ,
     adjustmentDate: new Date(),
     adjustmentType,
     
@@ -566,7 +567,7 @@ export const editStockAdjustment = async (req, res) => {
       });
     }
 
-    console.log("✅ Found original adjustment:", originalAdjustment.adjustmentNumber);
+    console.log("✅ Found original adjustment:", originalAdjustment.transactionNumber);
 
     // ========================================
     // STEP 2: Validate - can't change company/branch
@@ -644,7 +645,7 @@ export const editStockAdjustment = async (req, res) => {
     console.log("🔄 Updating stock adjustment document...");
 
     originalAdjustment.adjustmentType = updatedData.adjustmentType;
-    originalAdjustment.adjustmentDate = updatedData.adjustmentDate;
+    originalAdjustment.transactionDate = updatedData.transactionDate;
     originalAdjustment.reference = updatedData.reference || "";
     originalAdjustment.reason = updatedData.reason || "";
     originalAdjustment.items = updatedData.items;
@@ -767,7 +768,7 @@ export const getItemAdjustmentHistory = async (req, res) => {
       company: companyId,
       branch: branchId,
     })
-      .sort({ adjustmentDate: -1 })
+      .sort({ transactionDate: -1 })
       .limit(parseInt(limit))
       .populate("createdBy", "name email");
 
@@ -778,8 +779,8 @@ export const getItemAdjustmentHistory = async (req, res) => {
 
       return {
         _id: adj._id,
-        adjustmentNumber: adj.adjustmentNumber,
-        adjustmentDate: adj.adjustmentDate,
+        transactionNumber: adj.transactionNumber,
+        transactionDate: adj.transactionDate,
         adjustmentType: adj.adjustmentType,
         reference: adj.reference,
         reason: adj.reason,

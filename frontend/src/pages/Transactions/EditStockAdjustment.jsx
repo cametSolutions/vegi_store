@@ -8,6 +8,8 @@ import { useStockAdjustment } from "../stock/hooks/useStockAdjustment ";
 import { useStockAdjustmentActions } from "../stock/hooks/useStockAdjustmentActions ";
 import { useDispatch, useSelector } from "react-redux";
 import { useQuery } from "@tanstack/react-query";
+import TransactionSummaryComponent from  "../Transactions/components/TransactionSummary";
+
 import { stockAdjustmentQueries } from "@/hooks/queries/stockAdjustmentQueries ";
 import { toast } from "sonner";
 import {
@@ -20,6 +22,7 @@ const TransactionHeader = React.memo(TransactionHeaderComponent);
 const AddItemForm = React.memo(AddItemFormComponent);
 const ItemsTable = React.memo(ItemsTableComponent);
 const StockTransactionAction = React.memo(TransactionActionsComponent);
+const TransactionSummary = React.memo(TransactionSummaryComponent);
 
 // EditStockAdjustment.jsx
 
@@ -37,6 +40,8 @@ const EditStockAdjustment = ({
     updateStockAdjustmentField,
     updateItemQuantity,
     removeItem,
+     handleDiscountChange,
+    handlePaidAmountChange,
     addItem,
     clickedItemInTable,
     handleItemClickInItemsTable,
@@ -130,7 +135,7 @@ const EditStockAdjustment = ({
       onSuccess();
     }
   };
-
+console.log(stockAdjustmentData)
   return (
     <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
       {/* Loader */}
@@ -143,10 +148,10 @@ const EditStockAdjustment = ({
       {/* Header */}
       <TransactionHeader
         currentTransactionType="stock_adjustment"
-        date={stockAdjustmentData.adjustmentDate}
+        date={stockAdjustmentData.transactionDate}
         updateTransactionField={updateStockAdjustmentField}
         isEditMode={stockAdjustmentData.isEditMode}
-        transactionNumber={editAdjustmentData.adjustmentNumber}
+        transactionNumber={editAdjustmentData.transactionNumber}
       />
 
       {/* Main Content */}
@@ -168,7 +173,7 @@ const EditStockAdjustment = ({
                     className="w-4 h-4 text-green-600 focus:ring-green-500"
                   />
                   <span className="text-sm font-medium text-gray-700">
-                    ⊕ Add To Stock
+                     Add To Stock
                   </span>
                 </label>
 
@@ -184,7 +189,7 @@ const EditStockAdjustment = ({
                     className="w-4 h-4 text-red-600 focus:ring-red-500"
                   />
                   <span className="text-sm font-medium text-gray-700">
-                    ⊖ Remove From Stock
+                     Remove From Stock
                   </span>
                 </label>
               </div>
@@ -215,20 +220,17 @@ const EditStockAdjustment = ({
             />
 
             {/* Summary */}
-            <div className="bg-white border-t border-gray-200 p-4">
-              <div className="flex justify-end">
-                <div className="w-80 space-y-2">
-                  <div className="flex justify-between items-center py-2 border-b border-gray-300">
-                    <span className="text-base font-semibold text-gray-700">
-                      Total Amount:
-                    </span>
-                    <span className="text-xl font-bold text-gray-900">
-                      {stockAdjustmentData.totalAmount?.toFixed(2) || "0.00"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <TransactionSummary
+              total={stockAdjustmentData.totalAmount}
+              netAmount={stockAdjustmentData.totalAmount}
+              discount={stockAdjustmentData.discount}
+              paidAmount={stockAdjustmentData.paidAmount}
+              balanceAmount={stockAdjustmentData.totalAmount}
+              totalDue={stockAdjustmentData.totalDue}
+              onDiscountChange={handleDiscountChange}
+              onPaidAmountChange={handlePaidAmountChange}
+              transactionType={stockAdjustmentData.transactionType}
+            />
 
             {/* Actions */}
             <StockTransactionAction

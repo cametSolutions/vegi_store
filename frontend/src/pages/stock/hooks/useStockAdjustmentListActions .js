@@ -2,7 +2,7 @@
 import { useState, useCallback, useMemo } from "react";
 
 export const useStockAdjustmentListActions = () => {
-  const [sortField, setSortField] = useState("adjustmentDate");
+  const [sortField, setSortField] = useState("transactionDate");
   const [sortDirection, setSortDirection] = useState("desc");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -73,8 +73,8 @@ export const useStockAdjustmentListActions = () => {
     if (data && data.length > 0) {
       const headers = ["Date", "Reference", "Type", "Items", "Total Amount"];
       const csvData = data.map((adjustment) => [
-        adjustment.adjustmentDate,
-        adjustment.reference || adjustment.adjustmentNumber || "N/A",
+        adjustment.transactionDate,
+        adjustment.reference || adjustment.transactionNumber || "N/A",
         adjustment.adjustmentType === "add" ? "ADD" : "REMOVE",
         adjustment.items?.length || 0,
         adjustment.totalAmount?.toFixed(2) || "0.00",

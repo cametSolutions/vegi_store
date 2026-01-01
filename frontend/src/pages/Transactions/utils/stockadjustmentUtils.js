@@ -20,7 +20,7 @@ export const adjustmentReasons = [
 // utils/stockAdjustmentUtils.js
 
 export const createEmptyStockAdjustment = () => ({
-  adjustmentDate: new Date().toISOString().split("T")[0],
+  transactionDate: new Date().toISOString().split("T")[0],
   adjustmentType: "add", // "add" or "remove"
   items: [],
   totalAmount: 0,

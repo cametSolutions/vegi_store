@@ -71,14 +71,14 @@ const StockAdjustmentListTable = ({
       </div>
     );
   }
-
+console.log(data)
   return (
     <div className="h-full overflow-auto">
       <table className="w-full text-sm">
         <thead className="bg-slate-700 text-white sticky top-0 z-10">
           <tr>
             <th className="px-3 py-2 text-left font-medium text-[11px]">DATE</th>
-          
+            <th className="px-3 py-2 text-left font-medium text-[11px]">TRANSACTION NUMBER</th>
             <th className="px-3 py-2 text-center font-medium text-[11px]">
               TYPE
             </th>
@@ -101,11 +101,13 @@ const StockAdjustmentListTable = ({
             >
               {/* Date */}
               <td className="px-3 py-2 text-[11px] text-slate-700">
-                {formatDate(adjustment?.adjustmentDate)}
+                {formatDate(adjustment?.transactionDate)}
               </td>
 
               {/* Reference */}
-             
+              <td className="px-3 py-2 text-[11px] text-slate-700">
+                {adjustment?.transactionNumber}
+              </td>
 
               {/* Adjustment Type */}
               <td className="px-3 py-2 text-center">
