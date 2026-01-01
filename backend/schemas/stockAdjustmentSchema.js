@@ -130,7 +130,7 @@ const stockAdjustmentSchema = new mongoose.Schema(
 stockAdjustmentSchema.index({ company: 1, branch: 1, transactionNumber: 1 });
 stockAdjustmentSchema.index({ company: 1, branch: 1, transactionDate: -1 });
 stockAdjustmentSchema.index({ company: 1, branch: 1, adjustmentType: 1 });
-stockAdjustmentSchema.index({ transactionNumber: 1 });
+
 
 // Static method for pagination
 stockAdjustmentSchema.statics.getPaginatedAdjustments = async function (

@@ -52,7 +52,11 @@ const CreateStockAdjustment = () => {
     if (selectedBranchFromStore?._id) {
       updateStockAdjustmentField("branch", selectedBranchFromStore._id);
     }
-  }, [selectedCompanyFromStore, selectedBranchFromStore, updateStockAdjustmentField]);
+  }, [
+    selectedCompanyFromStore,
+    selectedBranchFromStore,
+    updateStockAdjustmentField,
+  ]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -76,7 +80,7 @@ const CreateStockAdjustment = () => {
   console.log("stockAdjustmentData", stockAdjustmentData);
 
   return (
-    <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
+    <div className="h-[calc(100vh-100px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
       {/* Loader Overlay */}
       {isLoading && (
         <div className="absolute inset-0 bg-white/60 z-50 flex items-center justify-center">
@@ -92,42 +96,49 @@ const CreateStockAdjustment = () => {
       />
 
       {/* Main Content - Same structure as CreateTransaction */}
-      <div className="flex h-[calc(100vh-56px)]">
+      <div className="flex ">
         <div className="flex-1 p-1 overflow-hidden flex flex-col">
-          <div className="flex flex-col py-2 bg-white">
+          <div className="flex flex-col  bg-white">
             {/* Radio Buttons - Add To Stock / Remove From Stock */}
-            <div className="px-4 py-3 border-b border-gray-200">
+            {/* Add To Stock / Remove From Stock Radio Buttons */}
+            <div className="px-3 py-6  border-b border-gray-200 ">
               <div className="flex items-center gap-6">
                 <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="text-xs font-medium text-gray-700">
+                    Add To Stock
+                  </span>
                   <input
                     type="radio"
                     name="adjustmentType"
                     value="add"
                     checked={stockAdjustmentData.adjustmentType === "add"}
                     onChange={(e) =>
-                      updateStockAdjustmentField("adjustmentType", e.target.value)
+                      updateStockAdjustmentField(
+                        "adjustmentType",
+                        e.target.value
+                      )
                     }
-                    className="w-4 h-4 text-green-600 focus:ring-green-500"
+                    className="w-3 h-3 text-green-600 focus:ring-green-500"
                   />
-                  <span className="text-sm font-medium text-gray-700">
-                    Add To Stock
-                  </span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="text-xs font-medium text-gray-700">
+                    Remove From Stock
+                  </span>
                   <input
                     type="radio"
                     name="adjustmentType"
                     value="remove"
                     checked={stockAdjustmentData.adjustmentType === "remove"}
                     onChange={(e) =>
-                      updateStockAdjustmentField("adjustmentType", e.target.value)
+                      updateStockAdjustmentField(
+                        "adjustmentType",
+                        e.target.value
+                      )
                     }
-                    className="w-4 h-4 text-red-600 focus:ring-red-500"
+                    className="w-3 h-3  text-red-600 text-red-600 focus:ring-red-500"
                   />
-                  <span className="text-sm font-medium text-gray-700">
-                    Remove From Stock
-                  </span>
                 </label>
               </div>
             </div>

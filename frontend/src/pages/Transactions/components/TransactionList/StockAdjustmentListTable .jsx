@@ -92,7 +92,7 @@ console.log(data)
           {data.map((adjustment, index) => (
             <tr
               key={adjustment?._id || index}
-              onClick={() => onEditAdjustment(adjustment)}
+              onDoubleClick={() => onEditAdjustment(adjustment)}
               className={`border-b border-slate-200 hover:bg-blue-50 cursor-pointer transition-colors ${
                 editAdjustmentId === adjustment?._id
                   ? "bg-blue-100 border-l-4 border-l-blue-600"

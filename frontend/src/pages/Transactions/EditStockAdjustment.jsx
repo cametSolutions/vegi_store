@@ -8,7 +8,7 @@ import { useStockAdjustment } from "../stock/hooks/useStockAdjustment ";
 import { useStockAdjustmentActions } from "../stock/hooks/useStockAdjustmentActions ";
 import { useDispatch, useSelector } from "react-redux";
 import { useQuery } from "@tanstack/react-query";
-import TransactionSummaryComponent from  "../Transactions/components/TransactionSummary";
+import TransactionSummaryComponent from "../Transactions/components/TransactionSummary";
 
 import { stockAdjustmentQueries } from "@/hooks/queries/stockAdjustmentQueries ";
 import { toast } from "sonner";
@@ -40,7 +40,7 @@ const EditStockAdjustment = ({
     updateStockAdjustmentField,
     updateItemQuantity,
     removeItem,
-     handleDiscountChange,
+    handleDiscountChange,
     handlePaidAmountChange,
     addItem,
     clickedItemInTable,
@@ -89,7 +89,7 @@ const EditStockAdjustment = ({
   useEffect(() => {
     if (adjustmentResponse) {
       console.log("🟢 Adjustment response:", adjustmentResponse);
-      
+
       updateStockAdjustmentData({
         ...adjustmentResponse,
         _id: adjustmentResponse._id, // ✅ Explicitly set _id
@@ -124,8 +124,11 @@ const EditStockAdjustment = ({
 
   const onSave = async () => {
     console.log("💾 onSave - stockAdjustmentData:", stockAdjustmentData);
-    console.log("💾 onSave - stockAdjustmentData._id:", stockAdjustmentData._id);
-    
+    console.log(
+      "💾 onSave - stockAdjustmentData._id:",
+      stockAdjustmentData._id
+    );
+
     setIsLoading(true);
     const success = await handleSave();
     setIsLoading(false);
@@ -135,7 +138,7 @@ const EditStockAdjustment = ({
       onSuccess();
     }
   };
-console.log(stockAdjustmentData)
+  console.log(stockAdjustmentData);
   return (
     <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
       {/* Loader */}
@@ -157,40 +160,48 @@ console.log(stockAdjustmentData)
       {/* Main Content */}
       <div className="flex h-[calc(100vh-56px)]">
         <div className="flex-1 p-1 overflow-hidden flex flex-col">
-          <div className="flex flex-col py-2 bg-white">
+          <div className="flex flex-col  bg-white">
             {/* Add To Stock / Remove From Stock Radio Buttons */}
-            <div className="px-4 py-3 border-b border-gray-200">
+            <div className="px-3 py-6 border-b border-gray-200 ">
               <div className="flex items-center gap-6">
                 <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="text-xs font-medium text-gray-700">
+                    Add To Stock
+                  </span>
                   <input
+                    disabled
                     type="radio"
                     name="adjustmentType"
                     value="add"
                     checked={stockAdjustmentData.adjustmentType === "add"}
                     onChange={(e) =>
-                      updateStockAdjustmentField("adjustmentType", e.target.value)
+                      updateStockAdjustmentField(
+                        "adjustmentType",
+                        e.target.value
+                      )
                     }
-                    className="w-4 h-4 text-green-600 focus:ring-green-500"
+                    className="w-3 h-3 text-green-600 focus:ring-green-500"
                   />
-                  <span className="text-sm font-medium text-gray-700">
-                     Add To Stock
-                  </span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="text-xs font-medium text-gray-700">
+                    Remove From Stock
+                  </span>
                   <input
+                    disabled
                     type="radio"
                     name="adjustmentType"
                     value="remove"
                     checked={stockAdjustmentData.adjustmentType === "remove"}
                     onChange={(e) =>
-                      updateStockAdjustmentField("adjustmentType", e.target.value)
+                      updateStockAdjustmentField(
+                        "adjustmentType",
+                        e.target.value
+                      )
                     }
-                    className="w-4 h-4 text-red-600 focus:ring-red-500"
+                    className="w-3 h-3 text-red-600 focus:ring-red-500"
                   />
-                  <span className="text-sm font-medium text-gray-700">
-                     Remove From Stock
-                  </span>
                 </label>
               </div>
             </div>
@@ -248,8 +259,5 @@ console.log(stockAdjustmentData)
     </div>
   );
 };
-
-
-
 
 export default EditStockAdjustment;
