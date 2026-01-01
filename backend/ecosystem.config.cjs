@@ -8,7 +8,7 @@ module.exports = {
       exec_mode: "cluster",  // Enables load balancing for the API
       env: {
         NODE_ENV: "production",
-        PORT: 5000 // Optional: Override default port if needed
+        PORT: 10000 // Optional: Override default port if needed
       }
     },
     {
