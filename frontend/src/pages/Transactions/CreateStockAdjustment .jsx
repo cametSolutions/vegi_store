@@ -158,11 +158,11 @@ const CreateStockAdjustment = () => {
 
             {/* Transaction Summary */}
             <TransactionSummary
-              total={stockAdjustmentData.subtotal}
-              netAmount={stockAdjustmentData.netAmount}
+              total={stockAdjustmentData.totalAmount}
+              netAmount={stockAdjustmentData.totalAmount}
               discount={stockAdjustmentData.discount}
               paidAmount={stockAdjustmentData.paidAmount}
-              balanceAmount={stockAdjustmentData.balanceAmount}
+              balanceAmount={stockAdjustmentData.totalAmount}
               totalDue={stockAdjustmentData.totalDue}
               onDiscountChange={handleDiscountChange}
               onPaidAmountChange={handlePaidAmountChange}
