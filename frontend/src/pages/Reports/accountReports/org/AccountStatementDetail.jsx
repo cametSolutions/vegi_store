@@ -24,12 +24,16 @@ import FiltersBar from "@/components/filters/filterBar/FiltersBar";
 import { Button } from "@/components/ui/button";
 import { accountMasterQueries } from "@/hooks/queries/accountMaster.queries";
 import { setFilter } from "@/store/slices/filtersSlice";
+import DownloadButton from "@/components/DownloadButton/DownloadButton";
+import { useReportDownload } from "@/hooks/downloadHooks/account/useSummaryDownload";
 
 const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
   const dispatch = useDispatch();
 
   // 1. Get Filters from Redux
   const filters = useSelector((state) => state.filters);
+  const { initiateDownload, isDownloading, progress, status } = useReportDownload();
+
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -104,7 +108,7 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
       let dr = 0;
       let cr = 0;
       console.log(txn);
-      
+
       const amount = Math.abs(txn.effectiveAmount || txn.amount || 0);
       const type = txn.transactionType?.toLowerCase();
 
@@ -127,7 +131,6 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
 
       // console.log(amount, type);
       // console.log(dr, cr);
-      
 
       groups[dateKey].txns.push({ ...txn, dr, cr });
       groups[dateKey].totalDr += dr;
@@ -138,7 +141,6 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
   }, [transactions]);
 
   // console.log(groupedTransactions);
-  
 
   const TableColGroup = () => (
     <colgroup>
@@ -153,6 +155,27 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
     setCurrentPage(newPage);
   };
 
+
+  const handleDownload = async (format) => {
+  if (!accountId) {
+    toast.error("No party selected");
+    return;
+  }
+
+  const downloadFilters = {
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    company: companyId,
+    branch: branchId,
+    account: accountId, // ✅ Single account for statement
+    transactionType: filters.transactionType || null,
+    searchTerm: filters.searchTerm || null,
+  };
+
+  await initiateDownload(downloadFilters, format,"statement");
+};
+
+
   if (!selectedParty) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-full bg-slate-50 border-l border-slate-200 text-slate-400">
@@ -161,6 +184,10 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
       </div>
     );
   }
+
+
+
+
 
   return (
     <div className="flex flex-col h-full bg-slate-100 overflow-hidden font-sans text-sm">
@@ -182,22 +209,13 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center bg-slate-50 rounded-lg p-1 border border-slate-200">
-              <button
-                className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-md transition-all shadow-sm"
-                title="Print"
-              >
-                <Printer className="w-4 h-4" />
-              </button>
-              <div className="w-px h-4 bg-slate-200 mx-1"></div>
-              <button
-                className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-md transition-all shadow-sm"
-                title="Download"
-              >
-                <Download className="w-4 h-4" />
-              </button>
-            </div>
-
+            {/* ← Download Button */}
+            <DownloadButton
+              onDownload={handleDownload}
+              isDownloading={isDownloading}
+              progress={progress}
+              status={status} // Optional: Pass this if you want the Check/X icons to appear
+            />
             <div className="h-6 w-px bg-slate-200 mx-1"></div>
 
             <FiltersBar
@@ -351,51 +369,55 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                       <td colSpan={4} className="p-0"></td>
                     </tr>
                   </tbody>
-                  {(pagination.page === pagination.totalPages || pagination.totalPages === 0) && (
-  <tfoot>
-    {/* 1. Total Dr/Cr Row - Fixed above the Closing Balance */}
-    {/* We use bottom-[45px] because the row below it is approx 45px tall */}
-    <tr>
-      <td
-        colSpan={2}
-        className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-600 uppercase tracking-tight border-r border-t-2 border-slate-300 bg-slate-50"
-      >
-        Total Amount
-      </td>
-      <td className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-700 font-mono tracking-tight border-r border-t-2 border-slate-300 bg-slate-50">
-        {statementData.summary?.totalDebit > 0
-          ? formatINR(statementData.summary.totalDebit)
-          : "0.00"}
-      </td>
-      <td className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-700 font-mono tracking-tight border-t-2 border-slate-300 bg-slate-50">
-        {statementData.summary?.totalCredit > 0
-          ? formatINR(statementData.summary.totalCredit)
-          : "0.00"}
-      </td>
-    </tr>
+                  {(pagination.page === pagination.totalPages ||
+                    pagination.totalPages === 0) && (
+                    <tfoot>
+                      {/* 1. Total Dr/Cr Row - Fixed above the Closing Balance */}
+                      {/* We use bottom-[45px] because the row below it is approx 45px tall */}
+                      <tr>
+                        <td
+                          colSpan={2}
+                          className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-600 uppercase tracking-tight border-r border-t-2 border-slate-300 bg-slate-50"
+                        >
+                          Total Amount
+                        </td>
+                        <td className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-700 font-mono tracking-tight border-r border-t-2 border-slate-300 bg-slate-50">
+                          {statementData.summary?.totalDebit > 0
+                            ? formatINR(statementData.summary.totalDebit)
+                            : "0.00"}
+                        </td>
+                        <td className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-700 font-mono tracking-tight border-t-2 border-slate-300 bg-slate-50">
+                          {statementData.summary?.totalCredit > 0
+                            ? formatINR(statementData.summary.totalCredit)
+                            : "0.00"}
+                        </td>
+                      </tr>
 
-    {/* 2. Total Closing Balance Row - Fixed at the very bottom */}
-    <tr>
-      <td
-        colSpan={2}
-        className="sticky bottom-0 z-30 px-4 py-3 text-right text-xs font-bold text-slate-800 uppercase tracking-tight border-r border-t border-slate-300 bg-indigo-50"
-      >
-        Total Closing Balance
-      </td>
-      <td className="sticky bottom-0 z-30 px-4 py-3 text-right text-sm font-bold text-indigo-700 font-mono tracking-tight border-r border-t border-slate-300 bg-indigo-50">
-        {statementData.summary?.closingBalance > 0
-          ? formatINR(Math.abs(statementData.summary.closingBalance))
-          : ""}
-      </td>
-      <td className="sticky bottom-0 z-30 px-4 py-3 text-right text-sm font-bold text-indigo-700 font-mono tracking-tight border-t border-slate-300 bg-indigo-50">
-        {statementData.summary?.closingBalance < 0
-          ? formatINR(Math.abs(statementData.summary.closingBalance))
-          : ""}
-      </td>
-    </tr>
-  </tfoot>
-)}
-
+                      {/* 2. Total Closing Balance Row - Fixed at the very bottom */}
+                      <tr>
+                        <td
+                          colSpan={2}
+                          className="sticky bottom-0 z-30 px-4 py-3 text-right text-xs font-bold text-slate-800 uppercase tracking-tight border-r border-t border-slate-300 bg-indigo-50"
+                        >
+                          Total Closing Balance
+                        </td>
+                        <td className="sticky bottom-0 z-30 px-4 py-3 text-right text-sm font-bold text-indigo-700 font-mono tracking-tight border-r border-t border-slate-300 bg-indigo-50">
+                          {statementData.summary?.closingBalance > 0
+                            ? formatINR(
+                                Math.abs(statementData.summary.closingBalance)
+                              )
+                            : ""}
+                        </td>
+                        <td className="sticky bottom-0 z-30 px-4 py-3 text-right text-sm font-bold text-indigo-700 font-mono tracking-tight border-t border-slate-300 bg-indigo-50">
+                          {statementData.summary?.closingBalance < 0
+                            ? formatINR(
+                                Math.abs(statementData.summary.closingBalance)
+                              )
+                            : ""}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </div>
 

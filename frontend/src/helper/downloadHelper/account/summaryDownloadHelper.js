@@ -85,7 +85,7 @@ export const downloadHelper = {
     const startDate = context.startDate;
     const endDate = context.endDate;
     const pageWidth = doc.internal.pageSize.width;
-    const margin = 14;
+    const margin = 7; 
 
     const config = {
       title: "Account Summary",
@@ -96,98 +96,96 @@ export const downloadHelper = {
       returnKey: isSale ? "salesReturn" : "purchaseReturn",
     };
 
-    // ✅ DRAW BACKGROUND RECTANGLE
-    // x=0, y=0, width=pageWidth, height=55 (adjust based on content)
-    doc.setFillColor(248, 250, 252); // Very light slate/gray (slate-50)
-    doc.rect(0, 0, pageWidth, 55, 'F'); // 'F' means Fill
+    // ✅ DRAW COMPACT BACKGROUND RECTANGLE
+    // Increased height slightly to 45 to accommodate looser spacing
+    const headerHeight = 45; 
+    doc.setFillColor(248, 250, 252); 
+    doc.rect(0, 0, pageWidth, headerHeight, 'F'); 
 
-    let y = 20;
+    let y = 10; 
 
     // --- LEFT SIDE: REPORT TITLE & DATES ---
     
     // 1. Report Title
-    doc.setFontSize(14);
+    doc.setFontSize(13); 
     doc.setTextColor(30, 41, 59); 
     doc.setFont("helvetica", "bold");
     doc.text(config.title, margin, y);
-    y += 7;
+    y += 5; 
 
     // 2. Subtitle
-    doc.setFontSize(10);
+    doc.setFontSize(9); 
     doc.setTextColor(100, 116, 139); 
     doc.setFont("helvetica", "normal");
     doc.text(config.analysisType, margin, y);
-    y += 8;
+    y += 5; 
 
     // 3. Date Range
     if (startDate && endDate) {
         const startStr = formatDate(new Date(startDate), 'dd MMM yyyy');
         const endStr = formatDate(new Date(endDate), 'dd MMM yyyy');
         
-        doc.setFontSize(9);
+        doc.setFontSize(8); 
         doc.setTextColor(71, 85, 105); 
         doc.setFont("helvetica", "bold");
         doc.text("Period:", margin, y);
         
         doc.setFont("helvetica", "normal");
-        doc.text(`${startStr} to ${endStr}`, margin + 12, y);
-        y += 5;
+        doc.text(`${startStr} to ${endStr}`, margin + 10, y); 
+        y += 4;
     }
 
     // 4. Generated On
     const generatedStr = formatDate(new Date(), 'dd MMM yyyy, hh:mm a');
-    doc.setFontSize(9);
+    doc.setFontSize(8); 
     doc.setTextColor(100, 116, 139);
     doc.text(`Generated: ${generatedStr}`, margin, y);
 
     // --- RIGHT SIDE: COMPANY INFO (Right Aligned) ---
-    let rightY = 20;
+    // Increased vertical spacing between lines for a "looser" look
+    let rightY = 10; 
     const rightMargin = pageWidth - margin;
 
     // 1. Company Name
-    doc.setFontSize(14);
+    doc.setFontSize(11); 
     doc.setTextColor(15, 23, 42); 
     doc.setFont("helvetica", "bold");
     doc.text(company.companyName || "Company Name", rightMargin, rightY, { align: 'right' });
-    rightY += 6;
+    rightY += 5; // Increased from 4
 
     // 2. Address
-    doc.setFontSize(9);
+    doc.setFontSize(8); 
     doc.setTextColor(71, 85, 105);
     doc.setFont("helvetica", "normal");
 
     if (company.permanentAddress) {
         const addressText = doc.splitTextToSize(company.permanentAddress, 80); 
-        addressText.forEach(line => {
+        addressText.slice(0, 2).forEach(line => { 
             doc.text(line, rightMargin, rightY, { align: 'right' });
-            rightY += 4;
+            rightY += 4; // Increased from 3
         });
     }
-
-    rightY += 2; 
 
     // 3. Contact Info
     if (company.email || company.mobile) {
         const contactText = [company.email, company.mobile].filter(Boolean).join(' | ');
         doc.text(contactText, rightMargin, rightY, { align: 'right' });
-        rightY += 4;
+        rightY += 4; // Increased from 3
     }
 
     // 4. Tax IDs
     if (company.gstNumber) {
         doc.text(`GSTIN: ${company.gstNumber}`, rightMargin, rightY, { align: 'right' });
-        rightY += 4;
+        rightY += 4; // Increased from 3
     }
 
     // --- DIVIDER LINE ---
-    const headerBottom = 55;
-    
     doc.setDrawColor(226, 232, 240); 
     doc.setLineWidth(0.5);
-    doc.line(0, headerBottom, pageWidth, headerBottom); // Full width line
+    doc.line(0, headerHeight + 2, pageWidth, headerHeight + 2); 
 
     // --- TABLE ---
-    const tableStartY = headerBottom + 10; // Add some padding
+    const tableStartY = headerHeight + 7; 
 
     const tableBody = data.map((item, index) => [
       index + 1,
@@ -233,7 +231,8 @@ export const downloadHelper = {
             data.cell.styles.halign = 'right';
           }
         }
-      }
+      },
+      margin: { left: margin, right: margin } 
     });
 
     doc.save(`${fileName}.pdf`);
