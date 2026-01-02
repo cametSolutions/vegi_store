@@ -25,8 +25,8 @@ const CreateStockAdjustment = () => {
     updateItemQuantity,
     removeItem,
     addItem,
-    handleDiscountChange,
-    handlePaidAmountChange,
+    // handleDiscountChange,
+    // handlePaidAmountChange,
     clickedItemInTable,
     handleItemClickInItemsTable,
     resetStockAdjustmentData,
@@ -167,16 +167,18 @@ const CreateStockAdjustment = () => {
               handleItemClickInItemsTable={handleItemClickInItemsTable}
             />
 
+
+
             {/* Transaction Summary */}
             <TransactionSummary
-              total={stockAdjustmentData.subtotal}
-              netAmount={stockAdjustmentData.netAmount}
-              discount={stockAdjustmentData.discount}
+              total={stockAdjustmentData.totalAmount}
+              netAmount={stockAdjustmentData.totalAmount}
+              discount={0}
               paidAmount={stockAdjustmentData.paidAmount}
-              balanceAmount={stockAdjustmentData.balanceAmount}
-              totalDue={stockAdjustmentData.totalDue}
-              onDiscountChange={handleDiscountChange}
-              onPaidAmountChange={handlePaidAmountChange}
+              balanceAmount={stockAdjustmentData.totalAmount}
+              totalDue={stockAdjustmentData.totalAmount}
+              onDiscountChange={/* handleDiscountChange */ () => {}}
+              onPaidAmountChange={/* handlePaidAmountChange */ () => {}}
               transactionType={stockAdjustmentData.transactionType}
             />
 

@@ -13,13 +13,13 @@ export const stockAdjustmentMutations = {
       
       // Invalidate stock adjustment list queries
       queryClient.invalidateQueries({
-        queryKey: ["stockAdjustments", company, branch],
+        queryKey: ["stockAdjustments"],
       });
 
-      // Invalidate item/inventory queries since stock levels changed
-      queryClient.invalidateQueries({
-        queryKey: ["items"],
-      });
+      // // Invalidate item/inventory queries since stock levels changed
+      // queryClient.invalidateQueries({
+      //   queryKey: ["items"],
+      // });
 
       // Invalidate reports that depend on stock levels
       queryClient.invalidateQueries({
@@ -44,12 +44,12 @@ export const stockAdjustmentMutations = {
 
   update: (queryClient) => ({
     mutationFn: async ({ id, formData }) => {
-      console.log("🟡 ================================");
-      console.log("🟡 Mutation - mutationFn called");
-      console.log("🟡 Mutation - id:", id);
-      console.log("🟡 Mutation - id type:", typeof id);
-      console.log("🟡 Mutation - formData:", formData);
-      console.log("🟡 ================================");
+      // console.log("🟡 ================================");
+      // console.log("🟡 Mutation - mutationFn called");
+      // console.log("🟡 Mutation - id:", id);
+      // console.log("🟡 Mutation - id type:", typeof id);
+      // console.log("🟡 Mutation - formData:", formData);
+      // console.log("🟡 ================================");
       
       if (!id || id === "undefined") {
         throw new Error("Invalid adjustment ID in mutation");
@@ -57,17 +57,17 @@ export const stockAdjustmentMutations = {
       
       const response = await stockAdjustmentServices.update(id, formData);
       
-      console.log("🟡 Mutation - Response:", response);
+      // console.log("🟡 Mutation - Response:", response);
       
       return response;
     },
 
     onSuccess: (response, variables) => {
-      console.log("✅ ================================");
-      console.log("✅ Mutation Success");
-      console.log("✅ response:", response);
-      console.log("✅ variables:", variables);
-      console.log("✅ ================================");
+      // console.log("✅ ================================");
+      // console.log("✅ Mutation Success");
+      // console.log("✅ response:", response);
+      // console.log("✅ variables:", variables);
+      // console.log("✅ ================================");
 
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ["stockAdjustments"] });
@@ -78,13 +78,13 @@ export const stockAdjustmentMutations = {
     },
 
     onError: (error, variables) => {
-      console.error("❌ ================================");
-      console.error("❌ Mutation Error");
-      console.error("❌ error:", error);
-      console.error("❌ error.message:", error.message);
-      console.error("❌ error.response:", error.response);
-      console.error("❌ variables:", variables);
-      console.error("❌ ================================");
+      // console.error("❌ ================================");
+      // console.error("❌ Mutation Error");
+      // console.error("❌ error:", error);
+      // console.error("❌ error.message:", error.message);
+      // console.error("❌ error.response:", error.response);
+      // console.error("❌ variables:", variables);
+      // console.error("❌ ================================");
       
       toast.error(
         error?.message || 

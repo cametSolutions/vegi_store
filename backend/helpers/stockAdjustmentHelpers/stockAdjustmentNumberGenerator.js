@@ -1,20 +1,10 @@
 // helpers/stockAdjustmentHelpers/stockAdjustmentNumberGenerator.js
+import { nanoid } from "nanoid";
 import StockAdjustment from "../../model/StockAdjustmentModel.js";
 
 export const generateStockAdjustmentNumber = async (
-  companyId,
-  branchId,
-  session
+  transactionType
 ) => {
-  // Count existing adjustments for this company/branch
-  const count = await StockAdjustment.countDocuments({
-    company: companyId,
-    branch: branchId,
-  }).session(session);
-
-  // Increment and pad
-  const nextNumber = count + 1;
-  const paddedNumber = String(nextNumber).padStart(6, "0");
-  
-  return `SA-${paddedNumber}`;
+  const prefix = transactionType?.toUpperCase().slice(0, 3) || "TXN";
+  return `${prefix}-${nanoid(4)}`;
 };

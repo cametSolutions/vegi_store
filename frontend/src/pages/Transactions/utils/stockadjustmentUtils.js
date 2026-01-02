@@ -1,5 +1,7 @@
 // utils/stockAdjustmentUtils.js
 
+import { tr } from "date-fns/locale";
+
 // ==================== CONSTANTS ====================
 export const adjustmentTypes = [
   { value: "add", label: "Add Stock", icon: "Plus", color: "green" },
@@ -24,6 +26,7 @@ export const createEmptyStockAdjustment = () => ({
   adjustmentType: "add", // "add" or "remove"
   items: [],
   totalAmount: 0,
+  transactionType: "stock_adjustment",
 
   // Edit mode details
   isEditMode: false,
@@ -31,7 +34,7 @@ export const createEmptyStockAdjustment = () => ({
 });
 
 export const calculateStockAdjustmentTotals = (adjustment) => {
-  console.log("Calculating stock adjustment totals");
+  // console.log("Calculating stock adjustment totals");
 
   // Calculate total amount from all items
   const totalAmount = adjustment.items.reduce((sum, item) => {

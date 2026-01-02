@@ -5,10 +5,10 @@ import { useSelector } from "react-redux";
 import { useDebounce } from "@/hooks/useDebounce";
 import { stockAdjustmentQueries } from "@/hooks/queries/stockAdjustmentQueries ";
 import ListFooter from "../CommonTransactionListComponents/ListFooter";
-import ListHeader from "../CommonTransactionListComponents/ListHeader";
 import ListSearch from "../CommonTransactionListComponents/ListSearch";
 import StockAdjustmentListTable from "../Transactions/components/TransactionList/StockAdjustmentListTable ";
 import { useStockAdjustmentListActions } from "../stock/hooks/useStockAdjustmentListActions ";
+import ListHeader from "../CommonTransactionListComponents/ListHeader";
 
 const StockAdjustmentList = ({ onEditAdjustment, selectedAdjustment }) => {
   const companyId = useSelector(
