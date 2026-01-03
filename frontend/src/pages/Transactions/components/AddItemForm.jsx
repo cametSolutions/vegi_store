@@ -5,7 +5,6 @@ import { itemMasterQueries } from "../../../hooks/queries/item.queries";
 import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
-import { truncate } from "../../../../../shared/utils/string";
 import { NumericFormat } from "react-number-format";
 
 const AddItemForm = ({
@@ -18,6 +17,7 @@ const AddItemForm = ({
   clickedItemInTable,
   transactionType,
   account,
+  requireAccount = true,
 }) => {
   const [localItem, setLocalItem] = useState({
     item: null,
@@ -45,7 +45,7 @@ const AddItemForm = ({
   const rateInputRef = useRef(null);
   const addButtonRef = useRef(null);
 
-  // TanStack Query - enabled based on shouldSearch flag
+  // TanStack Query
   const {
     data: searchResponse,
     isFetching,
@@ -69,17 +69,20 @@ const AddItemForm = ({
     }
   }, [isError, error]);
 
-  // Update form fields when search results are received
+  // ✅ FIXED: Update form fields when search results are received
   useEffect(() => {
-    if (!account && shouldSearch) {
-      toast.error("Customer Not Selected", {
-        description: "Please select a customer before adding items.",
-      });
-      setShouldSearch(false);
-      return;
-    }
     // Only process when we were searching and fetch is complete
     if (shouldSearch && !isFetching && searchResponse !== undefined) {
+      
+      // ✅ CHECK ACCOUNT REQUIREMENT
+      if (requireAccount && !account) {
+        toast.error("Customer Not Selected", {
+          description: "Please select a customer before adding items.",
+        });
+        setShouldSearch(false);
+        return;
+      }
+
       if (searchResponse?.data && searchResponse.data.length > 0) {
         const foundProduct = searchResponse.data[0];
 
@@ -103,15 +106,6 @@ const AddItemForm = ({
           }
         }
 
-        // Find current stock for the branch
-        let currentStock = "";
-        if (foundProduct.stock && foundProduct.stock.length > 0) {
-          const branchStock = foundProduct.stock.find(
-            (s) => s.branch._id === branch
-          );
-          currentStock = branchStock?.currentStock || "";
-        }
-
         // Update localItem with found product details
         setLocalItem((prev) => ({
           ...prev,
@@ -127,10 +121,8 @@ const AddItemForm = ({
         }));
         setShowDropdown(false);
         setShouldSearch(false);
-        // Auto-focus to unit field after successful search
         setTimeout(() => unitInputRef.current?.focus(), 100);
       } else if (searchResponse?.data && searchResponse.data.length === 0) {
-        // No items found - show dropdown with "not found" message
         setLocalItem((prev) => ({
           ...prev,
           itemCode: debouncedSearchTerm,
@@ -146,14 +138,16 @@ const AddItemForm = ({
     debouncedSearchTerm,
     priceLevel,
     branch,
+    requireAccount,
+    account,
+    transactionType,
   ]);
 
-  // Update rate when priceLevel changes for an existing item
+  // Rest of your useEffects remain the same...
+  
   useEffect(() => {
     if (!localItem.item) return;
-
     const foundProduct = searchResponse?.data[0];
-
     if (!foundProduct || !foundProduct.priceLevels) return;
 
     let newRate = "";
@@ -171,7 +165,6 @@ const AddItemForm = ({
       newRate = "";
     }
 
-    // Only update if rate has changed
     if (localItem.rate !== newRate.toString()) {
       setLocalItem((prev) => ({
         ...prev,
@@ -180,7 +173,6 @@ const AddItemForm = ({
     }
   }, [priceLevel, localItem.item, searchResponse]);
 
-  // Handle clicked item from table
   useEffect(() => {
     if (clickedItemInTable) {
       const {
@@ -207,23 +199,19 @@ const AddItemForm = ({
         taxRate,
         taxAmount,
       }));
-      // setSearchTerm(itemCode);
       unitInputRef.current?.focus();
-      // codeInputRef.current?.focus();
     }
   }, [clickedItemInTable]);
 
-  // Handle itemCode Enter - trigger search
+  // All your handler functions remain the same...
   const handleCodeKeyDown = (e) => {
     if (e.key === "Enter" && searchTerm.trim() !== "") {
       e.preventDefault();
       setShowDropdown(false);
-
       setShouldSearch(true);
     }
   };
 
-  // Handle itemCode input change
   const handleCodeChange = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
@@ -231,7 +219,6 @@ const AddItemForm = ({
     setLocalItem({ ...localItem, itemCode: value });
   };
 
-  // Handle Unit Enter - move to quantity
   const handleUnitKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -239,7 +226,6 @@ const AddItemForm = ({
     }
   };
 
-  // Handle Quantity Enter - move to rate
   const handleQuantityKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -247,7 +233,6 @@ const AddItemForm = ({
     }
   };
 
-  // Handle Rate Enter - move to add button
   const handleRateKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -255,42 +240,58 @@ const AddItemForm = ({
     }
   };
 
-  // Add item to the transaction and reset form
-  const handleAddClick = () => {
-    // Validate required fields
-    if (!localItem.itemCode || !localItem.itemName || !localItem.item || !localItem.quantity) {
-      toast.error("Validation Error", {
-        description: "Name, Code, and Quantity are required",
-      });
-      return;
-    }
+// Update the handleAddClick function in your AddItemForm component
 
-    // Add item to transaction
-    const newItems = addItem(items, localItem);
-    updateTransactionField("items", newItems);
-
-    // Reset form to initial state
-    setLocalItem({
-      item: null,
-      itemCode: "",
-      itemName: "",
-      unit: units[0]?.value || "",
-      priceLevels: [],
-      quantity: "",
-      rate: "",
-      baseAmount: "0",
-      amountAfterTax: "0",
-      taxable: false,
-      taxRate: "0",
-      taxAmount: "0",
+const handleAddClick = () => {
+  // Validate required fields
+  if (!localItem.itemCode || !localItem.itemName || !localItem.item || !localItem.quantity) {
+    toast.error("Validation Error", {
+      description: "Name, Code, and Quantity are required",
     });
-    setSearchTerm("");
+    return;
+  }
 
-    // Focus back to code input for next item entry
-    setTimeout(() => codeInputRef.current?.focus(), 0);
+  // ✅ CALCULATE AMOUNTS BEFORE ADDING
+  const quantity = parseFloat(localItem.quantity) || 0;
+  const rate = parseFloat(localItem.rate) || 0;
+  const baseAmount = quantity * rate;
+  const taxRate = parseFloat(localItem.taxRate) || 0;
+  const taxAmount = localItem.taxable ? (baseAmount * taxRate) / 100 : 0;
+  const amountAfterTax = baseAmount + taxAmount;
+
+  // Create item with calculated amounts
+  const itemToAdd = {
+    ...localItem,
+    quantity: localItem.quantity,
+    rate: localItem.rate,
+    baseAmount: baseAmount.toFixed(2),
+    taxAmount: taxAmount.toFixed(2),
+    amountAfterTax: amountAfterTax.toFixed(2),
   };
 
-  // Handle Enter key on add button - triggers add action
+  const newItems = addItem(items, itemToAdd);
+  updateTransactionField("items", newItems);
+
+  // Reset form
+  setLocalItem({
+    item: null,
+    itemCode: "",
+    itemName: "",
+    unit: units[0]?.value || "",
+    priceLevels: [],
+    quantity: "",
+    rate: "",
+    baseAmount: "0",
+    amountAfterTax: "0",
+    taxable: false,
+    taxRate: "0",
+    taxAmount: "0",
+  });
+  setSearchTerm("");
+
+  setTimeout(() => codeInputRef.current?.focus(), 0);
+};
+
   const handleAddButtonKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();

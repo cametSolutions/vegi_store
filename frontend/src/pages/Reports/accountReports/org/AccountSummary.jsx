@@ -130,7 +130,7 @@ const AccountSummary = () => {
     console.log(downloadFilters);
     
 
-    initiateDownload(downloadFilters, format);
+    initiateDownload(downloadFilters, format, "summary");
   };
 
   // --- Strict Column Width Definition ---

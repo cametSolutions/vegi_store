@@ -1,0 +1,184 @@
+// schemas/stockAdjustmentSchema.js
+import mongoose from "mongoose";
+
+const stockAdjustmentItemSchema = new mongoose.Schema({
+  item: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Item",
+    required: true,
+  },
+  itemCode: {
+    type: String,
+    required: true,
+  },
+  itemName: {
+    type: String,
+    required: true,
+  },
+  unit: {
+    type: String,
+    required: true,
+  },
+  quantity: {
+    type: Number,
+    required: true,
+  },
+  rate: {
+    type: Number,
+    default: 0,
+  },
+  amount: {
+    type: Number,
+    default: 0,
+  },
+  // ✅ ADD THESE MISSING FIELDS
+  baseAmount: {
+    type: Number,
+    default: 0,
+  },
+  amountAfterTax: {
+    type: Number,
+    default: 0,
+  },
+  taxable: {
+    type: Boolean,
+    default: false,
+  },
+  taxRate: {
+    type: Number,
+    default: 0,
+  },
+  taxAmount: {
+    type: Number,
+    default: 0,
+  },
+  remarks: String,
+});
+
+const stockAdjustmentSchema = new mongoose.Schema(
+  {
+    transactionType: {
+         type: String,
+         enum: ["sale", "purchase", "sales_return", "purchase_return","stock_adjustment"],
+         required: [true, "Transaction type is required"],
+       },
+   
+       transactionDate: {
+         type: Date,
+         required: [true, "Transaction date is required"],
+         default: Date.now,
+       },
+       transactionNumber: {
+         type: String,
+         required: [true, "Transaction number is required"],
+         default: function () {
+           const prefix = this.transactionType?.toUpperCase().slice(0, 3) || "TXN";
+           return `${prefix}-${nanoid(4)}`;
+         },
+       },
+    adjustmentType: {
+      type: String,
+      enum: ["add", "remove"],
+      required: true,
+    },
+    reference: {
+      type: String,
+      trim: true,
+    },
+    reason: {
+      type: String,
+      trim: true,
+    },
+    items: [stockAdjustmentItemSchema],
+    totalAmount: {
+      type: Number,
+      default: 0,
+    },
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+      index: true,
+    },
+    branch: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Branch",
+      required: true,
+      index: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    status: {
+      type: String,
+      enum: ["draft", "completed", "cancelled"],
+      default: "completed",
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+// Indexes
+stockAdjustmentSchema.index({ company: 1, branch: 1, transactionNumber: 1 });
+stockAdjustmentSchema.index({ company: 1, branch: 1, transactionDate: -1 });
+stockAdjustmentSchema.index({ company: 1, branch: 1, adjustmentType: 1 });
+
+
+// Static method for pagination
+stockAdjustmentSchema.statics.getPaginatedAdjustments = async function (
+  filter,
+  page = 1,
+  limit = 25,
+  sort = { transactionDate: -1 }
+) {
+  const skip = (page - 1) * limit;
+
+  const [data, totalCount] = await Promise.all([
+    this.find(filter)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .populate("createdBy", "name email")
+      .populate("updatedBy", "name email")
+      .lean(),
+    this.countDocuments(filter),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / limit);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+
+  return {
+    data,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalCount,
+      hasNextPage,
+      hasPrevPage,
+      nextPage: hasNextPage ? page + 1 : null,
+      prevPage: hasPrevPage ? page - 1 : null,
+    },
+    nextPage: hasNextPage ? page + 1 : null,
+  };
+};
+
+// Pre-save hook
+stockAdjustmentSchema.pre("save", function (next) {
+  if (this.items && this.items.length > 0) {
+    this.totalAmount = this.items.reduce((sum, item) => {
+      return sum + (item.amount || item.quantity * item.rate || 0);
+    }, 0);
+  }
+  next();
+});
+
+export default stockAdjustmentSchema;

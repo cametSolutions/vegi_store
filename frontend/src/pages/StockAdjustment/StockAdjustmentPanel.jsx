@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
-import CreateStockAdjustment from "./CreateStockAdjustment";
+import CreateStockAdjustment from "./CreateStockAdjustment ";
 import EditStockAdjustment from "./EditStockAdjustment";
-import StockAdjustmentList from "./components/StockAdjustmentList/StockAdjustmentList";
+import StockAdjustmentList from "./StockAdjustmentList";
 import { useSelector } from "react-redux";
 
 const StockAdjustmentPanel = () => {
   const isEditMode = useSelector((state) => state.stockAdjustment?.isEditMode);
-  const [editMode, setEditMode] = useState(false);
+  const [editMode, setEditMode] = useState(isEditMode);
   const [selectedAdjustment, setSelectedAdjustment] = useState(null);
 
   // Handler to switch to edit mode
@@ -22,6 +22,7 @@ const StockAdjustmentPanel = () => {
   };
 
   // Sync local editMode state with Redux store
+  // Reset selected adjustment when edit is completed
   useEffect(() => {
     setEditMode(isEditMode);
     if (!isEditMode) {
@@ -30,23 +31,26 @@ const StockAdjustmentPanel = () => {
   }, [isEditMode]);
 
   return (
-    <div className="flex w-full justify-between bg-white gap-2 h-[calc(100vh-99px)]">
-      <div className="w-[45%] border-r border-gray-200">
-        <StockAdjustmentList
-          onEditAdjustment={handleEditAdjustment}
-          selectedAdjustment={selectedAdjustment}
-        />
-      </div>
+    <div className="flex w-full justify-between bg-white gap-2">
+      {/* ✅ Left side: Create/Edit Form (55% width) */}
       <div className="w-[55%]">
         {editMode ? (
           <EditStockAdjustment
             editAdjustmentData={selectedAdjustment}
             handleCancelEdit={handleCancelEdit}
-            onSuccess={handleCancelEdit}
+            onSuccess={handleCancelEdit} // Return to create mode after successful edit
           />
         ) : (
           <CreateStockAdjustment />
         )}
+      </div>
+
+      {/* ✅ Right side: List (45% width) */}
+      <div className="w-[45%]">
+        <StockAdjustmentList
+          onEditAdjustment={handleEditAdjustment}
+          selectedAdjustment={selectedAdjustment}
+        />
       </div>
     </div>
   );

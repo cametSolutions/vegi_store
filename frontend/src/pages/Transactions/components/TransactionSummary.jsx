@@ -48,6 +48,7 @@ const TransactionSummaryComponent = ({
           </label>
           <div className={`${wrapperClass} bg-white border-slate-300`}>
             <NumericFormat
+            disabled={transactionType === "stock_adjustment"}
               value={discount === 0 ? "" : discount}
               onValueChange={(values) =>
                 onDiscountChange(values.floatValue || 0)

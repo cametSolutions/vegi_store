@@ -30,6 +30,10 @@ import salesReturnRoutes from "./routes/transactions/sales_return_routes.js";
 import purchaseReturnRoutes from "./routes/transactions/purchase_return_routes.js";
 import purchaseRoutes from "./routes/transactions/purchaseRoutes.js";
 import downloadRoutes from "./routes/downloadRoutes/downloadRoutes.js";
+import stockAdjustmentRoutes from "./routes/stockAdjustmentRoutes/stockAdjustmentRoutes.js";
+
+// Add this line with your other routes
+
 
 /// Initialize Cron Jobs
 import { initializeCronJobs } from "./jobs/schedulers/cronScheduler.js";
@@ -109,6 +113,7 @@ app.use("/api/branch", authMiddleware, branchRoute);
 app.use("/api/user", authMiddleware, userRoute);
 app.use("/api/pricelevel", authMiddleware, pricelevelRoute);
 app.use("/api/accountmaster", authMiddleware, acccountmasterRoute);
+app.use("/api/transaction/stock_adjustment", authMiddleware,stockAdjustmentRoutes);
 app.use("/api/transaction/sale", authMiddleware, saleRoutes);
 app.use("/api/transaction/purchase", authMiddleware, purchaseRoutes);
 app.use("/api/transaction/sales_return", authMiddleware, salesReturnRoutes);

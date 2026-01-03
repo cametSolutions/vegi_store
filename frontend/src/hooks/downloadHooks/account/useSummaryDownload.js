@@ -1,6 +1,7 @@
 // src/hooks/downloadHooks/useReportDownload.js
 
-import { downloadHelper } from '@/helper//downloadHelper/account/summaryDownloadHelper';
+import { downloadHelper } from '@/helper/downloadHelper/account/summaryDownloadHelper';
+import { statementDownloadHelper } from '@/helper/downloadHelper/account/statementDownloadHelper';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, useRef } from 'react';
 import { useSelector } from 'react-redux';
@@ -19,11 +20,13 @@ export const useReportDownload = () => {
   );
   
   const formatRef = useRef(null);
+  const reportTypeRef = useRef(null); // ✅ Track report type (summary/statement)
   const contextRef = useRef({ 
     type: 'sale',
     startDate: null,
     endDate: null,
-    company: null // ✅ Store company details
+    company: null,
+    account: null,
   });
 
   const initiateMutation = useMutation(
@@ -40,12 +43,16 @@ export const useReportDownload = () => {
       const { data, fileName } = statusData;
       
       try {
+        // ✅ Choose the correct helper based on report type
+        const helper = reportTypeRef.current === 'statement' 
+          ? statementDownloadHelper 
+          : downloadHelper;
+
         if (formatRef.current === 'excel') {
-          downloadHelper.generateExcel(data, fileName, contextRef.current);
+          helper.generateExcel(data, fileName, contextRef.current);
           toast.success("Excel file downloaded successfully!");
         } else if (formatRef.current === 'pdf') {
-          // ✅ Pass company details to PDF
-          downloadHelper.generatePDF(data, fileName, contextRef.current);
+          helper.generatePDF(data, fileName, contextRef.current);
           toast.success("PDF file downloaded successfully!");
         }
       } catch (error) {
@@ -56,7 +63,14 @@ export const useReportDownload = () => {
       const timer = setTimeout(() => {
         setJobId(null);
         formatRef.current = null;
-        contextRef.current = { type: 'sale', startDate: null, endDate: null, company: null };
+        reportTypeRef.current = null;
+        contextRef.current = { 
+          type: 'sale', 
+          startDate: null, 
+          endDate: null, 
+          company: null,
+          account: null,
+        };
         queryClient.removeQueries({ queryKey: ["download", "current-job"] });
       }, 2000);
 
@@ -67,20 +81,33 @@ export const useReportDownload = () => {
       toast.error(statusData.error || "Report generation failed");
       setJobId(null);
       formatRef.current = null;
-      contextRef.current = { type: 'sale', startDate: null, endDate: null, company: null };
+      reportTypeRef.current = null;
+      contextRef.current = { 
+        type: 'sale', 
+        startDate: null, 
+        endDate: null, 
+        company: null,
+        account: null,
+      };
       queryClient.removeQueries({ queryKey: ["download", "current-job"] });
     }
   }, [statusData, queryClient]);
 
-  const initiateDownload = async (filters, format) => {
-    formatRef.current = format;
+  // ✅ Updated to accept reportType parameter
+  const initiateDownload = async (filters, format, reportType = 'summary') => {
+
+    console.log(reportType);
     
-    // ✅ Capture all details including company
+    formatRef.current = format;
+    reportTypeRef.current = reportType; // ✅ Store report type
+    
+    // ✅ Capture all details including company and account
     contextRef.current = { 
       type: filters.transactionType || 'sale',
       startDate: filters.startDate,
       endDate: filters.endDate,
-      company: selectedCompany // ✅ Pass company object
+      company: selectedCompany,
+      account: filters.account || null, // ✅ For statement reports
     };
     
     try {
@@ -89,7 +116,14 @@ export const useReportDownload = () => {
     } catch (error) {
       console.error('Download initiation failed:', error);
       formatRef.current = null;
-      contextRef.current = { type: 'sale', startDate: null, endDate: null, company: null };
+      reportTypeRef.current = null;
+      contextRef.current = { 
+        type: 'sale', 
+        startDate: null, 
+        endDate: null, 
+        company: null,
+        account: null,
+      };
     }
   };
 

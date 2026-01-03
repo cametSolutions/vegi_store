@@ -33,7 +33,7 @@ export const adjustmentEntrySchema = new Schema(
     originalTransactionModel: {
       type: String,
       required: true,
-      enum: ["Sale", "Purchase", "SalesReturn", "PurchaseReturn", "Receipt", "Payment"], // ✅ UPDATED
+      enum: ["Sale", "Purchase", "SalesReturn", "PurchaseReturn", "Receipt", "Payment","StockAdjustment"], // ✅ UPDATED
     },
     originalTransactionNumber: {
       type: String,
