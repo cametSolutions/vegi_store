@@ -58,6 +58,7 @@ const isSearchEnabled =
   (
     transactionType === "sale" || 
     transactionType === "sales_return" || 
+      transactionType === "stock_adjustment" ||
     (
       (transactionType === "purchase" || transactionType === "purchase_return") && 
       !!account

@@ -153,7 +153,7 @@ const CreateStockAdjustment = () => {
               updateTransactionField={updateStockAdjustmentField}
               addItem={addItem}
               clickedItemInTable={clickedItemInTable}
-              transactionType={null}
+              transactionType="stock_adjustment"
               account={null}
             />
           </div>
