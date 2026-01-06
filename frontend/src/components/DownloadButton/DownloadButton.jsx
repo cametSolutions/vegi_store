@@ -84,14 +84,14 @@ const DownloadButton = ({
   return (
     <div className="flex items-center gap-3 z-50">
       <div className="flex items-center bg-slate-50 rounded-lg p-1 border border-slate-200">
-        <button
+        {/* <button
           className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-md transition-all shadow-sm"
           title="Print"
           onClick={() => window.print()}
           disabled={isDownloading} // Disable print while downloading
         >
           <Printer className="w-4 h-4" />
-        </button>
+        </button> */}
 
         <div className="w-px h-4 bg-slate-200 mx-1"></div>
 
@@ -132,7 +132,7 @@ const DownloadButton = ({
 
               {/* Dropdown menu */}
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20">
-                {formats.includes("excel") && (
+                {/* {formats.includes("excel") && (
                   <button
                     onClick={() => handleFormatSelect("excel")}
                     className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 flex items-center gap-2"
@@ -140,7 +140,7 @@ const DownloadButton = ({
                       <BsFileEarmarkExcelFill />
                     Download as Excel
                   </button>
-                )}
+                )} */}
                 {formats.includes("pdf") && (
                   <button
                     onClick={() => handleFormatSelect("pdf")}

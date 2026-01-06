@@ -13,6 +13,7 @@ export const initiateAccountSummaryDownload = async (req, res) => {
       format // 'excel' or 'pdf'
     } = req.query;
 
+    const reportType = req.params.reportType
     // Validation
     if (!startDate || !endDate || !company || !branch) {
       return res.status(400).json({ 
@@ -28,7 +29,7 @@ export const initiateAccountSummaryDownload = async (req, res) => {
 
     // Create job in queue
     const job = await reportExportsQueue.add('account-summary-export', {
-      reportType: 'account-summary',
+      reportType: reportType,
       format,
       filters: {
         startDate,

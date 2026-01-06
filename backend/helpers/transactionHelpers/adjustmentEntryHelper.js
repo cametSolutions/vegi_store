@@ -63,7 +63,7 @@ export const createAdjustmentEntries = async (
         ),
         originalTransactionNumber: original.transactionNumber,
         originalTransactionDate: original.transactionDate,
-        transactionNumber,
+        adjustmentNumber,
         adjustmentDate: new Date(),
         adjustmentType,
         affectedAccount: updated.account,

@@ -1,5 +1,5 @@
 // src/pages/ItemSummaryPage.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector, useDispatch } from "react-redux";
 import { 
@@ -24,6 +24,10 @@ import FiltersBar from "@/components/filters/filterBar/FiltersBar";
 import { setFilter } from "@/store/slices/filtersSlice";
 import { useDebounce } from "@/hooks/useDebounce";
 
+// --- Download Imports ---
+import DownloadButton from "@/components/DownloadButton/DownloadButton"; 
+import { useReportDownload } from "@/hooks/downloadHooks/item/useItemSummaryDownload";
+
 const ItemSummaryPage = () => {
   const dispatch = useDispatch();
 
@@ -36,6 +40,9 @@ const ItemSummaryPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const limit = 20;
+
+  // --- Download Hook Initialization ---
+  const { initiateDownload, isDownloading, progress, status } = useReportDownload();
 
   // Defaults
   useEffect(() => {
@@ -52,6 +59,7 @@ const ItemSummaryPage = () => {
   const transactionType = filters.transactionType || "sale";
   const debouncedSearchTerm = useDebounce(search, 500);
 
+  // --- Data Query ---
   const queryOptions = itemMasterQueries.getItemSummary(companyId, branchId, {
     startDate: filters.startDate,
     endDate: filters.endDate,
@@ -80,6 +88,19 @@ const ItemSummaryPage = () => {
     setCurrentPage(1);
   };
 
+  // --- Download Handler ---
+  const handleDownload = (format) => {
+    const downloadFilters = {
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      company: companyId,
+      branch: branchId,
+      transactionType: transactionType,
+      searchTerm: debouncedSearchTerm || undefined,
+    };
+    initiateDownload(downloadFilters, format, "item-summary");
+  };
+
   // --- Configuration ---
   const isSale = transactionType === "sale";
   
@@ -92,10 +113,20 @@ const ItemSummaryPage = () => {
     returnQtyKey: isSale ? "totalIn" : "totalOut",
     returnAmtKey: isSale ? "amountIn" : "amountOut",
     
-    // Header Colors - darkened borders for better definition
+    // Header Colors
     mainHeaderClass: isSale ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-blue-50 text-blue-700 border-blue-300",
     returnHeaderClass: "bg-orange-50 text-orange-700 border-orange-300",
   };
+
+  // --- Calculate Totals ---
+  const totals = useMemo(() => {
+    return summaryData.reduce((acc, row) => ({
+      mainQty: acc.mainQty + (row[config.mainQtyKey] || 0),
+      mainAmt: acc.mainAmt + (row[config.mainAmtKey] || 0),
+      returnQty: acc.returnQty + (row[config.returnQtyKey] || 0),
+      returnAmt: acc.returnAmt + (row[config.returnAmtKey] || 0),
+    }), { mainQty: 0, mainAmt: 0, returnQty: 0, returnAmt: 0 });
+  }, [summaryData, config]);
 
   // --- Strict Column Width Definition ---
   const TableColGroup = () => (
@@ -145,7 +176,18 @@ const ItemSummaryPage = () => {
                 </button>
               )}
             </div>
-             <div className="h-6 w-px bg-slate-200 mx-1"></div>
+            
+            <div className="h-6 w-px bg-slate-200 mx-1"></div>
+
+            <DownloadButton 
+              onDownload={handleDownload}
+              isDownloading={isDownloading}
+              progress={progress}
+              status={status}
+            />
+
+            <div className="h-6 w-px bg-slate-200 mx-1"></div>
+             
             <FiltersBar
               showDateFilter={true}
               showTransactionType={true}
@@ -184,34 +226,26 @@ const ItemSummaryPage = () => {
                 <table className="w-full table-fixed border-collapse">
                   <TableColGroup />
                   <thead>
-                    {/* Top Group Headers - Sticky Row 1 */}
+                    {/* Top Group Headers */}
                     <tr className="border-b border-slate-300">
                       <th className="sticky top-0 z-30 bg-slate-50 border-r border-slate-300"></th>
                       <th className="sticky top-0 z-30 bg-slate-50 border-r border-slate-300"></th>
                       <th className="sticky top-0 z-30 bg-slate-50 border-r border-slate-300"></th>
-                      
-                      {/* Dynamic Header 1 (Main) */}
                       <th colSpan={2} className={`sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold uppercase tracking-wider border-r border-white ${config.mainHeaderClass}`}>
                         {config.mainHeader}
                       </th>
-                      
-                      {/* Dynamic Header 2 (Return) */}
                       <th colSpan={2} className={`sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold uppercase tracking-wider ${config.returnHeaderClass}`}>
                         {config.returnHeader}
                       </th>
                     </tr>
 
-                    {/* Sub Headers - Sticky Row 2 (Top offset = approx height of Row 1 ~29px) */}
+                    {/* Sub Headers */}
                     <tr>
                       <th className="sticky top-[29px] z-20 px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100 border-b border-slate-300">#</th>
                       <th className="sticky top-[29px] z-20 px-3 py-2 text-left text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100 border-b border-slate-300">Item</th>
                       <th className="sticky top-[29px] z-20 px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-100 border-b border-slate-300">Unit</th>
-                      
-                      {/* Main Cols */}
                       <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-slate-50/95 border-r border-slate-300 border-b border-slate-300">Qty</th>
                       <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-slate-50/95 border-r border-slate-300 border-b border-slate-300">Amount</th>
-                      
-                      {/* Return Cols */}
                       <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-orange-50/95 border-r border-slate-300 border-b border-slate-300">Qty</th>
                       <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-orange-50/95 border-b border-slate-300">Amount</th>
                     </tr>
@@ -228,28 +262,20 @@ const ItemSummaryPage = () => {
                             <span className="font-semibold text-slate-700 text-xs truncate" title={row.itemName}>{row.itemName}</span>
                             {row.itemCode && (
                                <div className="flex mt-0.5">
-                                 <span className="text-[10px] text-slate-400 font-mono">
-                                   Code: {row.itemCode}
-                                 </span>
+                                 <span className="text-[10px] text-slate-400 font-mono">Code: {row.itemCode}</span>
                                </div>
                             )}
                           </div>
                         </td>
                         <td className="px-3 py-3 text-center text-xs text-slate-500 border-r border-slate-300">
-                          <span className="bg-slate-50 px-1.5 py-0.5 rounded text-[10px] font-medium border border-slate-200">
-                            {row.unit}
-                          </span>
+                          <span className="bg-slate-50 px-1.5 py-0.5 rounded text-[10px] font-medium border border-slate-200">{row.unit}</span>
                         </td>
-                        
-                        {/* Main Transaction Data */}
                         <td className="px-3 py-3 text-right text-xs text-slate-700 font-mono tracking-tight bg-slate-50/30 border-r border-slate-300">
                           {row[config.mainQtyKey]?.toLocaleString() ?? "-"}
                         </td>
                         <td className="px-3 py-3 text-right text-xs font-semibold text-slate-800 font-mono tracking-tight bg-slate-50/30 border-r border-slate-300">
                           {row[config.mainAmtKey] ? formatINR(row[config.mainAmtKey]) : "-"}
                         </td>
-
-                        {/* Return Transaction Data */}
                         <td className="px-3 py-3 text-right text-xs text-orange-600 font-mono tracking-tight bg-orange-50/5 border-r border-slate-300">
                           {row[config.returnQtyKey]?.toLocaleString() ?? "-"}
                         </td>
@@ -262,11 +288,41 @@ const ItemSummaryPage = () => {
                 </table>
               </div>
 
+              {/* Total Row (Sticky Footer) */}
+              <div className="flex-none border-t-2 border-slate-300 bg-slate-50 z-40">
+                <table className="w-full table-fixed">
+                   <TableColGroup />
+                   <tbody>
+                      <tr>
+                        <td className="px-3 py-2.5 text-xs font-bold text-slate-700 text-center border-r border-slate-300"></td>
+                        <td className="px-3 py-2.5 text-xs font-bold text-slate-800 text-right border-r border-slate-300 uppercase tracking-wide">Total</td>
+                        <td className="px-3 py-2.5 border-r border-slate-300"></td>
+                        
+                        {/* Main Totals */}
+                        <td className="px-3 py-2.5 text-right text-xs font-bold text-slate-800 font-mono border-r border-slate-300 bg-slate-100">
+                           {totals.mainQty.toLocaleString()}
+                        </td>
+                        <td className="px-3 py-2.5 text-right text-xs font-bold text-slate-900 font-mono border-r border-slate-300 bg-slate-100">
+                           {formatINR(totals.mainAmt)}
+                        </td>
+
+                        {/* Return Totals */}
+                        <td className="px-3 py-2.5 text-right text-xs font-bold text-orange-700 font-mono border-r border-slate-300 bg-orange-50/30">
+                           {totals.returnQty.toLocaleString()}
+                        </td>
+                        <td className="px-3 py-2.5 text-right text-xs font-bold text-orange-700 font-mono bg-orange-50/30">
+                           {formatINR(totals.returnAmt)}
+                        </td>
+                      </tr>
+                   </tbody>
+                </table>
+              </div>
+
               {/* Pagination Footer */}
               <div className="flex-none px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between z-40">
                  <span className="text-[11px] text-slate-500">
-                    Showing <span className="font-medium text-slate-700">{(pagination.page - 1) * pagination.limit + 1}-{Math.min(pagination.page * pagination.limit, pagination.totalItems)}</span> of <span className="font-medium text-slate-700">{pagination.totalItems}</span>
-                  </span>
+                   Showing <span className="font-medium text-slate-700">{(pagination.page - 1) * pagination.limit + 1}-{Math.min(pagination.page * pagination.limit, pagination.totalItems)}</span> of <span className="font-medium text-slate-700">{pagination.totalItems}</span>
+                 </span>
                 
                 <div className="flex items-center gap-1">
                   <Button

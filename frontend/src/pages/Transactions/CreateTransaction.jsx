@@ -61,9 +61,9 @@ const CreateTransaction = () => {
     };
   }, [resetTransactionData]);
 
-  const selectedCompanyFromStore = useSelector(
-    (state) => state.companyBranch?.selectedCompany
-  );
+    const selectedCompanyFromStore = useSelector(
+      (state) => state.companyBranch?.selectedCompany
+    );
   const selectedBranchFromStore = useSelector(
     (state) => state.companyBranch?.selectedBranch
   );

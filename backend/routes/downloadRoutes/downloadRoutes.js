@@ -7,7 +7,9 @@ import {
 const router = express.Router();
 
 // POST or GET - initiate download
-router.get('/account-summary/download', initiateAccountSummaryDownload);
+router.get('/:reportType', initiateAccountSummaryDownload);
+
+
 
 // Poll for status
 router.get('/status/:jobId', getDownloadStatus);

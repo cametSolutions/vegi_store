@@ -13,7 +13,7 @@ export const Login = async (req, res) => {
     }
 
     const user = await User.findOne({ email })
-      .populate({ path: "access.company", select: "_id companyName" })
+      .populate({ path: "access.company" })
       .populate({ path: "access.branches", select: "_id branchName" });
 
     if (!user) {
