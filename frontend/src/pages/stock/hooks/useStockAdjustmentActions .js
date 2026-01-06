@@ -32,14 +32,14 @@ export const useStockAdjustmentActions = (
 
   const handleSave = useCallback(async () => {
     try {
-      console.log("💾 ================================");
-      console.log("💾 handleSave called");
-      console.log("💾 isEditMode:", isEditMode);
-      console.log("💾 company:", company);
-      console.log("💾 branch:", branch);
-      console.log("💾 stockAdjustmentData:", JSON.stringify(stockAdjustmentData, null, 2));
-      console.log("💾 stockAdjustmentData._id:", stockAdjustmentData._id);
-      console.log("💾 ================================");
+      // console.log("💾 ================================");
+      // console.log("💾 handleSave called");
+      // console.log("💾 isEditMode:", isEditMode);
+      // console.log("💾 company:", company);
+      // console.log("💾 branch:", branch);
+      // console.log("💾 stockAdjustmentData:", JSON.stringify(stockAdjustmentData, null, 2));
+      // console.log("💾 stockAdjustmentData._id:", stockAdjustmentData._id);
+      // console.log("💾 ================================");
 
       // Validation
       if (!company || !branch) {
@@ -68,13 +68,13 @@ export const useStockAdjustmentActions = (
         // Get ID
         const adjustmentId = stockAdjustmentData._id || stockAdjustmentData.editAdjustmentId;
         
-        console.log("🔵 ================================");
-        console.log("🔵 EDIT MODE");
-        console.log("🔵 stockAdjustmentData._id:", stockAdjustmentData._id);
-        console.log("🔵 stockAdjustmentData.editAdjustmentId:", stockAdjustmentData.editAdjustmentId);
-        console.log("🔵 Final adjustmentId:", adjustmentId);
-        console.log("🔵 adjustmentId type:", typeof adjustmentId);
-        console.log("🔵 ================================");
+        // console.log("🔵 ================================");
+        // console.log("🔵 EDIT MODE");
+        // console.log("🔵 stockAdjustmentData._id:", stockAdjustmentData._id);
+        // console.log("🔵 stockAdjustmentData.editAdjustmentId:", stockAdjustmentData.editAdjustmentId);
+        // console.log("🔵 Final adjustmentId:", adjustmentId);
+        // console.log("🔵 adjustmentId type:", typeof adjustmentId);
+        // console.log("🔵 ================================");
         
         if (!adjustmentId || adjustmentId === "undefined") {
           toast.error("Adjustment ID is missing");
@@ -82,8 +82,8 @@ export const useStockAdjustmentActions = (
           return false;
         }
 
-        console.log("🔵 Calling updateMutation.mutateAsync");
-        console.log("🔵 Parameters:", { id: adjustmentId, formData: convertedStockAdjustmentData });
+        // console.log("🔵 Calling updateMutation.mutateAsync");
+        // console.log("🔵 Parameters:", { id: adjustmentId, formData: convertedStockAdjustmentData });
 
         // Update existing adjustment
         await updateMutation.mutateAsync({
@@ -91,7 +91,7 @@ export const useStockAdjustmentActions = (
           formData: convertedStockAdjustmentData,
         });
         
-        console.log("✅ updateMutation completed successfully");
+        // console.log("✅ updateMutation completed successfully");
         
         dispatch(removeStockAdjustmentDataFromStore());
         return true;

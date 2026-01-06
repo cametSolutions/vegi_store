@@ -56,7 +56,7 @@ export const getUserById = async (req, res) => {
       .select("-password")
       .populate({
         path: "access.company",
-        select: "companyName _id",
+        // select: "companyName _id",
       })
       .populate({
         path: "access.branches",

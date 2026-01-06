@@ -9,7 +9,7 @@ import NotFoundPage from "./components/errors/NotFoundPage";
 import MastersRoutes from "./routes/MastersRoutes";
 import TransactionRoutes from "./routes/TransactionRoutes";
 import ReportRoutes from "./routes/ReportRoutes";
-import StockAdjustmentPanel from "@/pages/Transactions/StockAdjustmentPanel";
+import StockAdjustmentPanel from "@/pages/StockAdjustment/StockAdjustmentPanel";
 const Login = lazy(() => import("./pages/Login"));
 const Home = lazy(() => import("./pages/home/Home"));
 

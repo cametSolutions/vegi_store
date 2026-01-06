@@ -58,7 +58,7 @@ const [isLoading, setIsLoading] = useState(false);
   };
 
   return (
-    <div className=" pt-2 border-t border-slate-100">
+    <div className=" pt-2 border-t border-slate-100 ">
       <div className="flex items-center gap-2">
         
         {/* Cancel (Secondary) */}

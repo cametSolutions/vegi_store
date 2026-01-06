@@ -13,36 +13,53 @@ const toObjectId = (id) => new mongoose.Types.ObjectId(id);
 
 /**
  * Get stock movement conditions for aggregation
- * 
+ *
  * When transactionType is NOT specified, use natural stock movement:
  * - INWARD: purchase, sales_return
  * - OUTWARD: sale, purchase_return
- * 
+ *
  * @param {string|null} transactionType - 'sale', 'purchase', or null
  * @returns {Object} Aggregation conditions for in/out calculations
  */
 const getStockMovementConditions = (transactionType) => {
-  if (transactionType === 'sale') {
+  if (transactionType === "sale") {
     // Sale filter: sale = OUT, sales_return = IN
     return {
-      inCondition: { $eq: ['$transactionType', 'sales_return'] },
-      outCondition: { $eq: ['$transactionType', 'sale'] }
+      inCondition: { $eq: ["$transactionType", "sales_return"] },
+      outCondition: { $eq: ["$transactionType", "sale"] },
     };
-  } else if (transactionType === 'purchase') {
+  } else if (transactionType === "purchase") {
     // Purchase filter: purchase = IN, purchase_return = OUT
     return {
-      inCondition: { $eq: ['$transactionType', 'purchase'] },
-      outCondition: { $eq: ['$transactionType', 'purchase_return'] }
+      inCondition: { $eq: ["$transactionType", "purchase"] },
+      outCondition: { $eq: ["$transactionType", "purchase_return"] },
     };
   } else {
     // Stock register (default): purchase + sales_return = IN, sale + purchase_return = OUT
+    // stock_adjustment with movement "in" = IN, movement "out" = OUT
     return {
-      inCondition: { 
-        $in: ['$transactionType', ['purchase', 'sales_return']] 
+      inCondition: {
+        $or: [
+          { $in: ["$transactionType", ["purchase", "sales_return"]] },
+          {
+            $and: [
+              { $eq: ["$transactionType", "stock_adjustment"] },
+              { $eq: ["$movementType", "in"] },
+            ],
+          },
+        ],
       },
-      outCondition: { 
-        $in: ['$transactionType', ['sale', 'purchase_return']] 
-      }
+      outCondition: {
+        $or: [
+          { $in: ["$transactionType", ["sale", "purchase_return"]] },
+          {
+            $and: [
+              { $eq: ["$transactionType", "stock_adjustment"] },
+              { $eq: ["$movementType", "out"] },
+            ],
+          },
+        ],
+      },
     };
   }
 };
@@ -447,10 +464,10 @@ export const getBatchLastPurchaseRates = async (
         branch: branchId,
         item: { $in: itemIdObjs },
         transactionType: { $in: ["purchase", "purchase_return"] },
-        transactionDate: { 
+        transactionDate: {
           $gte: startDate,
-          $lte: endDate
-        }
+          $lte: endDate,
+        },
       },
     },
     {
@@ -557,21 +574,42 @@ export const getBatchAdjustedLedgers = async ({
 
   // Get stock movement conditions based on transactionType
   const getMovementConditions = () => {
-    if (transactionType === 'sale') {
+    if (transactionType === "sale") {
       return {
-        inCondition: { $eq: ['$transactionType', 'sales_return'] },
-        outCondition: { $eq: ['$transactionType', 'sale'] }
+        inCondition: { $eq: ["$transactionType", "sales_return"] },
+        outCondition: { $eq: ["$transactionType", "sale"] },
       };
-    } else if (transactionType === 'purchase') {
+    } else if (transactionType === "purchase") {
       return {
-        inCondition: { $eq: ['$transactionType', 'purchase'] },
-        outCondition: { $eq: ['$transactionType', 'purchase_return'] }
+        inCondition: { $eq: ["$transactionType", "purchase"] },
+        outCondition: { $eq: ["$transactionType", "purchase_return"] },
       };
     } else {
-      // Stock register logic
+      // Stock register logic: purchase + sales_return = IN, sale + purchase_return = OUT
+      // stock_adjustment with movement "in" = IN, movement "out" = OUT
       return {
-        inCondition: { $in: ['$transactionType', ['purchase', 'sales_return']] },
-        outCondition: { $in: ['$transactionType', ['sale', 'purchase_return']] }
+        inCondition: {
+          $or: [
+            { $in: ["$transactionType", ["purchase", "sales_return"]] },
+            {
+              $and: [
+                { $eq: ["$transactionType", "stock_adjustment"] },
+                { $eq: ["$movementType", "in"] },
+              ],
+            },
+          ],
+        },
+        outCondition: {
+          $or: [
+            { $in: ["$transactionType", ["sale", "purchase_return"]] },
+            {
+              $and: [
+                { $eq: ["$transactionType", "stock_adjustment"] },
+                { $eq: ["$movementType", "out"] },
+              ],
+            },
+          ],
+        },
       };
     }
   };
@@ -761,38 +799,22 @@ export const getBatchAdjustedLedgers = async ({
         transactions: { $push: "$$ROOT" }, // Keep all transactions
         totalIn: {
           $sum: {
-            $cond: [
-              inCondition,
-              "$effectiveQuantity",
-              0,
-            ],
+            $cond: [inCondition, "$effectiveQuantity", 0],
           },
         },
         totalOut: {
           $sum: {
-            $cond: [
-              outCondition,
-              "$effectiveQuantity",
-              0,
-            ],
+            $cond: [outCondition, "$effectiveQuantity", 0],
           },
         },
         amountIn: {
           $sum: {
-            $cond: [
-              inCondition,
-              "$effectiveAmountAfterTax",
-              0,
-            ],
+            $cond: [inCondition, "$effectiveAmountAfterTax", 0],
           },
         },
         amountOut: {
           $sum: {
-            $cond: [
-              outCondition,
-              "$effectiveAmountAfterTax",
-              0,
-            ],
+            $cond: [outCondition, "$effectiveAmountAfterTax", 0],
           },
         },
         transactionCount: { $sum: 1 },
@@ -1166,7 +1188,8 @@ export const getSimpleLedgerReport = async ({
   console.time("Query 4: Simple ledger aggregation");
 
   // Get stock movement conditions based on transactionType
-  const { inCondition, outCondition } = getStockMovementConditions(transactionType);
+  const { inCondition, outCondition } =
+    getStockMovementConditions(transactionType);
 
   const ledgers = await ItemLedger.aggregate([
     { $match: baseMatch },
@@ -1182,20 +1205,12 @@ export const getSimpleLedgerReport = async ({
         transactions: { $push: "$$ROOT" },
         totalIn: {
           $sum: {
-            $cond: [
-              inCondition,
-              "$quantity",
-              0,
-            ],
+            $cond: [inCondition, "$quantity", 0],
           },
         },
         totalOut: {
           $sum: {
-            $cond: [
-              outCondition,
-              "$quantity",
-              0,
-            ],
+            $cond: [outCondition, "$quantity", 0],
           },
         },
         amountIn: {
@@ -1469,7 +1484,8 @@ export const getHybridLedgerReport = async ({
   console.time("Query 4: Simple ledger for report period");
 
   // Get stock movement conditions based on transactionType
-  const { inCondition, outCondition } = getStockMovementConditions(transactionType);
+  const { inCondition, outCondition } =
+    getStockMovementConditions(transactionType);
 
   const ledgers = await ItemLedger.aggregate([
     { $match: baseMatch },
@@ -1694,6 +1710,7 @@ export const refoldLedgersWithAdjustments = async ({
       },
     },
   ]);
+
   console.timeEnd("Query 1: Item list");
 
   const totalItems = itemFacet[0]?.meta[0]?.totalItems || 0;
@@ -1765,6 +1782,9 @@ export const refoldLedgersWithAdjustments = async ({
     lastPurchaseRates,
     transactionType,
   });
+
+  console.log("ledger map", ledgerMap);
+
   console.timeEnd("Query 4: Adjusted ledger data");
 
   // Combine results

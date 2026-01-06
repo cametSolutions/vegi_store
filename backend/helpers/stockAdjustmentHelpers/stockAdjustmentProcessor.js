@@ -25,7 +25,7 @@ export const processStockAdjustment = async (
     // Step 3: Generate number
     const transactionNumber =
       adjustmentData.transactionNumber ||
-      (await generateStockAdjustmentNumber(company, branch, session));
+      (await generateStockAdjustmentNumber("stock_adjustment"));
 
     // Step 4: Process items WITH all required fields for ledger
     const processedItems = items.map((item) => {

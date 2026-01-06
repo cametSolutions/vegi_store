@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Plus, Loader2 } from "lucide-react";
-import { units } from "../../../../constants/units";
-import { itemMasterQueries } from "../../../hooks/queries/item.queries";
+import { units } from "../../../constants/units";
+import { itemMasterQueries } from "../../hooks/queries/item.queries";
 import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";

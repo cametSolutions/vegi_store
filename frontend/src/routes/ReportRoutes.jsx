@@ -5,14 +5,16 @@ import TransactionPanel from "@/pages/Transactions/TransactionPanel";
 import CashTransactionPanel from "@/pages/CashTransaction/CashTransactionPanel";
 import ItemLedgerDashboard from "@/pages/Reports/itemReports/dev/ItemLedgerDashboard";
 import ItemMonthlyBalanceDashboard from "@/pages/Reports/itemReports/dev/ItemMonthlyBalanceDashboard";
-import AccountLedgerDashboard from "@/pages/Reports/accountReports/AccountLedgerDashboard";
-import AccountMonthlyBalanceDashboard from "@/pages/Reports/accountReports/AccountMonthlyBalanceDashboard";
+import AccountLedgerDashboard from "@/pages/Reports/accountReports/dev/AccountLedgerDashboard";
+import AccountMonthlyBalanceDashboard from "@/pages/Reports/accountReports/dev/AccountMonthlyBalanceDashboard";
 import OutstandingReport from "@/pages/Reports/outstandingReports/OutstandingReport";
 
 import TransactionSummary from "@/pages/Reports/TransactionSummary/TransactionSummary";
 import ItemSummary from "@/pages/Reports/itemReports/org/ItemSummary";
 import OutstandingSummary from "@/pages/Reports/outstandingReports/OutstandingSummary";
 import StockRegister from "@/pages/Reports/itemReports/org/StockRegister";
+import AccountStatement from "@/pages/Reports/accountReports/org/AccountStatement";
+import AccountSummary from "@/pages/Reports/accountReports/org/AccountSummary";
 
 export default function TransactionRoutes() {
   return (
@@ -35,6 +37,8 @@ export default function TransactionRoutes() {
       {/* Account reports  */}
 
       <Route path="account-report" element={<AccountLedgerDashboard />} />
+      <Route path="account-statement" element={<AccountStatement />} />
+      <Route path="account-summary" element={<AccountSummary />} />
       <Route
         path="account-monthly-report"
         element={<AccountMonthlyBalanceDashboard />}
