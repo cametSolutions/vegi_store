@@ -374,7 +374,11 @@ TransactionSchema.index({
 });
 TransactionSchema.index({ company: 1, paymentStatus: 1 });
 TransactionSchema.index({ transactionDate: -1 });
-TransactionSchema.index({ "items.item": 1 });
+TransactionSchema.index({ "items.item": 1 ,company: 1, branch: 1});
+TransactionSchema.index({ "items.item": 1 ,account: 1});
+// In your TransactionSchema
+TransactionSchema.index({ account: 1,  "items.item": 1, transactionDate: -1,status: 1});
+
 TransactionSchema.index({ priceLevel: 1 });
 TransactionSchema.index({ "items.itemCode": 1 });
 
