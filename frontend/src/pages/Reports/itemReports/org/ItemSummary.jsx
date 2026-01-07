@@ -36,7 +36,7 @@ const ItemSummaryPage = () => {
   const filters = useSelector((state) => state.filters);
 
   // Local state
-  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.TODAY);
+  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.THIS_MONTH);
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const limit = 20;
@@ -50,7 +50,7 @@ const ItemSummaryPage = () => {
       dispatch(setFilter({ key: "transactionType", value: "sale" }));
     }
     if (!filters.startDate || !filters.endDate) {
-      const range = getDateRange(DATE_FILTERS.TODAY);
+      const range = getDateRange(DATE_FILTERS.THIS_MONTH);
       dispatch(setFilter({ key: "startDate", value: range.start }));
       dispatch(setFilter({ key: "endDate", value: range.end }));
     }
