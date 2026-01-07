@@ -40,7 +40,9 @@ export const transactionServices = {
     companyId,
     branchId,
     sortBy,
-    sortOrder
+    sortOrder, 
+     startDate, // ✅ ADD
+    endDate 
   ) => {
     try {
       const response = await api.get(`/transaction/${transactionType}/getall`, {
@@ -53,6 +55,8 @@ export const transactionServices = {
           transactionType,
           sortBy,
           sortOrder,
+          startDate: startDate?.toISOString(), // ✅ ADD
+          endDate: endDate?.toISOString(), 
         },
       });
 

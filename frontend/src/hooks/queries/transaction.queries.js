@@ -12,6 +12,8 @@ export const transactionQueries = {
     limit = 25,
     sortBy,
     sortOrder,
+     startDate, // ✅ ADD
+    endDate, 
     options = {}
   ) =>
     infiniteQueryOptions({
@@ -23,6 +25,8 @@ export const transactionQueries = {
         branchId,
         sortBy,
         sortOrder,
+        startDate?.toISOString(), // ✅ ADD to query key
+        endDate?.toISOString(),
       ],
       queryFn: ({ pageParam }) =>
         transactionServices.getAll(
@@ -33,7 +37,9 @@ export const transactionQueries = {
           companyId,
           branchId,
           sortBy,
-          sortOrder
+          sortOrder,
+          startDate, // ✅ ADD
+          endDate    // ✅ ADD
         ),
       initialPageParam: 1,
       getNextPageParam: (lastPage) => lastPage.nextPage,

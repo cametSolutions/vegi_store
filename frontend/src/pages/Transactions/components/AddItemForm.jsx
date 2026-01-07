@@ -50,6 +50,25 @@ console.log("Account info:", {
   transactionType: transactionType
 });
 
+useEffect(() => {
+    setLocalItem({
+      item: null,
+      itemCode: "",
+      itemName: "",
+      unit: units[0]?.value || "",
+      priceLevels: [],
+      quantity: "",
+      rate: "",
+      baseAmount: "0",
+      amountAfterTax: "0",
+      taxable: false,
+      taxRate: "0",
+      taxAmount: "0",
+    });
+    setSearchTerm("");
+    setShowDropdown(false);
+    setShouldSearch(false);
+  }, [transactionType]); // Resets when switching between sale/purchase
 
 
 const isSearchEnabled = 
@@ -75,7 +94,7 @@ const isSearchEnabled =
     ...itemMasterQueries.search(debouncedSearchTerm, company, branch, 25, true,  account, // Pass accountId
     transactionType),
     enabled: isSearchEnabled,
-    staleTime: 2 * 60 * 1000,
+    // staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
