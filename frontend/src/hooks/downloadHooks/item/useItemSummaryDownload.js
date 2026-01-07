@@ -2,18 +2,21 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
+import { useSelector } from "react-redux";
 
 import { itemSummaryDownloadHelper } from "@/helper/downloadHelper/item/itemSummaryDownloadHelper";
+import { stockRegisterDownloadHelper } from "@/helper/downloadHelper/item/stockRegisterDownloadHelper";
 import { downloadMutations } from "../../mutations/downloadMutations";
 import { downloadQueries } from "../../queries/download.queries";
-import { useSelector } from "react-redux";
 
 export const useReportDownload = () => {
   const queryClient = useQueryClient();
   const [jobId, setJobId] = useState(null);
 
-  // Refs to hold download context
+  // ✅ 1. Add the missing Ref for reportType
+  const reportTypeRef = useRef("item-summary");
   const formatRef = useRef(null);
+  
   const contextRef = useRef({
     transactionType: "sale",
     startDate: null,
@@ -27,24 +30,20 @@ export const useReportDownload = () => {
     (state) => state.companyBranch?.selectedCompany
   );
 
-  // 1. Mutation to start the background job
-  // We spread the config from downloadMutations, then overwrite onSuccess/onError with our local logic
+  // Mutation to start the background job
   const initiateMutation = useMutation({
     ...downloadMutations.initiateDownloadItemSummary(queryClient),
-
     onSuccess: (data) => {
-      console.log("✅ Mutation Success:", data);
       setJobId(data.jobId);
       toast.info("Report generation started...");
     },
     onError: (error) => {
-      console.error("❌ Mutation Error:", error);
       toast.error(error.message || "Failed to start download");
     },
   });
 
-  // 2. Poll for status (only when jobId exists)
-  const { data: statusData, isLoading: isPolling } = useQuery({
+  // Poll for status
+  const { data: statusData } = useQuery({
     ...downloadQueries.getJobStatus(jobId),
     enabled: !!jobId,
     refetchInterval: (query) => {
@@ -53,9 +52,9 @@ export const useReportDownload = () => {
     },
   });
 
-  // 3. Handle Completion
+  // Handle Completion
   useEffect(() => {
-    if (statusData?.status === "completed" && formatRef.current) {
+    if (statusData?.status === "completed" && jobId && formatRef.current) {
       const { data, fileName } = statusData;
 
       const dataObj = {
@@ -63,20 +62,17 @@ export const useReportDownload = () => {
         company: selectedCompanyFromStore,
       };
 
+      // ✅ 2. Decide which helper to use based on the stored ref
+      const helper = reportTypeRef.current === 'stock-register' 
+          ? stockRegisterDownloadHelper 
+          : itemSummaryDownloadHelper;
+
       try {
         if (formatRef.current === "excel") {
-          itemSummaryDownloadHelper.generateExcel(
-            data,
-            fileName,
-            dataObj
-          );
+          helper.generateExcel(data, fileName, dataObj);
           toast.success("Excel file downloaded successfully!");
         } else if (formatRef.current === "pdf") {
-          itemSummaryDownloadHelper.generatePDF(
-            data,
-            fileName,
-            dataObj
-          );
+          helper.generatePDF(data, fileName, dataObj);
           toast.success("PDF file downloaded successfully!");
         }
       } catch (error) {
@@ -84,7 +80,6 @@ export const useReportDownload = () => {
         console.error("File generation error:", error);
       }
 
-      // Cleanup
       const timer = setTimeout(() => {
         setJobId(null);
         formatRef.current = null;
@@ -98,7 +93,7 @@ export const useReportDownload = () => {
       toast.error(statusData.error || "Report generation failed");
       setJobId(null);
     }
-  }, [statusData, queryClient, jobId]);
+  }, [statusData, queryClient, jobId, selectedCompanyFromStore]);
 
   // Public function called by the UI
   const initiateDownload = async (
@@ -106,9 +101,10 @@ export const useReportDownload = () => {
     format,
     reportType = "item-summary"
   ) => {
+    // ✅ 3. Store the reportType and format in refs for the useEffect to use later
+    reportTypeRef.current = reportType;
     formatRef.current = format;
 
-    // Store context for the helper
     contextRef.current = {
       transactionType: filters.transactionType,
       startDate: filters.startDate,
@@ -118,8 +114,6 @@ export const useReportDownload = () => {
       searchTerm: filters.searchTerm,
     };
 
-    // Prepare payload
-    // Note: We construct the exact object structure expected by mutationFn ({ filters, format })
     const payload = {
       format,
       filters: {
@@ -132,15 +126,12 @@ export const useReportDownload = () => {
       },
     };
 
-    console.log("🚀 Triggering Download Mutation with:", payload);
     initiateMutation.mutate(payload);
   };
 
   return {
     initiateDownload,
-    isDownloading:
-      initiateMutation.isPending ||
-      (!!jobId && statusData?.status !== "completed"),
+    isDownloading: initiateMutation.isPending || (!!jobId && statusData?.status !== "completed"),
     progress: statusData?.progress || 0,
     status: statusData?.status,
   };

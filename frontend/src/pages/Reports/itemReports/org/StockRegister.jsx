@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import FiltersBar from "@/components/filters/filterBar/FiltersBar";
 import { setFilter } from "@/store/slices/filtersSlice";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useReportDownload } from "@/hooks/downloadHooks/account/useSummaryDownload";
+import { useReportDownload } from "@/hooks/downloadHooks/item/useItemSummaryDownload";
 import DownloadButton from "@/components/DownloadButton/DownloadButton";
 
 const StockRegister = () => {
@@ -101,13 +101,13 @@ const StockRegister = () => {
       endDate: filters.endDate,
       company: companyId,
       branch: branchId,
-      transactionType: transactionType,
+      transactionType: null,
       searchTerm: debouncedSearchTerm || undefined,
     };
 
     // console.log(downloadFilters);
 
-    // initiateDownload(downloadFilters, format, "summary");
+    initiateDownload(downloadFilters, format, "stock-register");
   };
 
   // --- Column Configuration ---
