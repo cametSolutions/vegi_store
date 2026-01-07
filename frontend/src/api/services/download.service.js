@@ -7,12 +7,10 @@ export const downloadServices = {
   // Inherit all base methods
   ...downloadApi,
 
-  // Initiate download - FIXED: GET request with query params, not POST with body
+  // Initiate download for account summary - FIXED: GET request with query params, not POST with body
   initiateDownload: async (filters, format) => {
     try {
-      console.log(filters);
-      
-      const response = await api.get("/download/account-summary/download", {
+      const response = await api.get("/download/account-summary", {
         params: { ...filters, format }, // This is correct for query params
       });
       return response.data;
@@ -20,6 +18,21 @@ export const downloadServices = {
       throw new Error(error.response?.data?.message || error.message);
     }
   },
+
+  initiateDownloadItemSummary: async (filters, format) => {
+    try {
+ 
+      
+      const response = await api.get("/download/item-summary", {
+        params: { ...filters, format }, // This is correct for query params
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || error.message);
+    }
+  },
+
+
 
   // Check job status - FIXED: Use axios response format
   getJobStatus: async (jobId) => {

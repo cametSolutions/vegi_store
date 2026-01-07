@@ -2,14 +2,14 @@
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector, useDispatch } from "react-redux";
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Loader2, 
-  X, 
-  Search, 
-  ClipboardList, 
-  Layers
+import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  X,
+  Search,
+  ClipboardList,
+  Layers,
 } from "lucide-react";
 
 import {
@@ -23,16 +23,22 @@ import { Button } from "@/components/ui/button";
 import FiltersBar from "@/components/filters/filterBar/FiltersBar";
 import { setFilter } from "@/store/slices/filtersSlice";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useReportDownload } from "@/hooks/downloadHooks/item/useItemSummaryDownload";
+import DownloadButton from "@/components/DownloadButton/DownloadButton";
 
 const StockRegister = () => {
   const dispatch = useDispatch();
 
-  const companyId = useSelector((state) => state.companyBranch?.selectedCompany._id);
-  const branchId = useSelector((state) => state.companyBranch?.selectedBranch._id);
+  const companyId = useSelector(
+    (state) => state.companyBranch?.selectedCompany._id
+  );
+  const branchId = useSelector(
+    (state) => state.companyBranch?.selectedBranch._id
+  );
   const filters = useSelector((state) => state.filters);
 
   // Local state
-  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.TODAY);
+  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.THIS_MONTH);
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const limit = 20;
@@ -43,10 +49,10 @@ const StockRegister = () => {
     if (filters.transactionType !== null) {
       dispatch(setFilter({ key: "transactionType", value: null }));
     }
-    
+
     // Default Date Range
     if (!filters.startDate || !filters.endDate) {
-      const range = getDateRange(DATE_FILTERS.TODAY);
+      const range = getDateRange(DATE_FILTERS.THIS_MONTH);
       dispatch(setFilter({ key: "startDate", value: range.start }));
       dispatch(setFilter({ key: "endDate", value: range.end }));
     }
@@ -66,8 +72,13 @@ const StockRegister = () => {
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     ...queryOptions,
-    enabled: !!companyId && !!branchId,
+    enabled:
+      !!companyId && !!branchId && !!filters.startDate && !!filters.endDate,
   });
+
+  // ← Download hook
+  const { initiateDownload, isDownloading, progress, error, status } =
+    useReportDownload();
 
   const summaryData = data?.items || [];
   const pagination = data?.pagination || {
@@ -83,12 +94,28 @@ const StockRegister = () => {
     setCurrentPage(1);
   };
 
+  // ← Download handler
+  const handleDownload = (format) => {
+    const downloadFilters = {
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      company: companyId,
+      branch: branchId,
+      transactionType: null,
+      searchTerm: debouncedSearchTerm || undefined,
+    };
+
+    // console.log(downloadFilters);
+
+    initiateDownload(downloadFilters, format, "stock-register");
+  };
+
   // --- Column Configuration ---
   const TableColGroup = () => (
     <colgroup>
-      <col style={{ width: "50px" }} />  {/* # */}
+      <col style={{ width: "50px" }} /> {/* # */}
       <col style={{ width: "250px" }} /> {/* Item */}
-      <col style={{ width: "80px" }} />  {/* Unit */}
+      <col style={{ width: "80px" }} /> {/* Unit */}
       <col style={{ width: "100px" }} /> {/* Opening */}
       <col style={{ width: "100px" }} /> {/* In-ward */}
       <col style={{ width: "100px" }} /> {/* Out-ward */}
@@ -100,21 +127,33 @@ const StockRegister = () => {
 
   return (
     <div className="flex flex-col bg-slate-100 h-[calc(100vh-101px)] overflow-hidden font-sans text-sm">
-      
       {/* Header Section */}
       <div className="flex-none bg-white border-b border-slate-200 px-6 py-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-             <div className="p-2 rounded-lg border shadow-sm bg-indigo-50 border-indigo-100 text-indigo-600">
-                <ClipboardList className="w-5 h-5" />
-             </div>
-             <div>
-                <h1 className="text-base font-bold text-slate-800">Stock Register</h1>
-                <p className="text-xs text-slate-500 font-medium">Detailed inventory tracking</p>
-             </div>
+            <div className="p-2 rounded-lg border shadow-sm bg-indigo-50 border-indigo-100 text-indigo-600">
+              <ClipboardList className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-slate-800">
+                Stock Register
+              </h1>
+              <p className="text-xs text-slate-500 font-medium">
+                Detailed inventory tracking
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
+            {/* ← Download Button */}
+            <DownloadButton
+              onDownload={handleDownload}
+              isDownloading={isDownloading}
+              progress={progress}
+              status={status} // Optional: Pass this if you want the Check/X icons to appear
+            />
+
+            
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
               <input
@@ -124,17 +163,21 @@ const StockRegister = () => {
                 value={search}
                 onChange={handleSearchChange}
               />
+
               {search && (
                 <button
-                  onClick={() => { setSearch(""); setCurrentPage(1); }}
+                  onClick={() => {
+                    setSearch("");
+                    setCurrentPage(1);
+                  }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200"
                 >
                   <X className="w-3 h-3" />
                 </button>
               )}
             </div>
-             <div className="h-6 w-px bg-slate-200 mx-1"></div>
-            
+            <div className="h-6 w-px bg-slate-200 mx-1"></div>
+
             {/* Filter Bar with Transaction Type Hidden */}
             <FiltersBar
               showDateFilter={true}
@@ -150,21 +193,26 @@ const StockRegister = () => {
       {/* Main Content */}
       <div className="flex-1 overflow-hidden p-1.5">
         <div className="bg-white rounded-sm shadow-sm border border-slate-300 h-full flex flex-col overflow-hidden relative">
-          
           {isLoading || isFetching ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400">
-               <Loader2 className="animate-spin w-8 h-8 mb-2 text-indigo-500" />
-               <span className="text-xs font-medium">Loading stock register...</span>
+              <Loader2 className="animate-spin w-8 h-8 mb-2 text-indigo-500" />
+              <span className="text-xs font-medium">
+                Loading stock register...
+              </span>
             </div>
           ) : isError ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-500">
               <p className="text-sm mb-3">Unable to load stock data</p>
-              <Button onClick={refetch} variant="outline" size="sm">Retry</Button>
+              <Button onClick={refetch} variant="outline" size="sm">
+                Retry
+              </Button>
             </div>
           ) : summaryData?.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400">
-               <Layers className="w-10 h-10 mb-3 opacity-20" />
-               <p className="text-sm font-medium">No items found for selected period</p>
+              <Layers className="w-10 h-10 mb-3 opacity-20" />
+              <p className="text-sm font-medium">
+                No items found for selected period
+              </p>
             </div>
           ) : (
             <>
@@ -179,27 +227,54 @@ const StockRegister = () => {
                     */}
                     <tr className="border-b border-slate-300 bg-slate-50">
                       {/* Fixed Columns (RowSpan 2) */}
-                      <th rowSpan={2} className="sticky top-0 z-30 px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle">
+                      <th
+                        rowSpan={2}
+                        className="sticky top-0 z-30 px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle"
+                      >
                         #
                       </th>
-                      <th rowSpan={2} className="sticky top-0 z-30 px-3 py-2 text-left text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle">
+                      <th
+                        rowSpan={2}
+                        className="sticky top-0 z-30 px-3 py-2 text-left text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle"
+                      >
                         Item Name
                       </th>
-                      <th rowSpan={2} className="sticky top-0 z-30 px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle">
+                      <th
+                        rowSpan={2}
+                        className="sticky top-0 z-30 px-3 py-2 text-center text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle"
+                      >
                         Unit
                       </th>
-                      <th rowSpan={2} className="sticky top-0 z-30 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle">
-                        Opening<br/>Quantity
+                      <th
+                        rowSpan={2}
+                        className="sticky top-0 z-30 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle"
+                      >
+                        Opening
+                        <br />
+                        Quantity
                       </th>
-                      <th rowSpan={2} className="sticky top-0 z-30 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle">
-                        In-ward<br/>Quantity
+                      <th
+                        rowSpan={2}
+                        className="sticky top-0 z-30 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle"
+                      >
+                        In-ward
+                        <br />
+                        Quantity
                       </th>
-                      <th rowSpan={2} className="sticky top-0 z-30 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle">
-                        Out-ward<br/>Quantity
+                      <th
+                        rowSpan={2}
+                        className="sticky top-0 z-30 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-slate-50 align-middle"
+                      >
+                        Out-ward
+                        <br />
+                        Quantity
                       </th>
 
                       {/* Grouped Header (ColSpan 3) */}
-                      <th colSpan={3} className="sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold text-slate-700 uppercase tracking-wider border-b border-slate-300 bg-indigo-50/50">
+                      <th
+                        colSpan={3}
+                        className="sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold text-slate-700 uppercase tracking-wider border-b border-slate-300 bg-indigo-50/50"
+                      >
                         Closing Balance
                       </th>
                     </tr>
@@ -221,19 +296,27 @@ const StockRegister = () => {
 
                   <tbody className="divide-y divide-slate-200 bg-white">
                     {summaryData.map((row, idx) => (
-                      <tr key={row.itemId} className="hover:bg-slate-50 transition-colors group">
+                      <tr
+                        key={row.itemId}
+                        className="hover:bg-slate-50 transition-colors group"
+                      >
                         <td className="px-3 py-3 text-xs text-slate-500 text-center border-r border-slate-300">
                           {(pagination.page - 1) * pagination.limit + idx + 1}
                         </td>
                         <td className="px-3 py-3 border-r border-slate-300">
                           <div className="flex flex-col">
-                            <span className="font-semibold text-slate-700 text-xs truncate" title={row.itemName}>{row.itemName}</span>
+                            <span
+                              className="font-semibold text-slate-700 text-xs truncate"
+                              title={row.itemName}
+                            >
+                              {row.itemName}
+                            </span>
                             {row.itemCode && (
-                               <div className="flex mt-0.5">
-                                 <span className="text-[10px] text-slate-400 font-mono">
-                                   Code: {row.itemCode}
-                                 </span>
-                               </div>
+                              <div className="flex mt-0.5">
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  Code: {row.itemCode}
+                                </span>
+                              </div>
                             )}
                           </div>
                         </td>
@@ -242,7 +325,7 @@ const StockRegister = () => {
                             {row.unit}
                           </span>
                         </td>
-                        
+
                         {/* Opening */}
                         <td className="px-3 py-3 text-right text-xs text-slate-600 font-mono tracking-tight border-r border-slate-300">
                           {row.openingQuantity?.toLocaleString() ?? 0}
@@ -263,10 +346,14 @@ const StockRegister = () => {
                           {row.closingQuantity?.toLocaleString() ?? 0}
                         </td>
                         <td className="px-3 py-3 text-right text-xs text-slate-600 font-mono tracking-tight bg-indigo-50/5 border-r border-slate-300">
-                          {row.lastPurchaseRate ? formatINR(row.lastPurchaseRate) : "-"}
+                          {row.lastPurchaseRate
+                            ? formatINR(row.lastPurchaseRate)
+                            : "-"}
                         </td>
                         <td className="px-3 py-3 text-right text-xs font-semibold text-slate-800 font-mono tracking-tight bg-indigo-50/5">
-                          {row.closingBalance ? formatINR(row.closingBalance) : "-"}
+                          {row.closingBalance
+                            ? formatINR(row.closingBalance)
+                            : "-"}
                         </td>
                       </tr>
                     ))}
@@ -276,10 +363,21 @@ const StockRegister = () => {
 
               {/* Pagination Footer */}
               <div className="flex-none px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between z-40">
-                 <span className="text-[11px] text-slate-500">
-                    Showing <span className="font-medium text-slate-700">{(pagination.page - 1) * pagination.limit + 1}-{Math.min(pagination.page * pagination.limit, pagination.totalItems)}</span> of <span className="font-medium text-slate-700">{pagination.totalItems}</span>
+                <span className="text-[11px] text-slate-500">
+                  Showing{" "}
+                  <span className="font-medium text-slate-700">
+                    {(pagination.page - 1) * pagination.limit + 1}-
+                    {Math.min(
+                      pagination.page * pagination.limit,
+                      pagination.totalItems
+                    )}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-medium text-slate-700">
+                    {pagination.totalItems}
                   </span>
-                
+                </span>
+
                 <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"

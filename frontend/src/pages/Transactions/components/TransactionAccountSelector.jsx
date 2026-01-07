@@ -152,6 +152,14 @@ const TransactionAccountSelector = ({
   // EFFECTS
   // ============================================================================
 
+useEffect(() => {
+  setSearchTerm(accountName || "");
+}, [accountName]);
+
+
+
+
+  
   /**
    * Set initial price level when price levels are fetched
    */

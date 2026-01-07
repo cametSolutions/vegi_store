@@ -41,16 +41,17 @@ export const useTransactionActions = (transactionData, isEditMode = false) => {
             id: transactionData.id,
             formData: transactionData,
             transactionType: transactionData.transactionType,
-          })
-          .finally(() => {
-            dispatch(removeTransactionDataFromStore());
           });
+         queryClient.invalidateQueries({ queryKey: ['items'] });
+        
+        dispatch(removeTransactionDataFromStore());
       } else {
         // Create new transaction
         await createMutation.mutateAsync({
           formData: { ...convertedTransactionData, company, branch },
           transactionType: transactionData.transactionType,
         });
+           queryClient.invalidateQueries({ queryKey: ['items'] });
       }
 
       return true;

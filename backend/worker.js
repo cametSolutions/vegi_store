@@ -7,13 +7,14 @@ import connectDB from "./config/db.js";
 
 // Import processors
 import { processAccountReport } from "./workers/processors/accountReportProcessor.js";
+import { processItemReport } from "./workers/processors/itemReportProcessor.js";
 // import { processItemReport } from './workers/processors/itemReportProcessor.js';
 
 dotenv.config();
 
 // Main job router
 async function processReportExport(job) {
-  console.log(" [Worker] Received job:", job);
+  // console.log(" [Worker] Received job:", job);
 
   const { reportType } = job.data;
 
@@ -25,7 +26,10 @@ async function processReportExport(job) {
       case "account-summary":
         return await processAccountReport(job);
       
-      case "account-statement":
+      case "item-summary":
+        return await processItemReport(job);
+
+
 
       // return await processItemReport(job);
 

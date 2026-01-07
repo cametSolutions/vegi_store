@@ -1,9 +1,11 @@
 import { isMasterReferenced } from "../../helpers/MasterHelpers/masterHelper.js";
+import mongoose from "mongoose";
 
 import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
 import {SalesModel,PurchaseModel} from "../../model/TransactionModel.js";
 import {SalesReturnModel,PurchaseReturnModel} from "../../model/TransactionModel.js";
 import OutstandingModel from "../../model/OutstandingModel.js";
+import ItemLedger from "../../model/ItemsLedgerModel.js";
 // import {PaymentModel,ReceiptModel} from "../../model/FundTransactionMode.js";
 export const create = async (req, res) => {
   try {
@@ -264,14 +266,17 @@ export const updateIndexes = async () => {
 };
 
 //// for searching an item
-export const searchItems = async (req, res) => {
 
+
+export const searchItems = async (req, res) => {
   console.log("call came here");
   
   const {
     searchTerm,
     companyId,
     branchId,
+    accountId,
+    transactionType,
     limit = 25,
     exactMatch = false,
   } = req.query;
@@ -282,11 +287,90 @@ export const searchItems = async (req, res) => {
       companyId,
       branchId,
       limit,
-      exactMatch === "true" // string to boolean conversion for query param
+      exactMatch === "true"
     );
 
+    // If accountId and transactionType provided, fetch last rate from Transaction tables
+    if (accountId && transactionType && items.length > 0) {
+      console.log("✅ Fetching last rates");
+      
+      const itemsWithLastRate = await Promise.all(
+        items.map(async (item) => {
+          const itemObj = item.toObject ? item.toObject() : { ...item };
+          
+          let lastTransaction = null;
+          
+          if (transactionType === "sale" || transactionType === "sales_return") {
+            // Simple find query instead of aggregation
+            const salesTx = await SalesModel.findOne({
+             
+              company: companyId,
+              branch: branchId,
+              status: { $ne: "cancelled" },
+              "items.item": itemObj._id
+            })
+            .sort({ transactionDate: -1, createdAt: -1 })
+            .select('items transactionType transactionDate')
+            .lean();
+            
+            if (salesTx) {
+              const itemInTx = salesTx.items.find(i => i.item.toString() === itemObj._id.toString());
+              if (itemInTx) {
+                lastTransaction = {
+                  rate: itemInTx.rate,
+                  transactionType: salesTx.transactionType,
+                  transactionDate: salesTx.transactionDate
+                };
+              }
+            }
+          } else if (transactionType === "purchase" || transactionType === "purchase_return") {
+            const purchaseTx = await PurchaseModel.findOne({
+              account: accountId,
+              company: companyId,
+              branch: branchId,
+              status: { $ne: "cancelled" },
+              "items.item": itemObj._id
+            })
+            .sort({ transactionDate: -1, createdAt: -1 })
+            .select('items transactionType transactionDate')
+            .lean();
+            
+            if (purchaseTx) {
+              const itemInTx = purchaseTx.items.find(i => i.item.toString() === itemObj._id.toString());
+              if (itemInTx) {
+                lastTransaction = {
+                  rate: itemInTx.rate,
+                  transactionType: purchaseTx.transactionType,
+                  transactionDate: purchaseTx.transactionDate
+                };
+              }
+            }
+          }
+          
+          if (lastTransaction) {
+            itemObj.lastRate = lastTransaction.rate;
+            itemObj.lastTransactionType = lastTransaction.transactionType;
+            itemObj.lastTransactionDate = lastTransaction.transactionDate;
+            console.log(`✅ Found last rate for ${itemObj.itemName}:`, lastTransaction.rate);
+          } else {
+            console.log(`❌ No last rate found for ${itemObj.itemName}`);
+          }
+          
+          return itemObj;
+        })
+      );
+      
+      return res.json({ data: itemsWithLastRate, message: "items found" });
+    }
+
+    // ✅ ADDED: Response when accountId/transactionType not provided
     res.json({ data: items, message: "items found" });
+    
   } catch (error) {
+    // ✅ ADDED: Error handling
+    console.error("Search items error:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+

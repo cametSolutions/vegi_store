@@ -1,17 +1,16 @@
+// src/hooks/mutations/downloadMutations.js
 import { downloadServices } from "@/api/services/download.service";
-import { toast } from "sonner";
 
 export const downloadMutations = {
+  // Existing Account Download
   initiateDownload: (queryClient) => ({
     mutationFn: ({ filters, format }) => 
       downloadServices.initiateDownload(filters, format),
-    onSuccess: (response, variables) => {
-      toast.success("Report generation started...");
-      // Note: We are using local state (setJobId) to drive the UI, 
-      // but keeping this here is fine for debugging or advanced caching.
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to initiate download");
-    },
   }),
+
+  // ✅ FIXED: Removed 'async' keyword here
+  initiateDownloadItemSummary: (queryClient) => ({
+    mutationFn: ({ filters, format }) => 
+      downloadServices.initiateDownloadItemSummary(filters, format),
+  }),  
 };

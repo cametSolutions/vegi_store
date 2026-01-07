@@ -11,6 +11,8 @@ export const itemMasterQueries = {
     branchId,
     limit = 25,
     exactMatch,
+    accountId = null,
+    transactionType = null,
     options = {}
   ) =>
     queryOptions({
@@ -22,9 +24,12 @@ export const itemMasterQueries = {
         branchId,
         limit,
         exactMatch,
+         accountId,
+        transactionType,
       ],
       queryFn: () =>
-        itemServices.search(searchTerm, companyId, branchId, limit, exactMatch),
+        itemServices.search(searchTerm, companyId, branchId, limit, exactMatch, accountId,
+        transactionType,),
       ...options,
     }),
 

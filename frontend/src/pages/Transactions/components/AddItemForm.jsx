@@ -44,6 +44,45 @@ const AddItemForm = ({
   const quantityInputRef = useRef(null);
   const rateInputRef = useRef(null);
   const addButtonRef = useRef(null);
+console.log("Account info:", {
+  account: account,
+  accountId: account?._id,
+  transactionType: transactionType
+});
+
+useEffect(() => {
+    setLocalItem({
+      item: null,
+      itemCode: "",
+      itemName: "",
+      unit: units[0]?.value || "",
+      priceLevels: [],
+      quantity: "",
+      rate: "",
+      baseAmount: "0",
+      amountAfterTax: "0",
+      taxable: false,
+      taxRate: "0",
+      taxAmount: "0",
+    });
+    setSearchTerm("");
+    setShowDropdown(false);
+    setShouldSearch(false);
+  }, [transactionType]); // Resets when switching between sale/purchase
+
+
+const isSearchEnabled = 
+  shouldSearch && 
+  debouncedSearchTerm.trim() !== "" &&
+  (
+    transactionType === "sale" || 
+    transactionType === "sales_return" || 
+      transactionType === "stock_adjustment" ||
+    (
+      (transactionType === "purchase" || transactionType === "purchase_return") && 
+      !!account
+    )
+  );
 
   // TanStack Query
   const {
@@ -52,9 +91,10 @@ const AddItemForm = ({
     isError,
     error,
   } = useQuery({
-    ...itemMasterQueries.search(debouncedSearchTerm, company, branch, 25, true),
-    enabled: shouldSearch && debouncedSearchTerm.trim() !== "",
-    staleTime: 2 * 60 * 1000,
+    ...itemMasterQueries.search(debouncedSearchTerm, company, branch, 25, true,  account, // Pass accountId
+    transactionType),
+    enabled: isSearchEnabled,
+    // staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
@@ -70,108 +110,119 @@ const AddItemForm = ({
   }, [isError, error]);
 
   // ✅ FIXED: Update form fields when search results are received
-  useEffect(() => {
-    // Only process when we were searching and fetch is complete
-    if (shouldSearch && !isFetching && searchResponse !== undefined) {
+ useEffect(() => {
+  if (shouldSearch && !isFetching && searchResponse !== undefined) {
+    
+    // ✅ CHECK ACCOUNT REQUIREMENT
+    if (requireAccount && !account) {
+      toast.error("Customer Not Selected", {
+        description: "Please select a customer before adding items.",
+      });
+      setShouldSearch(false);
+      return;
+    }
+
+    if (searchResponse?.data && searchResponse.data.length > 0) {
+      const foundProduct = searchResponse.data[0];
+      console.log(foundProduct);
+
+      // ✅ UPDATED: Priority - priceLevel first, then lastRate
+      let rate = "";
       
-      // ✅ CHECK ACCOUNT REQUIREMENT
-      if (requireAccount && !account) {
-        toast.error("Customer Not Selected", {
-          description: "Please select a customer before adding items.",
-        });
-        setShouldSearch(false);
-        return;
+      // First priority: Use price level rate (for sales transactions with priceLevel)
+      if (
+        foundProduct.priceLevels && 
+        foundProduct.priceLevels.length > 0 &&
+        priceLevel &&
+        (transactionType === "sale" || transactionType === "sales_return")
+      ) {
+        const priceLevelData = foundProduct.priceLevels.find(
+          (pl) =>
+            pl.priceLevel._id === priceLevel ||
+            pl.priceLevel.priceLevelName === priceLevel
+        );
+        rate = priceLevelData?.rate || "";
+      }
+      
+      // Second priority: Use last transaction rate if priceLevel didn't give a rate
+      if (!rate && foundProduct.lastRate) {
+        rate = foundProduct.lastRate;
       }
 
-      if (searchResponse?.data && searchResponse.data.length > 0) {
-        const foundProduct = searchResponse.data[0];
-
-        // Find the appropriate rate based on priceLevel
-        let rate = "";
-        if (foundProduct.priceLevels && foundProduct.priceLevels.length > 0) {
-          if (
-            priceLevel &&
-            (transactionType === "sale" || transactionType === "sales_return")
-          ) {
-            const priceLevelData = foundProduct.priceLevels.find(
-              (pl) =>
-                pl.priceLevel._id === priceLevel ||
-                pl.priceLevel.priceLevelName === priceLevel
-            );
-
-
-            rate = priceLevelData?.rate || "";
-          } else {
-            rate = "";
-          }
-        }
-
-        // Update localItem with found product details
-        setLocalItem((prev) => ({
-          ...prev,
-          item: foundProduct?._id,
-          itemCode: foundProduct.itemCode || debouncedSearchTerm,
-          itemName: foundProduct.itemName || "",
-          priceLevels: foundProduct.priceLevels || [],
-          unit: foundProduct.unit || "",
-          rate: rate.toString() || "",
-          taxable: false,
-          taxRate: "0",
-          taxAmount: "0",
-        }));
-        setShowDropdown(false);
-        setShouldSearch(false);
-        setTimeout(() => unitInputRef.current?.focus(), 100);
-      } else if (searchResponse?.data && searchResponse.data.length === 0) {
-        setLocalItem((prev) => ({
-          ...prev,
-          itemCode: debouncedSearchTerm,
-        }));
-        setShowDropdown(true);
-        setShouldSearch(false);
-      }
-    }
-  }, [
-    searchResponse,
-    isFetching,
-    shouldSearch,
-    debouncedSearchTerm,
-    priceLevel,
-    branch,
-    requireAccount,
-    account,
-    transactionType,
-  ]);
-
-  // Rest of your useEffects remain the same...
-  
-  useEffect(() => {
-    if (!localItem.item) return;
-    const foundProduct = searchResponse?.data[0];
-    if (!foundProduct || !foundProduct.priceLevels) return;
-
-    let newRate = "";
-    if (
-      priceLevel &&
-      (transactionType === "sale" || transactionType === "sales_return")
-    ) {
-      const priceLevelData = foundProduct.priceLevels.find(
-        (pl) =>
-          pl.priceLevel._id === priceLevel ||
-          pl.priceLevel.priceLevelName === priceLevel
-      );
-      newRate = priceLevelData?.rate || "";
-    } else {
-      newRate = "";
-    }
-
-    if (localItem.rate !== newRate.toString()) {
+      // Update localItem with found product details
       setLocalItem((prev) => ({
         ...prev,
-        rate: newRate.toString(),
+        item: foundProduct?._id,
+        itemCode: foundProduct.itemCode || debouncedSearchTerm,
+        itemName: foundProduct.itemName || "",
+        priceLevels: foundProduct.priceLevels || [],
+        unit: foundProduct.unit || "",
+        rate: rate.toString() || "",
+        taxable: false,
+        taxRate: "0",
+        taxAmount: "0",
       }));
+      setShowDropdown(false);
+      setShouldSearch(false);
+      setTimeout(() => unitInputRef.current?.focus(), 100);
+    } else if (searchResponse?.data && searchResponse.data.length === 0) {
+      setLocalItem((prev) => ({
+        ...prev,
+        itemCode: debouncedSearchTerm,
+      }));
+      setShowDropdown(true);
+      setShouldSearch(false);
     }
-  }, [priceLevel, localItem.item, searchResponse]);
+  }
+}, [
+  searchResponse,
+  isFetching,
+  shouldSearch,
+  debouncedSearchTerm,
+  priceLevel,
+  branch,
+  requireAccount,
+  account,
+  transactionType,
+]);
+
+
+  // Rest of your useEffects remain the same...
+useEffect(() => {
+  if (!localItem.item) return;
+  const foundProduct = searchResponse?.data[0];
+  if (!foundProduct) return;
+
+  let newRate = "";
+  
+  // First check priceLevel
+  if (
+    foundProduct.priceLevels &&
+    foundProduct.priceLevels.length > 0 &&
+    priceLevel &&
+    (transactionType === "sale" || transactionType === "sales_return")
+  ) {
+    const priceLevelData = foundProduct.priceLevels.find(
+      (pl) =>
+        pl.priceLevel._id === priceLevel ||
+        pl.priceLevel.priceLevelName === priceLevel
+    );
+    newRate = priceLevelData?.rate || "";
+  }
+  
+  // Fallback to lastRate if no priceLevel rate found
+  if (!newRate && foundProduct.lastRate) {
+    newRate = foundProduct.lastRate.toString();
+  }
+
+  if (localItem.rate !== newRate.toString()) {
+    setLocalItem((prev) => ({
+      ...prev,
+      rate: newRate.toString(),
+    }));
+  }
+}, [priceLevel, localItem.item, searchResponse, transactionType]);
+
 
   useEffect(() => {
     if (clickedItemInTable) {
