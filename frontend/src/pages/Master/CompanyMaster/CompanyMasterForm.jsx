@@ -205,16 +205,43 @@ const CompanyMasterForm = ({ editingId, editData, onClearEdit }) => {
                 </div>
              </div>
 
-             <div>
-                <InputLabel label="Permanent Address" required />
-                <textarea
-                  {...register("permanentAddress", { required: "Address is required" })}
-                  className={`${inputClass} h-20 resize-none`}
-                  placeholder="Registered office address..."
-                  disabled={isLoading}
-                />
-                {errors.permanentAddress && <ErrorMessage message={errors.permanentAddress.message} />}
-             </div>
+            <div>
+  <InputLabel label="Permanent Address" required />
+  <textarea
+    {...register("permanentAddress", { required: "Address is required" })}
+    className={`${inputClass} h-20 resize-none`}
+    placeholder="Registered office address..."
+    disabled={isLoading}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        
+        // Insert comma and space at cursor position
+        const target = e.target;
+        const start = target.selectionStart;
+        const end = target.selectionEnd;
+        const currentValue = target.value;
+        
+        const newValue = 
+          currentValue.substring(0, start) + 
+          ", " + 
+          currentValue.substring(end);
+        
+        target.value = newValue;
+        
+        // Update react-hook-form value
+        e.target.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        // Move cursor after the comma
+        setTimeout(() => {
+          target.selectionStart = target.selectionEnd = start + 2;
+        }, 0);
+      }
+    }}
+  />
+  {errors.permanentAddress && <ErrorMessage message={errors.permanentAddress.message} />}
+</div>
+
           </div>
 
           {/* Section: Registration */}

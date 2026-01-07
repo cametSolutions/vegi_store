@@ -8,10 +8,9 @@ export const stockAdjustmentMutations = {
       stockAdjustmentServices.create(formData),
 
     onSuccess: (response, variables) => {
-      // The response structure is { success, message, data: { stockAdjustment, ... } }
       const { company, branch, _id } = response?.data?.stockAdjustment;
       
-      // Invalidate stock adjustment list queries
+      // Invalidate ALL stock adjustment queries (including infinite queries)
       queryClient.invalidateQueries({
         queryKey: ["stockAdjustments"],
       });
@@ -37,10 +36,6 @@ export const stockAdjustmentMutations = {
       );
     },
   }),
-
-
-
-
 
   update: (queryClient) => ({
     mutationFn: async ({ id, formData }) => {
@@ -69,10 +64,18 @@ export const stockAdjustmentMutations = {
       // console.log("✅ variables:", variables);
       // console.log("✅ ================================");
 
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ["stockAdjustments"] });
-      queryClient.invalidateQueries({ queryKey: ["items"] });
-      queryClient.invalidateQueries({ queryKey: ["reports"] });
+      // Invalidate ALL stock adjustment queries
+      queryClient.invalidateQueries({ 
+        queryKey: ["stockAdjustments"] 
+      });
+      
+      queryClient.invalidateQueries({ 
+        queryKey: ["items"] 
+      });
+      
+      queryClient.invalidateQueries({ 
+        queryKey: ["reports"] 
+      });
 
       toast.success("Stock adjustment updated successfully!");
     },
@@ -94,18 +97,14 @@ export const stockAdjustmentMutations = {
     },
   }),
 
-
-
   delete: (queryClient) => ({
     mutationFn: ({ id, companyId, branchId }) =>
       stockAdjustmentServices.delete(id, companyId, branchId),
 
     onSuccess: (response, variables) => {
-      const { companyId, branchId } = variables;
-
-      // Invalidate stock adjustment list
+      // Invalidate ALL stock adjustment queries
       queryClient.invalidateQueries({
-        queryKey: ["stockAdjustments", companyId, branchId],
+        queryKey: ["stockAdjustments"],
       });
 
       // Invalidate items since stock reverted

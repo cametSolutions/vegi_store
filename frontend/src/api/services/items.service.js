@@ -20,13 +20,28 @@ export const itemServices = {
     companyId,
     branchId,
     limit,
-    exactMatch = false
+    exactMatch = false,
+     accountId = null,
+    transactionType = null
   ) => {
     try {
-      const response = await api.get("/item/searchItem", {
-        params: { searchTerm, companyId, branchId, limit, exactMatch },
-      });
+      const params = {
+        searchTerm,
+        companyId,
+        branchId,
+        limit,
+        exactMatch,
+      };
 
+      // Only add accountId and transactionType if they are provided
+      if (accountId) {
+        params.accountId = accountId;
+      }
+      if (transactionType) {
+        params.transactionType = transactionType;
+      }
+   
+       const response = await api.get("/item/searchItem", { params });
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {

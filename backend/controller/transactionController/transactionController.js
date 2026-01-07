@@ -53,6 +53,9 @@ export const getTransactions = async (req, res) => {
     const sortBy = req.query.sortBy || "transactionDate";
     const sortOrder = req.query.sortOrder || "desc";
 
+const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
+
     // Convert 'desc' to -1, 'asc' to 1
     const sortDirection = sortOrder === "desc" ? -1 : 1;
 
@@ -72,6 +75,14 @@ export const getTransactions = async (req, res) => {
     }
     if (companyId) filter.company = companyId;
     if (branchId) filter.branch = branchId;
+
+
+if (startDate && endDate) {
+      filter.transactionDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
 
     // Use the static method for pagination
     const result = await transactionModel.getPaginatedTransactions(
