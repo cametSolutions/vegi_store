@@ -1,10 +1,11 @@
 import express from "express"
 import { getItemLedgerReport, getItemMonthlyReport } from "../../controller/reportController/dev/itemReportController.js"
 import { getAccountLedgerReport, getAccountMonthlySummary } from "../../controller/reportController/dev/accountReportController.js"
-import { getOutstandingReport, getOutstandingSummary,getPartyOutstandingDetails,getOutstandingParties } from "../../controller/reportController/dev/outstandingReportController.js"
+import { getOutstandingReport, getOutstandingSummary } from "../../controller/reportController/dev/outstandingReportController.js"
 import {getTransactionSummary} from "../../controller/reportController/saleReportController.js"
 import { getItemSummaryReport } from "../../controller/reportController/itemSummaryController.js"
 import { getAccountSummaryReport } from "../../controller/reportController/accountSummaryController.js"
+import { getOutstandingParties, getPartyOutstandingDetails } from "../../controller/reportController/outstandingSummaryController.js"
 const router=express.Router()
 
 /// Item Reports

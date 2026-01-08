@@ -18,13 +18,21 @@ import {
   ShoppingCart,
   CornerUpLeft,
 } from "lucide-react";
-import { DATE_FILTERS, formatDate, getDateRange } from "../../../../../shared/utils/date";
+import {
+  DATE_FILTERS,
+  formatDate,
+  getDateRange,
+} from "../../../../../shared/utils/date";
 import { formatINR } from "../../../../../shared/utils/currency";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import FiltersBar from "@/components/filters/filterBar/FiltersBar";
 import { setFilter } from "@/store/slices/filtersSlice";
 import { useDebounce } from "@/hooks/useDebounce";
+
+import DownloadButton from "@/components/DownloadButton/DownloadButton";
+import { useTransactionSummaryDownload } from "@/hooks/downloadHooks/transactions/useTransactionSummaryDownload";
+
 
 // Transaction type configuration
 const TRANSACTION_CONFIG = {
@@ -57,8 +65,12 @@ const TRANSACTION_CONFIG = {
 const TransactionSummary = () => {
   const dispatch = useDispatch();
 
-  const selectedCompany = useSelector((state) => state?.companyBranch?.selectedCompany);
-  const selectedBranch = useSelector((state) => state?.companyBranch?.selectedBranch);
+  const selectedCompany = useSelector(
+    (state) => state?.companyBranch?.selectedCompany
+  );
+  const selectedBranch = useSelector(
+    (state) => state?.companyBranch?.selectedBranch
+  );
   const filters = useSelector((state) => state.filters);
 
   const companyId = selectedCompany?._id;
@@ -71,6 +83,11 @@ const TransactionSummary = () => {
   const [dateFilter, setDateFilter] = useState(DATE_FILTERS.THIS_MONTH);
 
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+  
+  // --- Download Hook Initialization ---
+  const { initiateDownload, isDownloading, progress, status } = useTransactionSummaryDownload();
+
 
   useEffect(() => {
     if (!filters.transactionType) {
@@ -103,7 +120,13 @@ const TransactionSummary = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters.startDate, filters.endDate, debouncedSearchTerm, pageSize, transactionType]);
+  }, [
+    filters.startDate,
+    filters.endDate,
+    debouncedSearchTerm,
+    pageSize,
+    transactionType,
+  ]);
 
   const handleSearchChange = (e) => setSearchTerm(e.target.value);
   const handleClearSearch = () => {
@@ -124,10 +147,20 @@ const TransactionSummary = () => {
         search: debouncedSearchTerm,
       };
       if (type === "excel") {
-        await transactionSummaryService.exportToExcel(companyId, branchId, transactionType, params);
+        await transactionSummaryService.exportToExcel(
+          companyId,
+          branchId,
+          transactionType,
+          params
+        );
         toast.success("Excel downloaded");
       } else if (type === "pdf") {
-        await transactionSummaryService.exportToPDF(companyId, branchId, transactionType, params);
+        await transactionSummaryService.exportToPDF(
+          companyId,
+          branchId,
+          transactionType,
+          params
+        );
         toast.success("PDF downloaded");
       }
     } catch (error) {
@@ -137,7 +170,20 @@ const TransactionSummary = () => {
     }
   };
 
-  const handlePrint = () => window.print();
+
+
+  // --- Download Handler ---
+  const handleDownload = (format) => {
+    const downloadFilters = {
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      company: companyId,
+      branch: branchId,
+      transactionType: transactionType,
+      searchTerm: debouncedSearchTerm || undefined,
+    };
+    initiateDownload(downloadFilters, format, "transaction-summary");
+  };
 
   if (!companyId || !branchId) {
     return (
@@ -151,7 +197,7 @@ const TransactionSummary = () => {
   // Define column widths for strict alignment
   const TableColGroup = () => (
     <colgroup>
-      <col style={{ width: "50px" }} />  {/* # */}
+      <col style={{ width: "50px" }} /> {/* # */}
       <col style={{ width: "130px" }} /> {/* Ref No */}
       <col style={{ width: "100px" }} /> {/* Date */}
       <col style={{ width: "220px" }} /> {/* Account Name */}
@@ -166,7 +212,6 @@ const TransactionSummary = () => {
       {/* Fixed Header */}
       <div className="flex-none bg-white border-b border-slate-200 px-6 py-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          
           {/* Title Area */}
           <div className="flex items-center gap-3">
             <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 shadow-sm">
@@ -184,6 +229,13 @@ const TransactionSummary = () => {
 
           {/* Controls Area */}
           <div className="flex items-center gap-3">
+
+             <DownloadButton 
+              onDownload={handleDownload}
+              isDownloading={isDownloading}
+              progress={progress}
+              status={status}
+            />
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-sky-500 transition-colors" />
               <input
@@ -214,7 +266,12 @@ const TransactionSummary = () => {
               showDateFilter={true}
               showTransactionType={true}
               showOutstandingType={false}
-              allowedTxnTypes={["sale", "purchase", "sales_return", "purchase_return"]}
+              allowedTxnTypes={[
+                "sale",
+                "purchase",
+                "sales_return",
+                "purchase_return",
+              ]}
               dateFilter={dateFilter}
               onDateFilterChange={setDateFilter}
               onPageReset={() => setCurrentPage(1)}
@@ -226,22 +283,25 @@ const TransactionSummary = () => {
       {/* Main Content */}
       <div className="flex-1 overflow-hidden py-1 px-2">
         <div className="bg-white rounded-sm shadow-sm border border-slate-300 h-full flex flex-col overflow-hidden relative">
-          
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400">
               <Loader2 className="animate-spin w-8 h-8 mb-2 text-sky-500" />
-              <span className="text-xs font-medium">Loading transactions...</span>
+              <span className="text-xs font-medium">
+                Loading transactions...
+              </span>
             </div>
           ) : isError ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-500">
               <p className="text-sm mb-3">Unable to load data</p>
-              <Button onClick={() => refetch()} variant="outline" size="sm">Retry</Button>
+              <Button onClick={() => refetch()} variant="outline" size="sm">
+                Retry
+              </Button>
             </div>
           ) : transactions.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-400">
               <FileBarChart className="w-10 h-10 mb-3 opacity-20" />
               <p className="text-sm font-medium">
-                {debouncedSearchTerm 
+                {debouncedSearchTerm
                   ? `No results for "${debouncedSearchTerm}"`
                   : "No transactions found"}
               </p>
@@ -254,18 +314,35 @@ const TransactionSummary = () => {
                   <TableColGroup />
                   <thead>
                     <tr>
-                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">#</th>
-                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Ref No.</th>
-                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Date</th>
-                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">{config.accountLabel}</th>
-                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Phone</th>
-                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Email</th>
-                      <th className="sticky top-0 z-20 bg-slate-50 px-6 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Net Amount</th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                        #
+                      </th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                        Ref No.
+                      </th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                        Date
+                      </th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                        {config.accountLabel}
+                      </th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                        Phone
+                      </th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase border-r border-slate-300 border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                        Email
+                      </th>
+                      <th className="sticky top-0 z-20 bg-slate-50 px-6 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase border-b border-slate-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                        Net Amount
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 bg-white">
                     {transactions.map((transaction, index) => (
-                      <tr key={transaction._id} className="hover:bg-slate-50 transition-colors group">
+                      <tr
+                        key={transaction._id}
+                        className="hover:bg-slate-50 transition-colors group"
+                      >
                         <td className="px-4 py-3 text-xs text-slate-400 text-center border-r border-slate-200">
                           {(currentPage - 1) * pageSize + index + 1}
                         </td>
@@ -273,7 +350,9 @@ const TransactionSummary = () => {
                           {transaction.transactionNumber || "-"}
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600 border-r border-slate-200">
-                          {transaction.transactionDate ? formatDate(transaction.transactionDate) : "-"}
+                          {transaction.transactionDate
+                            ? formatDate(transaction.transactionDate)
+                            : "-"}
                         </td>
                         <td className="px-4 py-3 text-xs font-medium text-slate-800 truncate border-r border-slate-200">
                           {transaction.accountName || "-"}
@@ -301,14 +380,17 @@ const TransactionSummary = () => {
                   <TableColGroup />
                   <tfoot>
                     <tr>
-                      <td colSpan={6} className="px-4 py-3 text-right text-xs font-bold text-slate-600 uppercase border-r border-slate-300">
+                      <td
+                        colSpan={6}
+                        className="px-4 py-3 text-right text-xs font-bold text-slate-600 uppercase   border-slate-300"
+                      >
                         Total Amount:
                       </td>
                       <td className="px-6 py-3 text-right">
-                         <div className="bg-white border border-slate-300 rounded-md px-3 py-1.5 shadow-sm inline-block">
-                            <span className="text-sm font-bold text-slate-800 font-mono">
-                                {formatINR(totalAmount)}
-                            </span>
+                        <div className="bg-white border border-slate-300 rounded-md px-3 py-1.5 shadow-sm inline-block">
+                          <span className="text-sm font-bold text-slate-800 font-mono">
+                            {formatINR(totalAmount)}
+                          </span>
                         </div>
                       </td>
                     </tr>
@@ -318,46 +400,22 @@ const TransactionSummary = () => {
 
               {/* Pagination & Actions Footer (Fixed at page bottom) */}
               <div className="flex-none px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between z-40">
-                
-                {/* Export Actions */}
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExport("excel")}
-                    disabled={isExporting}
-                    className="h-8 text-xs font-medium text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100 hover:text-emerald-800"
-                  >
-                    {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" />}
-                    Excel
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExport("pdf")}
-                    disabled={isExporting}
-                    className="h-8 text-xs font-medium text-rose-700 bg-rose-50 border-rose-200 hover:bg-rose-100 hover:text-rose-800"
-                  >
-                    {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <FileText className="w-3.5 h-3.5 mr-1.5" />}
-                    PDF
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handlePrint}
-                    className="h-8 text-xs font-medium text-slate-600 bg-white border-slate-200 hover:bg-slate-50"
-                  >
-                    <Printer className="w-3.5 h-3.5 mr-1.5" />
-                    Print
-                  </Button>
-                </div>
+                <div></div>
 
                 {/* Pagination Controls */}
                 <div className="flex items-center gap-4">
                   <span className="text-[11px] text-slate-500">
-                    Showing <span className="font-medium text-slate-700">{(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalRecords)}</span> of <span className="font-medium text-slate-700">{totalRecords}</span>
+                    Showing{" "}
+                    <span className="font-medium text-slate-700">
+                      {(currentPage - 1) * pageSize + 1}-
+                      {Math.min(currentPage * pageSize, totalRecords)}
+                    </span>{" "}
+                    of{" "}
+                    <span className="font-medium text-slate-700">
+                      {totalRecords}
+                    </span>
                   </span>
-                  
+
                   <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
@@ -375,14 +433,15 @@ const TransactionSummary = () => {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-slate-500 hover:text-slate-800"
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
                       disabled={currentPage === totalPages}
                     >
                       <ChevronRight className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
-
               </div>
             </>
           )}

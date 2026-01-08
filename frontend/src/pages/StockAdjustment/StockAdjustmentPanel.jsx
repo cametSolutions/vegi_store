@@ -31,7 +31,7 @@ const StockAdjustmentPanel = () => {
   }, [isEditMode]);
 
   return (
-    <div className="flex w-full justify-between bg-white gap-2">
+    <div className="flex w-full justify-between  bg-white gap-2">
       {/* ✅ Left side: Create/Edit Form (55% width) */}
       <div className="w-[55%]">
         {editMode ? (
