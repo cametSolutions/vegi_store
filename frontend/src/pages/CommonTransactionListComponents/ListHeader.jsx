@@ -1,6 +1,6 @@
 import { Filter } from "lucide-react";
 
-
+import FiltersBar from "@/components/filters/filterBar/FiltersBar";
 const ListHeader = ({ title, recordCount }) => {
   return (
     <div className="flex items-center justify-between mb-3 px-1 ">
