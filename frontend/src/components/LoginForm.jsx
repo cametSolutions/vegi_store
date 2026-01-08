@@ -63,13 +63,13 @@ export const LoginForm = ({ onSubmit, isLoading = false }) => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-md ">
       {/* Logo and Header */}
       <div className="text-center mb-8">
         <div className="flex justify-center items-center mb-4">
           <div className="relative">
             <div className="bg-green-500 p-4 rounded-full shadow-lg">
-              <Leaf className="w-10 h-10 text-white" />
+              <Leaf className="w-8 h-8 text-white" />
             </div>
             <div className="absolute -top-1 -right-1 w-6 h-6 bg-orange-400 rounded-full flex items-center justify-center">
               <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -79,7 +79,7 @@ export const LoginForm = ({ onSubmit, isLoading = false }) => {
 
         {/* Small vegetable icons */}
         <div className="flex justify-center items-center space-x-4 mt-4 opacity-60">
-          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+          <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
             <span className="text-green-600 text-xs">🥕</span>
           </div>
           <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
@@ -107,20 +107,20 @@ export const LoginForm = ({ onSubmit, isLoading = false }) => {
         <div>
           <label
             htmlFor="email"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-white mb-2"
           >
             Email Address
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Mail className="h-5 w-5 text-gray-400" />
+              <Mail className="h-5 w-5 text-white" />
             </div>
             <input
               id="email"
               type="email"
               value={formData.email}
               onChange={(e) => handleInputChange("email", e.target.value)}
-              className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
+              className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none  text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
                 errors.email
                   ? "border-red-300 focus:ring-red-500 focus:border-red-500"
                   : "border-gray-300"
@@ -138,20 +138,20 @@ export const LoginForm = ({ onSubmit, isLoading = false }) => {
         <div>
           <label
             htmlFor="password"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-white mb-2"
           >
             Password
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Lock className="h-5 w-5 text-gray-400" />
+              <Lock className="h-5 w-5 text-white" />
             </div>
             <input
               id="password"
               type={showPassword ? "text" : "password"}
               value={formData.password}
               onChange={(e) => handleInputChange("password", e.target.value)}
-              className={`block w-full pl-10 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
+              className={`block w-full pl-10 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 text-white focus:ring-green-500 focus:border-green-500 transition-colors ${
                 errors.password
                   ? "border-red-300 focus:ring-red-500 focus:border-red-500"
                   : "border-gray-300"
@@ -187,17 +187,12 @@ export const LoginForm = ({ onSubmit, isLoading = false }) => {
             />
             <label
               htmlFor="remember-me"
-              className="ml-2 block text-sm text-gray-700"
+              className="ml-2 block text-sm text-white"
             >
               Remember me
             </label>
           </div>
-          <button
-            type="button"
-            className="text-sm text-green-600 hover:text-green-500 transition-colors"
-          >
-            Forgot your password?
-          </button>
+      
         </div>
 
         {/* Submit Button */}
@@ -218,14 +213,7 @@ export const LoginForm = ({ onSubmit, isLoading = false }) => {
       </form>
 
       {/* Sign Up Link */}
-      <div className="mt-8 text-center">
-        <p className="text-gray-600">
-          Don't have an account?{" "}
-          <button className="text-green-600 hover:text-green-500 font-medium transition-colors">
-            Sign up for free
-          </button>
-        </p>
-      </div>
+  
     </div>
   );
 };
