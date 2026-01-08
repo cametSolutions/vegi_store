@@ -80,7 +80,7 @@ const CreateStockAdjustment = () => {
   console.log("stockAdjustmentData", stockAdjustmentData);
 
   return (
-    <div className="h-[calc(100vh-100px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
+    <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
       {/* Loader Overlay */}
       {isLoading && (
         <div className="absolute inset-0 bg-white/60 z-50 flex items-center justify-center">

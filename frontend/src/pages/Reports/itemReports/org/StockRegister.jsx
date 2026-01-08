@@ -126,7 +126,7 @@ const StockRegister = () => {
   );
 
   return (
-    <div className="flex flex-col bg-slate-100 h-[calc(100vh-101px)] overflow-hidden font-sans text-sm">
+    <div className="flex flex-col bg-slate-100 h-[calc(100vh-103px)] overflow-hidden font-sans text-sm">
       {/* Header Section */}
       <div className="flex-none bg-white border-b border-slate-200 px-6 py-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

@@ -8,7 +8,7 @@ const Header = () => {
   useEffect(() => {
     const setHeaderHeight = () => {
       if (headerRef.current) {
-        const height = headerRef.current.offsetHeight;
+        const height = headerRef.current.offsetHeight+1;
         document.documentElement.style.setProperty("--header-height", `${height}px`);
       }
     };

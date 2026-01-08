@@ -1,32 +1,33 @@
 import React, { useEffect } from "react";
-import { Save, Eye, Trash2, X, FileText } from "lucide-react";
+import { Save, Trash2, X, Loader2 } from "lucide-react";
 import { useCashTransactionActions } from "../hooks/useCashTransactionAction";
 import { toast } from "sonner";
 
 const CashTransactionAction = ({
   CashtransactionData,
-  onSave,
   resetCashTransactionData,
   onLoadingChange,
   handleCancel,
+  isEditMode = false,
   // onView,
   // onDelete,
-  // onCancel,
   // onPrint,
-  isEditMode = false,
 }) => {
   const { handleSave, isLoading } = useCashTransactionActions(
     CashtransactionData,
     isEditMode
   );
+
+  // Notify parent whenever loading changes
   useEffect(() => {
     if (onLoadingChange) {
       onLoadingChange(isLoading);
     }
   }, [isLoading, onLoadingChange]);
+
   const handleSaveClick = async () => {
-    const { paymentMode, chequeNumber, accountName, account } =
-      CashtransactionData;
+    const { paymentMode, chequeNumber, accountName, account } = CashtransactionData;
+
     if (paymentMode === "cheque" && chequeNumber.trim() === "") {
       toast.error("Enter cheque number");
       return;
@@ -37,58 +38,62 @@ const CashTransactionAction = ({
       toast.error("Add a customer");
       return false;
     }
+
     await handleSave(); // save using your hook
-    if (resetCashTransactionData) resetCashTransactionData(CashtransactionData.transactionType); // 👈 reset after success
+    if (resetCashTransactionData) {
+      resetCashTransactionData(CashtransactionData.transactionType);
+    }
   };
-  console.log("transaction actions component renders");
 
   return (
-    <div className="mt-2">
-      <div className="grid grid-cols-3 gap-2">
-        {/* Primary Action - Darkest Blue */}
-        <button
-          onClick={() => handleSaveClick()}
-          className="bg-blue-700 hover:bg-blue-800 text-white px-2 py-2.5 rounded font-bold flex items-center justify-center gap-1 transition-colors text-[9px]"
-        >
-          <Save className="w-3 h-3" />
-          {isEditMode ? "Update" : "Save"}
-        </button>
-
-        {/* Secondary Action - Medium Blue */}
-        {/* <button
-          onClick={onView}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-2.5 rounded font-bold flex items-center justify-center gap-1 transition-colors text-[9px]"
-        >
-          <Eye className="w-3 h-3" />
-          View
-        </button> */}
-
-        {/* Destructive - Red (Exception) */}
-        <button
-          // onClick={onDelete}
-          className="bg-red-600 hover:bg-red-700 text-white px-2 py-2.5 rounded font-bold flex items-center justify-center gap-1 transition-colors text-[9px]"
-        >
-          <Trash2 className="w-3 h-3" />
-          Delete
-        </button>
-
-        {/* Neutral - Light Blue */}
+    <div className="pt-2 border-t border-slate-100">
+      <div className="flex items-center gap-2">
+        
+        {/* Cancel (Secondary) */}
         <button
           onClick={handleCancel}
-          className="bg-gray-500 hover:bg-gray-600 text-white px-2 py-2.5 rounded font-bold flex items-center justify-center gap-1 transition-colors text-[9px]"
+          disabled={isLoading}
+          className="h-10 px-3 rounded border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:border-slate-300 font-semibold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
         >
           <X className="w-3 h-3" />
           Cancel
         </button>
 
-        {/* Tertiary - Lightest Blue */}
-        {/* <button
-          onClick={onPrint}
-          className="bg-violet-500 hover:bg-violet-500 text-white px-2 py-2.5 rounded font-bold flex items-center justify-center gap-1 transition-colors text-[9px]"
+        {/* Delete (Destructive) - Keep it even if unused for layout consistency */}
+        <button
+          // onClick={onDelete}
+          disabled={isLoading}
+          className="h-10 px-3 rounded border border-red-100 bg-white text-red-500 hover:bg-red-50 hover:border-red-200 font-semibold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
         >
-          <FileText className="w-3 h-3" />
-          Print
-        </button> */}
+          <Trash2 className="w-3 h-3" />
+          Delete
+        </button>
+
+        {/* Save (Primary - Fill remaining) */}
+        <button
+          onClick={handleSaveClick}
+          disabled={isLoading}
+          className={`flex-1 h-10 px-4 rounded font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm text-white
+            ${isLoading 
+              ? "bg-blue-400 cursor-wait" 
+              : "bg-blue-600 hover:bg-blue-700 hover:shadow active:scale-[0.98]"
+            }`}
+        >
+          {isLoading ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <Save className="w-3 h-3" />
+          )}
+          <span>
+            {isLoading 
+              ? "Saving..." 
+              : isEditMode 
+                ? "Update" 
+                : "Save Transaction"
+            }
+          </span>
+        </button>
+
       </div>
     </div>
   );
