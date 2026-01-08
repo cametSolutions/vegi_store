@@ -32,6 +32,17 @@ export const downloadServices = {
     }
   },
 
+  initiateDownloadTransactionSummary: async (filters, format) => {
+    try {
+      const response = await api.get("/download/transaction-summary", {
+        params: { ...filters, format }, // This is correct for query params
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || error.message);
+    }
+  },
+
 
 
   // Check job status - FIXED: Use axios response format

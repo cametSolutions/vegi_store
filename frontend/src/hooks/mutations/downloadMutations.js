@@ -13,4 +13,11 @@ export const downloadMutations = {
     mutationFn: ({ filters, format }) => 
       downloadServices.initiateDownloadItemSummary(filters, format),
   }),  
+
+    initiateDownloadTransactionSummary: (queryClient) => ({
+    mutationFn: ({ filters, format }) => 
+      downloadServices.initiateDownloadTransactionSummary(filters, format),
+  }),  
+
+
 };
