@@ -9,8 +9,10 @@ export const initiateAccountSummaryDownload = async (req, res) => {
       branch,
       account,
       transactionType,
+      outstandingType,
       searchTerm,
       format, // 'excel' or 'pdf'
+      partyId,
     } = req.query;
 
     const reportType = req.params.reportType;
@@ -37,9 +39,10 @@ export const initiateAccountSummaryDownload = async (req, res) => {
         endDate,
         company,
         branch,
-        account: account || null,
+        account: account || partyId || null,
         transactionType: transactionType || null,
         searchTerm: searchTerm || null,
+        outstandingType: outstandingType || null,
       },
       requestedAt: new Date().toISOString(),
     });
@@ -81,11 +84,11 @@ export const getDownloadStatus = async (req, res) => {
     // Different responses based on job state
     if (state === "completed") {
       const result = job.returnvalue;
+      
       return res.json({
         status: "completed",
-        data: result.data, // The actual report data
-        fileName: result.fileName,
-        recordCount: result.recordCount,
+        // ✅ CHANGE: Spread 'result' so 'totalOutstanding', 'totalDr', etc. are included
+        ...result 
       });
     }
 

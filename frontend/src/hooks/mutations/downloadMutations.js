@@ -4,20 +4,23 @@ import { downloadServices } from "@/api/services/download.service";
 export const downloadMutations = {
   // Existing Account Download
   initiateDownload: (queryClient) => ({
-    mutationFn: ({ filters, format }) => 
+    mutationFn: ({ filters, format }) =>
       downloadServices.initiateDownload(filters, format),
   }),
 
   // ✅ FIXED: Removed 'async' keyword here
   initiateDownloadItemSummary: (queryClient) => ({
-    mutationFn: ({ filters, format }) => 
+    mutationFn: ({ filters, format }) =>
       downloadServices.initiateDownloadItemSummary(filters, format),
-  }),  
+  }),
 
-    initiateDownloadTransactionSummary: (queryClient) => ({
-    mutationFn: ({ filters, format }) => 
+  initiateDownloadTransactionSummary: (queryClient) => ({
+    mutationFn: ({ filters, format }) =>
       downloadServices.initiateDownloadTransactionSummary(filters, format),
-  }),  
+  }),
 
-
+  initiateDownloadOutstandingSummary: (queryClient) => ({
+    mutationFn: ({ filters, format }) =>
+      downloadServices.initiateDownloadOutstandingSummary(filters, format),
+  }),
 };

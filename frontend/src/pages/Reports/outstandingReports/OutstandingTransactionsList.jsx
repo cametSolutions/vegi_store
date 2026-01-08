@@ -14,6 +14,8 @@ import ErrorDisplay from "@/components/errors/ErrorDisplay";
 import { outstandingQueries } from "../../../hooks/queries/outstandingQueries";
 import FiltersBar from "@/components/filters/filterBar/FiltersBar";
 import { setFilter } from "@/store/slices/filtersSlice";
+import DownloadButton from "@/components/DownloadButton/DownloadButton";
+import { useOutstandingDownload } from "@/hooks/downloadHooks/outstanding/useOutstandingDownload";
 
 const OutstandingTransactionsList = ({
   companyId,
@@ -31,6 +33,10 @@ const OutstandingTransactionsList = ({
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
+
+
+   // --- ADD DOWNLOAD HOOK ---
+  const { initiateDownload, isDownloading, progress } = useOutstandingDownload();
 
   // Ensure defaults
   useEffect(() => {
@@ -87,6 +93,27 @@ const OutstandingTransactionsList = ({
     dispatch(setFilter({ key: "outstandingType", value }));
     setCurrentPage(1);
   };
+
+   // --- ADD HANDLER ---
+  const handleDownload = (format) => {
+    if (!selectedParty) return;
+    
+    const downloadFilters = {
+      company: companyId,
+      branch: branchId,
+      partyId: selectedParty.partyId,
+      partyName: selectedParty.partyName,
+      startDate: startDate,
+      endDate: endDate,
+      outstandingType: outstandingTypeFilter
+    };
+    
+    initiateDownload(downloadFilters, format);
+  };
+
+  // console.log(selectedParty);
+  
+
 
   const getOutstandingStyle = (type) => {
     const isDr = type === "dr";
@@ -156,6 +183,11 @@ const OutstandingTransactionsList = ({
           </div>
           
           <div className="flex gap-2">
+             <DownloadButton 
+                    onDownload={handleDownload}
+                    isDownloading={isDownloading}
+                    progress={progress}
+                  />
              <FiltersBar
                 showTransactionType={false}
                 showDateFilter={true}
