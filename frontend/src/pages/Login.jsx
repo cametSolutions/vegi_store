@@ -16,14 +16,14 @@ const Login = () => {
 
   return (
     <div
-      className="min-h-screen w-full bg-cover bg-center   relative flex items-center justify-end"
+      className="min-h-screen w-full bg-cover bg-center   relative flex items-center justify-center"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
       {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/25"></div>
+      <div className="absolute inset-0 bg-black/55 backdrop-blur-sm"></div>
 
       {/* Glass Login Card */}
-      <div className="relative z-10 mr-10 md:mr-24 w-[360px] rounded-2xl bg-white/25 border border-white/40 shadow-xl p-6">
+      <div className="relative z-10  w-[360px] rounded-2xl bg-white/25 border border-white/40 shadow-xl p-6">
         <LoginForm onSubmit={login} isLoading={isLoading} />
       </div>
     </div>
