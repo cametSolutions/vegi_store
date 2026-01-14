@@ -53,7 +53,7 @@ export const getTransactions = async (req, res) => {
     const sortBy = req.query.sortBy || "transactionDate";
     const sortOrder = req.query.sortOrder || "desc";
 
-const startDate = req.query.startDate;
+    const startDate = req.query.startDate;
     const endDate = req.query.endDate;
 
     // Convert 'desc' to -1, 'asc' to 1
@@ -76,11 +76,10 @@ const startDate = req.query.startDate;
     if (companyId) filter.company = companyId;
     if (branchId) filter.branch = branchId;
 
-
-if (startDate && endDate) {
+    if (startDate && endDate) {
       filter.transactionDate = {
         $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $lte: new Date(endDate),
       };
     }
 
@@ -167,6 +166,8 @@ export const createTransaction = async (req, res) => {
 
     // Process transaction using helper
     const result = await processTransaction(transactionData, userId, session);
+
+ 
 
     // Create receipt if paid amount > 0
     let receiptResult = null;

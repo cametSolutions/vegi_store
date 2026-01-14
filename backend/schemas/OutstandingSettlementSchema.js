@@ -1,10 +1,12 @@
 import mongoose from "mongoose";
 
 /**
- * OutstandingSettlement - Link table between Fund Transactions and Outstanding records
- * This tracks which payments/receipts settled which invoices/bills
+ * OutstandingSettlement - Link table between Fund Transactions/Offsets and Outstanding records
+ * This tracks which payments/receipts/offsets settled which invoices/bills
+ * 
+ * ✅ UPDATED TO SUPPORT OFFSET
  */
- export const OutstandingSettlementSchema = new mongoose.Schema(
+export const OutstandingSettlementSchema = new mongoose.Schema(
   {
     // ==================== COMPANY & BRANCH ====================
     company: {
@@ -33,16 +35,16 @@ import mongoose from "mongoose";
       trim: true,
     },
 
-    // ==================== FUND TRANSACTION (Receipt/Payment) ====================
+    // ==================== SETTLEMENT TRANSACTION (Receipt/Payment/Offset) ====================
     transaction: {
       type: mongoose.Schema.Types.ObjectId,
-      refPath: "FundTransaction",
-      required: [true, "Fund transaction is required"],
+      refPath: "transactionModel",
+      required: [true, "Transaction is required"],
       index: true,
     },
     transactionModel: {
       type: String,
-      enum: ["Receipt", "Payment"],
+      enum: ["Receipt", "Payment", "OutstandingOffset"], // ✅ Added OutstandingOffset
       required: true,
     },
     transactionNumber: {
@@ -56,7 +58,7 @@ import mongoose from "mongoose";
     },
     transactionType: {
       type: String,
-      enum: ["receipt", "payment"],
+      enum: ["receipt", "payment", "offset"], // ✅ Added offset
       required: true,
     },
 
@@ -83,25 +85,20 @@ import mongoose from "mongoose";
     },
 
     // ==================== SETTLEMENT AMOUNTS ====================
-    // Outstanding balance before this settlement
     previousOutstandingAmount: {
       type: Number,
       required: true,
-      min: 0,
     },
     
-    // Amount settled in this transaction
     settledAmount: {
       type: Number,
       required: true,
       min: [0.01, "Settled amount must be greater than 0"],
     },
     
-    // Outstanding balance after this settlement
     remainingOutstandingAmount: {
       type: Number,
       required: true,
-      min: 0,
     },
 
     // ==================== SETTLEMENT INFO ====================
@@ -117,7 +114,6 @@ import mongoose from "mongoose";
     },
     
     // ==================== REVERSAL INFO ====================
-    // If this settlement was reversed (transaction deleted)
     reversedAt: {
       type: Date,
     },
@@ -151,7 +147,6 @@ import mongoose from "mongoose";
 );
 
 // ==================== INDEXES ====================
-// Composite index for efficient queries
 OutstandingSettlementSchema.index({ 
   company: 1, 
   account: 1, 
@@ -159,7 +154,7 @@ OutstandingSettlementSchema.index({
 });
 
 OutstandingSettlementSchema.index({ 
-  fundTransaction: 1, 
+  transaction: 1, 
   settlementStatus: 1 
 });
 
@@ -171,43 +166,38 @@ OutstandingSettlementSchema.index({
 OutstandingSettlementSchema.index({ 
   company: 1, 
   branch: 1, 
-  fundTransactionType: 1 
+  transactionType: 1 
 });
 
 // ==================== VIRTUALS ====================
-// Check if settled
 OutstandingSettlementSchema.virtual("isActive").get(function () {
   return this.settlementStatus === "active";
 });
 
-// Check if reversed
 OutstandingSettlementSchema.virtual("isReversed").get(function () {
   return this.settlementStatus === "reversed";
 });
 
-// Settlement percentage
 OutstandingSettlementSchema.virtual("settlementPercentage").get(function () {
   if (this.previousOutstandingAmount === 0) return 100;
-  return Math.round((this.settledAmount / this.previousOutstandingAmount) * 100);
+  return Math.round((this.settledAmount / Math.abs(this.previousOutstandingAmount)) * 100);
 });
 
 // ==================== INSTANCE METHODS ====================
-// Reverse this settlement
 OutstandingSettlementSchema.methods.reverse = function (userId, reason) {
   this.settlementStatus = "reversed";
   this.reversedAt = new Date();
   this.reversedBy = userId;
-  this.reversalReason = reason || "transaction deleted";
+  this.reversalReason = reason || "Transaction deleted or edited";
   return this.save();
 };
 
 // ==================== STATIC METHODS ====================
-// Get all settlements for a fund transaction
-OutstandingSettlementSchema.statics.getByFundTransaction = function (
-  fundTransactionId,
+OutstandingSettlementSchema.statics.getByTransaction = function (
+  transactionId,
   includeReversed = false
 ) {
-  const query = { fundTransaction: fundTransactionId };
+  const query = { transaction: transactionId };
   if (!includeReversed) {
     query.settlementStatus = "active";
   }
@@ -217,7 +207,6 @@ OutstandingSettlementSchema.statics.getByFundTransaction = function (
     .sort({ settlementDate: 1 });
 };
 
-// Get all settlements for an outstanding
 OutstandingSettlementSchema.statics.getByOutstanding = function (
   outstandingId,
   includeReversed = false
@@ -227,94 +216,72 @@ OutstandingSettlementSchema.statics.getByOutstanding = function (
     query.settlementStatus = "active";
   }
   return this.find(query)
-    .populate("fundTransaction", "transactionNumber amount")
+    .populate("transaction")
     .sort({ settlementDate: 1 });
 };
 
-// Get settlement summary for an account
-OutstandingSettlementSchema.statics.getAccountSummary = function (
-  accountId,
-  startDate,
-  endDate
+OutstandingSettlementSchema.statics.getTotalSettled = async function (
+  outstandingId,
+  transactionType = null
 ) {
   const matchConditions = {
-    account: accountId,
+    outstanding: outstandingId,
     settlementStatus: "active",
   };
 
-  if (startDate || endDate) {
-    matchConditions.settlementDate = {};
-    if (startDate) matchConditions.settlementDate.$gte = new Date(startDate);
-    if (endDate) matchConditions.settlementDate.$lte = new Date(endDate);
+  if (transactionType) {
+    matchConditions.transactionType = transactionType;
   }
 
-  return this.aggregate([
+  const result = await this.aggregate([
     { $match: matchConditions },
     {
       $group: {
-        _id: "$fundTransactionType",
+        _id: null,
         totalSettled: { $sum: "$settledAmount" },
-        count: { $sum: 1 },
       },
     },
   ]);
+
+  return result.length > 0 ? result[0].totalSettled : 0;
 };
 
-// Get settlement history with details
-OutstandingSettlementSchema.statics.getSettlementHistory = function (
-  filters = {},
-  page = 1,
-  limit = 50
-) {
-  const query = { settlementStatus: "active", ...filters };
-  const skip = (page - 1) * limit;
-
-  return this.find(query)
-    .populate("account", "accountName accountType")
-    .populate("fundTransaction", "transactionNumber amount")
-    .populate("outstanding", "transactionNumber totalAmount closingBalanceAmount")
-    .populate("company", "name")
-    .populate("branch", "name")
-    .sort({ settlementDate: -1 })
-    .skip(skip)
-    .limit(limit);
-};
-
-// Reverse all settlements for a fund transaction
 OutstandingSettlementSchema.statics.reverseAllForTransaction = async function (
-  fundTransactionId,
+  transactionId,
   userId,
-  reason = "transaction deleted"
+  reason = "Transaction deleted or edited",
+  session
 ) {
   const settlements = await this.find({
-    fundTransaction: fundTransactionId,
+    transaction: transactionId,
     settlementStatus: "active",
-  });
+  }).session(session);
 
   for (const settlement of settlements) {
-    await settlement.reverse(userId, reason);
+    settlement.settlementStatus = "reversed";
+    settlement.reversedAt = new Date();
+    settlement.reversedBy = userId;
+    settlement.reversalReason = reason;
+    await settlement.save({ session });
   }
 
   return settlements.length;
 };
 
 // ==================== PRE MIDDLEWARE ====================
-// Validate amounts before saving
 OutstandingSettlementSchema.pre("save", function (next) {
-  // Ensure settled amount doesn't exceed previous outstanding
-  if (this.settledAmount > this.previousOutstandingAmount) {
+  if (this.settledAmount > Math.abs(this.previousOutstandingAmount)) {
     return next(
       new Error("Settled amount cannot exceed previous outstanding amount")
     );
   }
 
-  // Calculate remaining if not set
-  if (!this.remainingOutstandingAmount && this.remainingOutstandingAmount !== 0) {
-    this.remainingOutstandingAmount =
-      this.previousOutstandingAmount - this.settledAmount;
+  if (this.remainingOutstandingAmount === undefined) {
+    this.remainingOutstandingAmount = this.previousOutstandingAmount - this.settledAmount;
   }
 
   next();
 });
+
 const OutstandingSettlement = mongoose.model("OutstandingSettlement", OutstandingSettlementSchema);
 export default OutstandingSettlement;
