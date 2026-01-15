@@ -178,6 +178,31 @@ export const outstandingService = {
     }
   },
 
+   getSettlements: async (outstandingId, params = {}) => {
+    try {
+      const response = await api.get(
+        `reports/outstanding/${outstandingId}/settlements`,
+        {
+          params: {
+            ...(params.includeReversed !== undefined && { 
+              includeReversed: params.includeReversed 
+            }),
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch settlement details"
+        );
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
+  
   // Export to Excel
 
 };

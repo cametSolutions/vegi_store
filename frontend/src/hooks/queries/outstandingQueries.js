@@ -6,7 +6,7 @@ export const outstandingQueries = {
   all: () => ["reports", "outstanding"],
 
   // Get all parties with combined outstanding (customers + suppliers netted)
-   partiesList: (
+  partiesList: (
     companyId,
     branchId,
     dateRange = null,
@@ -59,9 +59,13 @@ export const outstandingQueries = {
       placeholderData: (previousData) => previousData,
     }),
 
-
   // Get all customers/suppliers with outstanding balances (OLD - separate view)
-  customersList: (companyId, branchId, dateRange = null, accountType = 'customer') =>
+  customersList: (
+    companyId,
+    branchId,
+    dateRange = null,
+    accountType = "customer"
+  ) =>
     queryOptions({
       queryKey: [
         ...outstandingQueries.all(),
@@ -74,9 +78,9 @@ export const outstandingQueries = {
       ],
       queryFn: () => {
         const params = {
-          accountType: accountType
+          accountType: accountType,
         };
-        
+
         if (dateRange?.start) {
           params.startDate = new Date(dateRange.start).toISOString();
         }
@@ -85,7 +89,7 @@ export const outstandingQueries = {
           endDate.setHours(23, 59, 59, 999);
           params.endDate = endDate.toISOString();
         }
-        
+
         return outstandingService.getCustomersList(companyId, branchId, params);
       },
       enabled: Boolean(companyId && branchId),
@@ -95,7 +99,7 @@ export const outstandingQueries = {
     }),
 
   // Get outstanding details for a specific party
-   partyDetails: (
+  partyDetails: (
     companyId,
     branchId,
     partyId,
@@ -149,7 +153,6 @@ export const outstandingQueries = {
       placeholderData: (previousData) => previousData,
     }),
 
-
   // Get outstanding details for a specific customer (OLD)
   customerDetails: (
     companyId,
@@ -175,11 +178,12 @@ export const outstandingQueries = {
       ],
       queryFn: () => {
         const params = {
-          outstandingType: outstandingType !== "all" ? outstandingType : undefined,
+          outstandingType:
+            outstandingType !== "all" ? outstandingType : undefined,
           page,
           limit,
         };
-        
+
         if (dateRange?.start) {
           params.startDate = new Date(dateRange.start).toISOString();
         }
@@ -229,14 +233,31 @@ export const outstandingQueries = {
         branchId,
         params,
       ],
-      queryFn: () =>
-        outstandingService.getSummary(companyId, branchId, params),
+      queryFn: () => outstandingService.getSummary(companyId, branchId, params),
       enabled: Boolean(companyId && branchId),
       staleTime: 30 * 1000,
       refetchOnWindowFocus: false,
       placeholderData: (previousData) => previousData,
     }),
 
+  /**
+   * Get settlement details for a specific outstanding
+   * Shows how an outstanding was settled (offset, receipt, payment)
+   */
+  settlements: (outstandingId, params = {}) =>
+    queryOptions({
+      queryKey: [
+        ...outstandingQueries.all(),
+        "settlements",
+        outstandingId,
+        params,
+      ],
+      queryFn: () => outstandingService.getSettlements(outstandingId, params),
+      enabled: Boolean(outstandingId),
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+      placeholderData: (previousData) => previousData,
+    }),
+
   // Export to Excel
- 
 };

@@ -82,7 +82,7 @@ const DownloadButton = ({
   };
 
   return (
-    <div className="flex items-center gap-3 z-50">
+    <div className="flex items-center gap-3">
       <div className="flex items-center bg-slate-50 rounded-lg p-1 border border-slate-200">
         {/* <button
           className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-md transition-all shadow-sm"

@@ -1,5 +1,7 @@
 import Outstanding from "../../model/OutstandingModel.js";
 import mongoose from "mongoose";
+import OutstandingSettlementModel from "../../model/OutstandingSettlementModel.js";
+
 
 
 /**
@@ -602,3 +604,115 @@ export const getOutstandingParties = async (req, res) => {
     });
   }
 };
+
+/**
+ * Get settlement details for an outstanding
+ * Shows how an outstanding was settled (offset, receipt, payment)
+ */
+export const getOutstandingSettlements = async (req, res) => {
+  try {
+    const { outstandingId } = req.params;
+    const { includeReversed = false } = req.query;
+
+    // Validate outstandingId
+    if (!mongoose.Types.ObjectId.isValid(outstandingId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid outstanding ID",
+      });
+    }
+
+    // Get outstanding details
+    const outstanding = await Outstanding.findById(outstandingId)
+      .select(
+        "transactionNumber transactionDate transactionType totalAmount paidAmount closingBalanceAmount outstandingType status"
+      )
+      .lean();
+
+    if (!outstanding) {
+      return res.status(404).json({
+        success: false,
+        message: "Outstanding not found",
+      });
+    }
+
+    // Build query
+    const query = { outstanding: outstandingId };
+    
+    // By default, only show active settlements
+    if (!includeReversed) {
+      query.settlementStatus = "active";
+    }
+
+    // Get settlements
+    const settlements = await OutstandingSettlementModel.find(query)
+      .select(
+        "transaction transactionModel transactionNumber transactionDate transactionType settledAmount settlementDate settlementStatus reversedAt reversalReason"
+      )
+      .sort({ settlementDate: 1 }) // Oldest first (chronological order)
+      .lean();
+
+    // Calculate totals
+    const activeSettlements = settlements.filter(
+      (s) => s.settlementStatus === "active"
+    );
+
+    const totalSettled = activeSettlements.reduce(
+      (sum, s) => sum + s.settledAmount,
+      0
+    );
+
+    const remaining = Math.abs(outstanding.closingBalanceAmount);
+
+    // Group by settlement type
+    const settlementsByType = activeSettlements.reduce((acc, settlement) => {
+      const type = settlement.transactionType;
+      if (!acc[type]) {
+        acc[type] = {
+          type,
+          settlements: [],
+          total: 0,
+          count: 0,
+        };
+      }
+      acc[type].settlements.push(settlement);
+      acc[type].total += settlement.settledAmount;
+      acc[type].count += 1;
+      return acc;
+    }, {});
+
+    // Response
+    res.status(200).json({
+      success: true,
+      data: {
+        outstanding: {
+          id: outstanding._id,
+          transactionNumber: outstanding.transactionNumber,
+          transactionDate: outstanding.transactionDate,
+          transactionType: outstanding.transactionType,
+          totalAmount: outstanding.totalAmount,
+          paidAmount: outstanding.paidAmount,
+          closingBalanceAmount: outstanding.closingBalanceAmount,
+          outstandingType: outstanding.outstandingType,
+          status: outstanding.status,
+        },
+        settlements: settlements,
+        summary: {
+          totalSettled,
+          remaining,
+          settlementCount: activeSettlements.length,
+          reversedCount: settlements.length - activeSettlements.length,
+        },
+        byType: Object.values(settlementsByType),
+      },
+    });
+  } catch (error) {
+    console.error("Get outstanding settlements error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch settlement details",
+      error: error.message,
+    });
+  }
+};
+

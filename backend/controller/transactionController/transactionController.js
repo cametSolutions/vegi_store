@@ -25,6 +25,7 @@ import {
   markMonthlyBalancesForRecalculation,
   updateOriginalTransactionRecord,
 } from "../../helpers/transactionHelpers/transactionEditHelper.js";
+import { triggerOffsetAfterEdit } from "../../helpers/transactionHelpers/offsetTriggerHooks.js";
 
 /**
  * get transactions (handles sales, purchase, sales_return, purchase_return)
@@ -403,6 +404,15 @@ export const editTransaction = async (req, res) => {
     const updatedTransaction = await updateOriginalTransactionRecord(
       originalTransaction,
       updatedData,
+      userId,
+      session
+    );
+
+
+    // Step 3: ✅ ADD THIS - Trigger offset after edit
+    await triggerOffsetAfterEdit(
+      originalTransaction,
+      updatedTransaction,
       userId,
       session
     );
