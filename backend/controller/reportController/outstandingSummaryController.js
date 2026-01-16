@@ -133,6 +133,8 @@ export const getPartyOutstandingDetails = async (req, res) => {
       }
     ]);
 
+    
+
     const totals = totalsAggregate[0] || {
       totalOutstanding: 0,
       totalDr: 0,
@@ -614,6 +616,11 @@ export const getOutstandingSettlements = async (req, res) => {
     const { outstandingId } = req.params;
     const { includeReversed = false } = req.query;
 
+    // Normalize boolean from query (?includeReversed=true/false)
+    const includeReversedBool =
+      includeReversed === true ||
+      includeReversed === "true";
+
     // Validate outstandingId
     if (!mongoose.Types.ObjectId.isValid(outstandingId)) {
       return res.status(400).json({
@@ -636,36 +643,39 @@ export const getOutstandingSettlements = async (req, res) => {
       });
     }
 
-    // Build query
-    const query = { outstanding: outstandingId };
-    
-    // By default, only show active settlements
-    if (!includeReversed) {
-      query.settlementStatus = "active";
-    }
+    // Base query: always fetch ALL settlements for this outstanding
+    const baseQuery = { outstanding: outstandingId };
 
-    // Get settlements
-    const settlements = await OutstandingSettlementModel.find(query)
+    const settlements = await OutstandingSettlementModel.find(baseQuery)
       .select(
         "transaction transactionModel transactionNumber transactionDate transactionType settledAmount settlementDate settlementStatus reversedAt reversalReason"
       )
-      .sort({ settlementDate: 1 }) // Oldest first (chronological order)
+      .sort({ settlementDate: 1 })
       .lean();
 
-    // Calculate totals
+    // Derived lists
     const activeSettlements = settlements.filter(
       (s) => s.settlementStatus === "active"
     );
+    const reversedSettlements = settlements.filter(
+      (s) => s.settlementStatus === "reversed"
+    );
 
-    const totalSettled = activeSettlements.reduce(
+    // Use either active only or all based on flag
+    const visibleSettlements = includeReversedBool
+      ? settlements
+      : activeSettlements;
+
+    // Totals based on *visible* settlements
+    const totalSettled = visibleSettlements.reduce(
       (sum, s) => sum + s.settledAmount,
       0
     );
 
     const remaining = Math.abs(outstanding.closingBalanceAmount);
 
-    // Group by settlement type
-    const settlementsByType = activeSettlements.reduce((acc, settlement) => {
+    // Group by type using visible settlements
+    const settlementsByType = visibleSettlements.reduce((acc, settlement) => {
       const type = settlement.transactionType;
       if (!acc[type]) {
         acc[type] = {
@@ -696,12 +706,13 @@ export const getOutstandingSettlements = async (req, res) => {
           outstandingType: outstanding.outstandingType,
           status: outstanding.status,
         },
-        settlements: settlements,
+        // What frontend shows depends on includeReversed
+        settlements: visibleSettlements,
         summary: {
           totalSettled,
           remaining,
-          settlementCount: activeSettlements.length,
-          reversedCount: settlements.length - activeSettlements.length,
+          settlementCount: activeSettlements.length,      // active count (always)
+          reversedCount: reversedSettlements.length,      // always returned
         },
         byType: Object.values(settlementsByType),
       },
@@ -715,4 +726,5 @@ export const getOutstandingSettlements = async (req, res) => {
     });
   }
 };
+
 

@@ -321,6 +321,11 @@ export const editTransaction = async (req, res) => {
       session
     );
 
+    const oldAccount= originalTransaction.account;
+
+    console.log("originalTransaction", originalTransaction);
+    
+
     if (!originalTransaction) {
       await session.abortTransaction();
       return res.status(404).json({
@@ -411,7 +416,7 @@ export const editTransaction = async (req, res) => {
 
     // Step 3: ✅ ADD THIS - Trigger offset after edit
     await triggerOffsetAfterEdit(
-      originalTransaction,
+      oldAccount,
       updatedTransaction,
       userId,
       session

@@ -52,7 +52,7 @@ export const triggerOffsetAfterCreate = async (transaction, userId, session) => 
  * 2. Recalculate and apply new offset
  */
 export const triggerOffsetAfterEdit = async (
-  originalTransaction,
+  oldAccount,
   updatedTransaction,
   userId,
   session
@@ -69,9 +69,12 @@ export const triggerOffsetAfterEdit = async (
 
     console.log(`🔄 Triggering offset after ${updatedTransaction.transactionType} edit`);
 
+    console.log("org", oldAccount);
+    
+
     // Step 1: Reverse existing offsets for this account
     await reverseExistingOffsets({
-      accountId: updatedTransaction.account,
+      accountId: oldAccount,
       companyId: updatedTransaction.company,
       branchId: updatedTransaction.branch,
       userId,
@@ -184,6 +187,10 @@ const reverseExistingOffsets = async ({
     account: accountId,
     status: "active",
   }).session(session);
+
+  console.log("Active offsets found:", activeOffsets);
+  console.log("accountId:", accountId);
+  
 
   console.log(`🔄 Reversing ${activeOffsets.length} active offsets`);
 
