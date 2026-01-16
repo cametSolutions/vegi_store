@@ -25,6 +25,7 @@ import {
   markMonthlyBalancesForRecalculation,
   updateOriginalTransactionRecord,
 } from "../../helpers/transactionHelpers/transactionEditHelper.js";
+import { triggerOffsetAfterEdit } from "../../helpers/transactionHelpers/offsetTriggerHooks.js";
 
 /**
  * get transactions (handles sales, purchase, sales_return, purchase_return)
@@ -53,7 +54,7 @@ export const getTransactions = async (req, res) => {
     const sortBy = req.query.sortBy || "transactionDate";
     const sortOrder = req.query.sortOrder || "desc";
 
-const startDate = req.query.startDate;
+    const startDate = req.query.startDate;
     const endDate = req.query.endDate;
 
     // Convert 'desc' to -1, 'asc' to 1
@@ -76,11 +77,10 @@ const startDate = req.query.startDate;
     if (companyId) filter.company = companyId;
     if (branchId) filter.branch = branchId;
 
-
-if (startDate && endDate) {
+    if (startDate && endDate) {
       filter.transactionDate = {
         $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $lte: new Date(endDate),
       };
     }
 
@@ -167,6 +167,8 @@ export const createTransaction = async (req, res) => {
 
     // Process transaction using helper
     const result = await processTransaction(transactionData, userId, session);
+
+ 
 
     // Create receipt if paid amount > 0
     let receiptResult = null;
@@ -319,6 +321,11 @@ export const editTransaction = async (req, res) => {
       session
     );
 
+    const oldAccount= originalTransaction.account;
+
+    console.log("originalTransaction", originalTransaction);
+    
+
     if (!originalTransaction) {
       await session.abortTransaction();
       return res.status(404).json({
@@ -402,6 +409,15 @@ export const editTransaction = async (req, res) => {
     const updatedTransaction = await updateOriginalTransactionRecord(
       originalTransaction,
       updatedData,
+      userId,
+      session
+    );
+
+
+    // Step 3: ✅ ADD THIS - Trigger offset after edit
+    await triggerOffsetAfterEdit(
+      oldAccount,
+      updatedTransaction,
       userId,
       session
     );

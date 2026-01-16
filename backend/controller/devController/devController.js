@@ -71,62 +71,67 @@ export const deleteData = async (req, res) => {
       "AdjustmentEntry",
       "SalesReturn",
       "PurchaseReturn",
-      "StockAdjustment"
+      "StockAdjustment",
+      "OutstandingOffset",
     ];
 
-    // Build dynamic filter
-    const filter = {};
+    const baseFilter = {};
 
-    // Convert string IDs to ObjectId
     if (company) {
-      filter.company = new mongoose.Types.ObjectId(company);
+      baseFilter.company = new mongoose.Types.ObjectId(company);
     }
     if (account) {
-      filter.account = new mongoose.Types.ObjectId(account);
+      baseFilter.account = new mongoose.Types.ObjectId(account);
     }
 
-    // If neither provided, stop
     if (!company && !account) {
       return res.status(400).json({ message: "No filter provided" });
     }
 
-    console.log("Filter:", filter);
-
     let totalDeleted = 0;
     const results = {};
-    
+
     for (const modelName of modelNames) {
       try {
-        // Use Mongoose model instead of raw collection
         const Model = mongoose.model(modelName);
+
+        // Clone base filter
+        let filter = { ...baseFilter };
+
+        // 🚨 Ignore opening balance in Outstanding
+        if (modelName === "Outstanding") {
+          filter.transactionType = { $ne: "opening_balance" };
+        }
+
         const result = await Model.deleteMany(filter);
         totalDeleted += result.deletedCount;
         results[modelName] = result.deletedCount;
-        console.log(`✓ Deleted ${result.deletedCount} documents from ${modelName}`);
+
+        console.log(`✓ Deleted ${result.deletedCount} from ${modelName}`);
       } catch (err) {
         console.log(`✗ Error deleting from ${modelName}:`, err.message);
         results[modelName] = `Error: ${err.message}`;
       }
     }
 
-    res.json({ 
-      message: "Data deletion completed", 
+    res.json({
+      message: "Data deletion completed",
       filter: {
         company: company || undefined,
-        account: account || undefined
+        account: account || undefined,
       },
       totalDeleted,
-      details: results
+      details: results,
     });
-    
   } catch (error) {
     console.error("Delete error:", error);
-    res.status(500).json({ 
-      message: "Error deleting data", 
-      error: error.message 
+    res.status(500).json({
+      message: "Error deleting data",
+      error: error.message,
     });
   }
 };
+
 
 
 

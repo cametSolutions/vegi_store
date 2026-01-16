@@ -30,6 +30,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "framer-motion": "^12.24.12",
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.542.0",
@@ -46,7 +47,7 @@
     "react-simple-keyboard": "^3.8.122",
     "react-spinners": "^0.17.0",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^3.3.1",
+    "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.12",
     "xlsx": "^0.18.5",
     "zod": "^4.1.3"

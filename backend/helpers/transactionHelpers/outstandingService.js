@@ -255,7 +255,10 @@ export const handleAccountTypeChangeOnEdit = async (
   deltas, // result from calculateTransactionDeltas
   userId,
   session
+
+  
 ) => {
+
   const behavior = determineTransactionBehavior(updated.transactionType);
 
   const originalAccountType = original.accountType;
@@ -435,6 +438,7 @@ export const handleAccountTypeChangeOnEdit = async (
       const activeCount = await OutstandingSettlement.countDocuments({
         outstanding: oldOutstanding._id,
         settlementStatus: "active",
+        transactionType: { $ne: "offset" },
       }).session(session);
 
       if (activeCount === 0) {
@@ -448,6 +452,7 @@ export const handleAccountTypeChangeOnEdit = async (
           `🗑️ Deleted old outstanding (no settlements): ${result.outstandingDeleted}`
         );
 
+        
         const newOutstandingArr = await Outstanding.create(
           [
             {
@@ -565,7 +570,6 @@ export const handleAccountTypeChangeOnEdit = async (
       }
 
       console.log("Calculated closing balance:", closingBalance);
-      
 
       existingOutstanding.closingBalanceAmount = closingBalance;
 
@@ -686,6 +690,7 @@ export const convertSettlementsToAdvancesAndDeleteOutstanding = async ({
   const settlements = await OutstandingSettlement.find({
     outstanding: oldOutstanding._id,
     settlementStatus: "active",
+    transactionType: { $ne: "offset" },
   }).session(session);
 
   if (!settlements.length) {

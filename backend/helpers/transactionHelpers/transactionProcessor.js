@@ -1,4 +1,3 @@
-import { SalesModel } from "../../model/TransactionModel.js";
 import { updateStock } from "./stockManager.js";
 import {
   createAccountLedger,
@@ -16,6 +15,7 @@ import {
 import { getCashBankAccountForPayment } from "../CommonTransactionHelper/CashBankAccountHelper.js";
 import { createCashBankLedgerEntry } from "../../helpers/CommonTransactionHelper/CashBankLedgerHelper.js";
 import { determineTransactionBehavior } from "./modelFindHelper.js";
+import { triggerOffsetAfterCreate } from "./offsetTriggerHooks.js";
 /**
  * Main transaction processor - orchestrates all steps
  */
@@ -31,9 +31,6 @@ export const processTransaction = async (transactionData, userId, session) => {
     await updateStock(items, behavior.stockDirection, branch, session);
 
     const transactionModel = getTransactionModel(transactionType);
-
-  
-    
 
     // // Step 3: Create transaction record
     const transaction = await transactionModel.create([transactionData], {
@@ -74,7 +71,8 @@ export const processTransaction = async (transactionData, userId, session) => {
       });
     } else if (
       // createdTransaction.balanceAmount > 0 &&
-      createdTransaction.accountType === "customer" || createdTransaction.accountType === "supplier"
+      createdTransaction.accountType === "customer" ||
+      createdTransaction.accountType === "supplier"
     ) {
       console.log("creating outstanding");
 
@@ -168,6 +166,11 @@ export const processTransaction = async (transactionData, userId, session) => {
       session
     );
 
+    console.log("Triggering offset after create");
+
+    // ✅✅✅ 8- Trigger automatic offset
+    await triggerOffsetAfterCreate(createdTransaction, userId, session);
+
     // Return all created documents
     return {
       transaction: createdTransaction,
@@ -179,4 +182,3 @@ export const processTransaction = async (transactionData, userId, session) => {
     throw error;
   }
 };
-

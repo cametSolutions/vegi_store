@@ -5,7 +5,7 @@ import { getOutstandingReport, getOutstandingSummary } from "../../controller/re
 import {getTransactionSummary} from "../../controller/reportController/saleReportController.js"
 import { getItemSummaryReport } from "../../controller/reportController/itemSummaryController.js"
 import { getAccountSummaryReport } from "../../controller/reportController/accountSummaryController.js"
-import { getOutstandingParties, getPartyOutstandingDetails } from "../../controller/reportController/outstandingSummaryController.js"
+import { getOutstandingParties, getOutstandingSettlements, getPartyOutstandingDetails } from "../../controller/reportController/outstandingSummaryController.js"
 const router=express.Router()
 
 /// Item Reports
@@ -20,6 +20,7 @@ router.get("/account-monthly-summary",getAccountMonthlySummary)
 router.get("/account-statement",getAccountSummaryReport)
 router.get("/outstanding-report",getOutstandingReport)
 router.get("/outstanding-summary",getOutstandingSummary)
+router.get("/outstanding/:outstandingId/settlements",getOutstandingSettlements)
 router.get("/transaction-summary/:companyId/:branchId/:transactionType",getTransactionSummary)
 router.get('/getCustomerOutstandingDetails/:companyId/:branchId/:customerId',getPartyOutstandingDetails);
 // router.get('/getOutstandingCustomers/:companyId/:branchId',getOutstandingCustomers);
