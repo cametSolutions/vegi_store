@@ -163,6 +163,7 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
               updateTransactionData={updateTransactionData}
               branch={selectedBranchFromStore?._id}
               company={selectedCompanyFromStore?._id}
+              settlementCount={transactionData?.settlementCount || 0}
             />
 
             <AddItemForm

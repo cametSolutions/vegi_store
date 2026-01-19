@@ -10,6 +10,7 @@ import { NumericFormat } from "react-number-format";
 import { toast } from "sonner";
 import { useDispatch } from "react-redux";
 import { hideLoader, showLoader } from "@/store/slices/loaderSlice";
+import SettlementWarningDialog from "@/components/modals/SettlementWarningDialog";
 
 /**
  * TransactionAccountSelector Component
@@ -42,6 +43,7 @@ const TransactionAccountSelector = ({
   branch,
   company,
   modifyOnPriceLevelChange,
+  settlementCount,
 }) => {
   // ============================================================================
   // CONSTANTS
@@ -57,6 +59,7 @@ const TransactionAccountSelector = ({
   // ============================================================================
   const [searchTerm, setSearchTerm] = useState(accountName || "");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
 
   // ============================================================================
   // REFS
@@ -84,7 +87,7 @@ const TransactionAccountSelector = ({
   // Query for customer search
   const supplierTransactionTypes = ["purchase", "purchase_return"];
   const accountTypeForSearch = supplierTransactionTypes.includes(
-    transactionType
+    transactionType,
   )
     ? "supplier"
     : "customer";
@@ -101,7 +104,7 @@ const TransactionAccountSelector = ({
       RESULT_LIMIT,
       {
         withOutstanding: true, // or false, or omit
-      }
+      },
     ),
     enabled: isSearchEnabled,
     refetchOnWindowFocus: true,
@@ -145,21 +148,17 @@ const TransactionAccountSelector = ({
   const priceLevels = allPriceLevels.filter(
     (level) =>
       level.status === "active" &&
-      (level.branches?.includes(branch) || level.branches?.length === 0)
+      (level.branches?.includes(branch) || level.branches?.length === 0),
   );
 
   // ============================================================================
   // EFFECTS
   // ============================================================================
 
-useEffect(() => {
-  setSearchTerm(accountName || "");
-}, [accountName]);
+  useEffect(() => {
+    setSearchTerm(accountName || "");
+  }, [accountName]);
 
-
-
-
-  
   /**
    * Set initial price level when price levels are fetched
    */
@@ -201,7 +200,7 @@ useEffect(() => {
     if (accountType === "cash" && cashAccountResponse && !account && company) {
       const truncatedName = truncate(
         cashAccountResponse?.accountName,
-        TRUNCATE_LENGTH
+        TRUNCATE_LENGTH,
       );
       setSearchTerm(truncatedName);
 
@@ -259,6 +258,11 @@ useEffect(() => {
   // );
 
   const handleInputChange = (e) => {
+
+    if(settlementCount > 0){
+      setShowWarning(true);
+      return;
+    }
     const value = e.target.value;
     setSearchTerm(value);
     setShowDropdown(true);
@@ -279,7 +283,7 @@ useEffect(() => {
 
       if (account.priceLevel && isPriceLevelNeeded) {
         const matchingLevel = priceLevels.find(
-          (level) => level._id === account.priceLevel
+          (level) => level._id === account.priceLevel,
         );
 
         if (matchingLevel) {
@@ -303,7 +307,7 @@ useEffect(() => {
 
       setShowDropdown(false);
     },
-    [updateTransactionData, priceLevels, priceLevel, priceLevelName]
+    [updateTransactionData, priceLevels, priceLevel, priceLevelName],
   );
 
   /**
@@ -331,24 +335,30 @@ useEffect(() => {
       });
       setSearchTerm("");
     },
-    [updateTransactionData]
+    [updateTransactionData],
   );
 
   /**
    * Clear selected account
    */
   const handleClearAccount = useCallback(() => {
-    updateTransactionData({
-      accountType: "customer",
-      accountName: "",
-      account: "",
-      openingBalance: 0,
-      // netAmount: 0,
-      email: "",
-      phone: "",
-    });
-    setSearchTerm("");
-  }, [updateTransactionData]);
+    console.log(settlementCount);
+    
+    if (settlementCount > 0) {
+      setShowWarning(true);
+    } else {
+      updateTransactionData({
+        accountType: "customer",
+        accountName: "",
+        account: "",
+        openingBalance: 0,
+        // netAmount: 0,
+        email: "",
+        phone: "",
+      });
+      setSearchTerm("");
+    }
+  }, [updateTransactionData, settlementCount]);
 
   /**
    * Handle price level change
@@ -357,7 +367,7 @@ useEffect(() => {
     (e) => {
       const selectedId = e.target.value;
       const selectedLevel = priceLevels.find(
-        (level) => level._id === selectedId
+        (level) => level._id === selectedId,
       );
 
       updateTransactionData({
@@ -365,8 +375,18 @@ useEffect(() => {
         priceLevelName: selectedLevel?.priceLevelName || "",
       });
     },
-    [updateTransactionData, priceLevels]
+    [updateTransactionData, priceLevels],
   );
+
+  const handleClearSettlements = () => {
+   updateTransactionData({
+     paidAmount: 0
+   })
+  };
+
+  const handleCancel = () => {
+    setShowWarning(false);
+  };
 
   // ============================================================================
   // RENDER HELPERS
@@ -463,152 +483,158 @@ useEffect(() => {
   // MAIN RENDER
   // ============================================================================
   return (
-    <div className={`grid ${isPriceLevelNeeded? "grid-cols-5" : "grid-cols-4"} gap-x-1 gap-y-2 bg-white px-3`}>
-      {/* ====================================================================== */}
-      {/* ACCOUNT TYPE SELECTOR */}
-      {/* ====================================================================== */}
-      <div>
-        <label className="block text-[11px] font-medium text-slate-700 mb-1">
-          <User className="inline w-3 h-3 mr-1" />
-          Party Type
-        </label>
-        <div className="flex gap-2 text-[11px] mt-2.5">
-          <label className="flex items-center cursor-pointer">
-            <input
-              type="radio"
-              name="accountType"
-              value="customer"
-              checked={accountType === "customer" || accountType === "supplier"}
-              onChange={(e) => handleAccountTypeChange(e.target.value)}
-              className="mr-1 text-blue-600 scale-75 cursor-pointer"
-            />
-            {partyLabel}
-          </label>
-          <label className="flex items-center cursor-pointer">
-            <input
-              type="radio"
-              name="accountType"
-              value="cash"
-              checked={accountType === "cash"}
-              onChange={(e) => handleAccountTypeChange(e.target.value)}
-              className="mr-1 text-blue-600 scale-75 cursor-pointer"
-            />
-            Other
-          </label>
-        </div>
-      </div>
-
-      {/* ====================================================================== */}
-      {/* ACCOUNT SEARCH (Only for Customer) */}
-      {/* ====================================================================== */}
-      <div className="relative">
-        <label className="block text-[11px] font-medium text-slate-700 mb-1">
-          Search {partyLabel}
-        </label>
-
-        <div className="relative">
-          <input
-            ref={inputRef}
-            type="text"
-            value={searchTerm}
-            onChange={handleInputChange}
-            onFocus={handleInputFocus}
-            disabled={accountType === "cash"}
-            placeholder={`Search ${partyLabel.toLowerCase()} name`}
-            className={`  ${
-              accountType === "cash" ? "bg-slate-200" : ""
-            }   w-full px-2 py-1 pr-7 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500`}
-            autoComplete="off"
-          />
-          {renderInputIcon()}
-        </div>
-
-        {/* Dropdown with search results */}
-        {showDropdown && searchTerm.length >= MIN_SEARCH_LENGTH && (
-          <div
-            ref={dropdownRef}
-            className="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-xs shadow-lg max-h-48 overflow-y-auto"
-          >
-            {renderDropdownContent()}
-          </div>
-        )}
-
-        {/* Helper text for minimum search length */}
-        {searchTerm.length > 0 && searchTerm.length < MIN_SEARCH_LENGTH && (
-          <div className="text-[8px] text-slate-500 mt-1">
-            Type at least {MIN_SEARCH_LENGTH} characters to search
-          </div>
-        )}
-      </div>
-
-      {/* ====================================================================== */}
-      {/* CUSTOMER/PARTY NAME (Display or Editable) */}
-      {/* ====================================================================== */}
-      <div>
-        <label className="block text-[11px] font-medium text-slate-700 mb-1">
-          {partyLabel} Name
-        </label>
-        <input
-          type="text"
-          value={accountName}
-          onChange={(e) =>
-            updateTransactionData({ accountName: e.target.value })
-          }
-          placeholder={`Enter ${partyLabel.toLowerCase()} name`}
-          disabled={accountType === "customer"}
-          className={`w-full px-2 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500 ${
-            accountType === "customer" ? "bg-slate-200 " : ""
-          }`}
-        />
-      </div>
-
-      {/* ====================================================================== */}
-      {/* OPENING BALANCE */}
-      {/* ====================================================================== */}
-      <div>
-        <label className="block text-[11px] font-medium text-slate-700 mb-1">
-          Opening Balance
-        </label>
-        <NumericFormat
-          prefix="₹"
-          thousandsGroupStyle="lakh"
-          thousandSeparator=","
-          value={openingBalance}
-          disabled
-          className={`w-full px-2 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500 bg-slate-200 
-          `}
-        />
-      </div>
-
-      {/* ====================================================================== */}
-      {/* PRICE LEVEL */}
-      {/* ====================================================================== */}
-
-      {isPriceLevelNeeded && (
+    <>
+      <SettlementWarningDialog
+        isOpen={showWarning}
+        onClose={handleCancel}
+        onConfirm={handleClearSettlements}
+        settlementCount={settlementCount}
+      />
+      <div
+        className={`grid ${isPriceLevelNeeded ? "grid-cols-5" : "grid-cols-4"} gap-x-1 gap-y-2 bg-white px-3`}
+      >
+        {/* ====================================================================== */}
+        {/* ACCOUNT TYPE SELECTOR */}
+        {/* ====================================================================== */}
         <div>
           <label className="block text-[11px] font-medium text-slate-700 mb-1">
-            Price Level
+            <User className="inline w-3 h-3 mr-1" />
+            Party Type
           </label>
-          <select
-            value={priceLevel || ""}
-            disabled={!isPriceLevelNeeded}
-            onChange={handlePriceLevelChange}
-            className={` ${
-              !isPriceLevelNeeded ? "bg-slate-200" : ""
-            }  w-full px-2 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500
+          <div className="flex gap-2 text-[11px] mt-2.5">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="accountType"
+                value="customer"
+                checked={
+                  accountType === "customer" || accountType === "supplier"
+                }
+                onChange={(e) => handleAccountTypeChange(e.target.value)}
+                className="mr-1 text-blue-600 scale-75 cursor-pointer"
+              />
+              {partyLabel}
+            </label>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="accountType"
+                value="cash"
+                checked={accountType === "cash"}
+                onChange={(e) => handleAccountTypeChange(e.target.value)}
+                className="mr-1 text-blue-600 scale-75 cursor-pointer"
+              />
+              Other
+            </label>
+          </div>
+        </div>
+
+        {/* ====================================================================== */}
+        {/* ACCOUNT SEARCH (Only for Customer) */}
+        {/* ====================================================================== */}
+        <div className="relative">
+          <label className="block text-[11px] font-medium text-slate-700 mb-1">
+            Search {partyLabel}
+          </label>
+
+          <div className="relative">
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchTerm}
+              onChange={handleInputChange}
+              onFocus={handleInputFocus}
+              disabled={accountType === "cash"}
+              placeholder={`Search ${partyLabel.toLowerCase()} name`}
+              className={`  ${accountType === "cash" ? "bg-slate-200" : ""}   w-full px-2 py-1 pr-7 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500`}
+              autoComplete="off"
+            />
+            {renderInputIcon()}
+          </div>
+
+          {/* Dropdown with search results */}
+          {showDropdown && searchTerm.length >= MIN_SEARCH_LENGTH && (
+            <div
+              ref={dropdownRef}
+              className="absolute z-50 w-full mt-1 bg-white border border-slate-300 rounded-xs shadow-lg max-h-48 overflow-y-auto"
+            >
+              {renderDropdownContent()}
+            </div>
+          )}
+
+          {/* Helper text for minimum search length */}
+          {searchTerm.length > 0 && searchTerm.length < MIN_SEARCH_LENGTH && (
+            <div className="text-[8px] text-slate-500 mt-1">
+              Type at least {MIN_SEARCH_LENGTH} characters to search
+            </div>
+          )}
+        </div>
+
+        {/* ====================================================================== */}
+        {/* CUSTOMER/PARTY NAME (Display or Editable) */}
+        {/* ====================================================================== */}
+        <div>
+          <label className="block text-[11px] font-medium text-slate-700 mb-1">
+            {partyLabel} Name
+          </label>
+          <input
+            type="text"
+            value={accountName}
+            onChange={(e) =>
+              updateTransactionData({ accountName: e.target.value })
+            }
+            placeholder={`Enter ${partyLabel.toLowerCase()} name`}
+            disabled={accountType === "customer"}
+            className={`w-full px-2 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500 ${accountType === "customer" ? "bg-slate-200 " : ""}`}
+          />
+        </div>
+
+        {/* ====================================================================== */}
+        {/* OPENING BALANCE */}
+        {/* ====================================================================== */}
+        <div>
+          <label className="block text-[11px] font-medium text-slate-700 mb-1">
+            Opening Balance
+          </label>
+          <NumericFormat
+            prefix="₹"
+            thousandsGroupStyle="lakh"
+            thousandSeparator=","
+            value={openingBalance}
+            disabled
+            className={`w-full px-2 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500 bg-slate-200 
+          `}
+          />
+        </div>
+
+        {/* ====================================================================== */}
+        {/* PRICE LEVEL */}
+        {/* ====================================================================== */}
+
+        {isPriceLevelNeeded && (
+          <div>
+            <label className="block text-[11px] font-medium text-slate-700 mb-1">
+              Price Level
+            </label>
+            <select
+              value={priceLevel || ""}
+              disabled={!isPriceLevelNeeded}
+              onChange={handlePriceLevelChange}
+              className={` ${!isPriceLevelNeeded ? "bg-slate-200" : ""}  w-full px-2 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500
           
           `}
-          >
-            <option value="">Select price level</option>
-            {priceLevels.map((level) => (
-              <option key={level._id} value={level._id}>
-                {level.priceLevelName}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-    </div>
+            >
+              <option value="">Select price level</option>
+              {priceLevels.map((level) => (
+                <option key={level._id} value={level._id}>
+                  {level.priceLevelName}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+    </>
   );
 };
 
