@@ -9,8 +9,11 @@ import {
   transactionTypeToModelName,
 } from "../../helpers/transactionHelpers/transactionMappers.js";
 import { sleep } from "../../../shared/utils/delay.js";
-
-import { createFundTransaction } from "../../services/fundTransactionService.js";
+fetchOriginalTransaction
+import {
+  createFundTransaction,
+  handleReceiptOnEdit,
+} from "../../services/fundTransactionService.js";
 import { fetchOriginalTransaction } from "../../helpers/transactionHelpers/modelFindHelper.js";
 import { applyStockDeltas } from "../../helpers/transactionHelpers/stockManager.js";
 import {
@@ -28,6 +31,7 @@ import {
 import { triggerOffsetAfterEdit } from "../../helpers/transactionHelpers/offsetTriggerHooks.js";
 import OutstandingSettlementModel from "../../model/OutstandingSettlementModel.js";
 import OutstandingModel from "../../model/OutstandingModel.js";
+import { validateAccountChangeOnEdit } from "../../helpers/FundTransactionHelper/FundTransactionHelper.js";
 
 /**
  * get transactions (handles sales, purchase, sales_return, purchase_return)
@@ -91,7 +95,7 @@ export const getTransactions = async (req, res) => {
       filter,
       page,
       limit,
-      sort,
+      sort
     );
 
     res.status(200).json(result);
@@ -205,7 +209,7 @@ export const createTransaction = async (req, res) => {
           date: transactionData.date || new Date(),
           user: req.user,
         },
-        session,
+        session
       );
     }
 
@@ -295,6 +299,7 @@ export const getTransactionDetail = async (req, res) => {
       if (outstanding) {
         settlementCount = await OutstandingSettlementModel.countDocuments({
           outstanding: outstanding._id,
+          status:"active",
         });
       }
 
@@ -337,12 +342,27 @@ export const editTransaction = async (req, res) => {
     const originalTransaction = await fetchOriginalTransaction(
       transactionId,
       updatedData.transactionType,
-      session,
+      session
     );
 
     const oldAccount = originalTransaction.account;
 
-    console.log("originalTransaction", originalTransaction);
+    // ========================================
+    // ✅ NEW: STEP 1.5: Validate Account Change
+    // ========================================
+    try {
+      await validateAccountChangeOnEdit({
+        originalTransaction,
+        updatedData,
+        session,
+      });
+    } catch (validationError) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: validationError.message,
+      });
+    }
 
     if (!originalTransaction) {
       await session.abortTransaction();
@@ -380,7 +400,7 @@ export const editTransaction = async (req, res) => {
       await applyStockDeltas(
         deltas.stockDelta,
         originalTransaction.branch,
-        session,
+        session
       );
     }
 
@@ -392,7 +412,7 @@ export const editTransaction = async (req, res) => {
       updatedData,
       deltas,
       userId,
-      session,
+      session
     );
 
     // console.log("adjustment entries", adjustmentResult);
@@ -409,34 +429,70 @@ export const editTransaction = async (req, res) => {
       updatedData,
       deltas,
       userId,
-      session,
+      session
     );
 
     // ========================================
-    // STEP 7: Mark Monthly Balances as Dirty
+    // ✅ NEW: STEP 5.5: Handle Receipt/Payment Management
+    // ========================================
+    let receiptHandlingResult = null;
+
+    // Check if paid amount changed
+    const oldPaidAmount = originalTransaction.paidAmount || 0;
+    const newPaidAmount = updatedData.paidAmount || 0;
+
+    if (oldPaidAmount !== newPaidAmount) {
+      console.log("\n💰 Paid amount changed, handling receipt/payment...");
+
+      receiptHandlingResult = await handleReceiptOnEdit({
+        transactionId: originalTransaction._id,
+        transactionType: updatedData.transactionType,
+        oldPaidAmount,
+        newPaidAmount,
+        accountId: updatedData.account,
+        accountName: updatedData.accountName,
+        company: updatedData.company,
+        branch: updatedData.branch,
+        transactionDate: updatedData.transactionDate,
+        netAmount: updatedData.netAmount,
+        previousBalanceAmount: updatedData.previousBalanceAmount,
+        user: req.user,
+        session,
+      });
+
+      console.log(
+        "✅ Receipt/payment handling completed:",
+        receiptHandlingResult.action
+      );
+    } else {
+      console.log("⏭️ Paid amount unchanged, skipping receipt handling");
+    }
+
+    // ========================================
+    // STEP 6: Mark Monthly Balances as Dirty
     // ========================================
     await markMonthlyBalancesForRecalculation(
       originalTransaction,
       updatedData,
-      session,
+      session
     );
 
     // ========================================
-    // STEP 8: Update Original Transaction Document
+    // STEP 7: Update Original Transaction Document
     // ========================================
     const updatedTransaction = await updateOriginalTransactionRecord(
       originalTransaction,
       updatedData,
       userId,
-      session,
+      session
     );
 
-    // Step 3: ✅ ADD THIS - Trigger offset after edit
+    // Step 8: ✅ ADD THIS - Trigger offset after edit
     await triggerOffsetAfterEdit(
       oldAccount,
       updatedTransaction,
       userId,
-      session,
+      session
     );
 
     // Commit transaction

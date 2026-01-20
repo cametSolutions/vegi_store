@@ -7,6 +7,7 @@ import {
 } from "../helpers/FundTransactionHelper/FundTransactionHelper.js";
 import {
   deleteOutstandingSettlements,
+  reverseOutstandingSettlements,
   settleOutstandingFIFO,
 } from "../helpers/FundTransactionHelper/OutstandingSettlementHelper.js";
 import {
@@ -21,7 +22,12 @@ import {
 } from "../helpers/CommonTransactionHelper/monthlyBalanceService.js";
 import AccountMaster from "../model/masters/AccountMasterModel.js";
 import { calculateFundTransactionDeltas } from "../helpers/transactionHelpers/calculationHelper.js";
-import { createFundTransactionAdjustmentEntry } from "../helpers/transactionHelpers/adjustmentEntryHelper.js";
+import {
+  createFundTransactionAdjustmentEntry,
+  createFundTransactionCancellationAdjustmentEntry,
+} from "../helpers/transactionHelpers/adjustmentEntryHelper.js";
+import { transactionTypeToModelName } from "../helpers/transactionHelpers/transactionMappers.js";
+import CashBankLedgerModel from "../model/CashBankLedgerModel.js";
 // import { createFundTransactionAdjustmentEntry } from "../helpers/transactionHelpers/adjustmentEntryHelper.js";
 
 /**
@@ -265,6 +271,11 @@ export const editFundTransaction = async ({
       throw new Error("Transaction not found");
     }
 
+    // Check if transaction is cancelled
+    if (originalTx.status === "cancelled" || originalTx.isCancelled) {
+      throw new Error("Cannot edit a cancelled transaction");
+    }
+
     console.log("✅ Original transaction found:", {
       number: originalTx.transactionNumber,
       amount: originalTx.amount,
@@ -286,21 +297,23 @@ export const editFundTransaction = async ({
     console.log("Deltas:", deltas);
 
     // ========================================
-    // STEP 4: DELETE OUTSTANDING SETTLEMENTS (✅ UPDATED)
+    // STEP 4: REVERSE OUTSTANDING SETTLEMENTS (✅ UPDATED)
     // ========================================
-    console.log("\n🔄 STEP 4: Deleting outstanding settlements...");
-    const deletedSettlements = await deleteOutstandingSettlements({
+    console.log("\n🔄 STEP 4: Reversing outstanding settlements...");
+    const reversedSettlementsResult = await reverseOutstandingSettlements({
       transactionId: originalTx._id,
       transactionType,
       transactionNumber: originalTx.transactionNumber,
       accountId: originalTx.account,
       amount: originalTx.amount,
+      userId: user._id,
+      reason: "Transaction edited",
       session,
     });
-    console.log(`✅ Deleted ${deletedSettlements.length} settlement(s)`);
+    console.log(`✅ Reversed ${reversedSettlementsResult.count} settlement(s)`);
 
     // ========================================
-    // STEP 5: DELETE CASH/BANK LEDGER
+    // STEP 5: DELETE CASH/BANK LEDGER (for tracking - will be zeroed by nightly job)
     // ========================================
     console.log("\n💰 STEP 5: Deleting cash/bank ledger entry...");
     const deletedCashBankEntry = await deleteCashBankLedger({
@@ -343,7 +356,7 @@ export const editFundTransaction = async ({
     originalTx.settlementDetails = [];
 
     await originalTx.save({ session });
-    console.log("✅ Transaction record updated", originalTx);
+    console.log("✅ Transaction record updated");
 
     // ========================================
     // STEP 7: GET PARTY ACCOUNT DETAILS
@@ -378,7 +391,6 @@ export const editFundTransaction = async ({
     await originalTx.save({ session });
 
     console.log(`✅ Created ${newSettlements.length} new settlement(s)`);
-    console.log(" New settlements:", newSettlements);
 
     // ========================================
     // STEP 9: GET CASH/BANK ACCOUNT
@@ -416,7 +428,7 @@ export const editFundTransaction = async ({
       createdBy: user._id,
       session,
     });
-    console.log("✅ New cash/bank ledger entry created:", newCashBankEntry);
+    console.log("✅ New cash/bank ledger entry created");
 
     // ========================================
     // STEP 11: MARK MONTHLY BALANCE AS DIRTY
@@ -429,20 +441,17 @@ export const editFundTransaction = async ({
       branch: originalTx.branch,
       session,
     });
-    console.log(
-      "✅ Monthly balance marked for recalculation",
-      dirtyTaggingResult
-    );
+    console.log("✅ Monthly balance marked for recalculation");
 
     // ========================================
-    // STEP 12: CREATE ADJUSTMENT ENTRY
+    // STEP 12: CREATE ADJUSTMENT ENTRY (✅ UPDATED)
     // ========================================
     console.log("\n📋 STEP 12: Creating adjustment entry...");
     const adjustmentEntry = await createFundTransactionAdjustmentEntry({
       originalTransaction: originalTx,
       transactionType,
       deltas,
-      deletedSettlements, // ✅ UPDATED: Changed from reversedSettlements
+      reversedSettlements: reversedSettlementsResult.settlements, // ✅ UPDATED
       newSettlements,
       deletedCashBankEntry,
       newCashBankEntry,
@@ -450,7 +459,8 @@ export const editFundTransaction = async ({
       editedBy: user._id,
       session,
     });
-    console.log("✅ Adjustment entry created:", adjustmentEntry);
+    console.log("✅ Adjustment entry created");
+
     // ========================================
     // COMMIT TRANSACTION
     // ========================================
@@ -465,7 +475,7 @@ export const editFundTransaction = async ({
         amountDelta: adjustmentEntry.amountDelta,
       },
       settlements: {
-        reversed: deletedSettlements.length,
+        reversed: reversedSettlementsResult.count, // ✅ UPDATED
         created: newSettlements.length,
         totalSettled: newSettlements.reduce(
           (sum, s) => sum + s.settledAmount,
@@ -485,5 +495,358 @@ export const editFundTransaction = async ({
     throw error;
   } finally {
     session.endSession();
+  }
+};
+
+/**
+ * Cancel a fund transaction (Receipt/Payment) - SOFT DELETE
+ * Marks transaction as cancelled, reverses settlements, creates adjustment entry
+ *
+ * Used when editing Sale/Purchase and setting paidAmount to 0
+ */
+export const cancelFundTransaction = async ({
+  transactionId,
+  transactionType,
+  userId,
+  reason = "Payment removed during transaction edit",
+  session,
+}) => {
+  console.log("\n❌ ===== CANCELLING FUND TRANSACTION =====");
+  console.log("Transaction ID:", transactionId);
+  console.log("Transaction Type:", transactionType);
+
+  try {
+    // ========================================
+    // STEP 1: FETCH ORIGINAL TRANSACTION
+    // ========================================
+    console.log("\n📋 STEP 1: Fetching original transaction...");
+    const TransactionModel = getTransactionModel(transactionType);
+    const originalTx = await TransactionModel.findById(transactionId).session(
+      session
+    );
+
+    if (!originalTx) {
+      throw new Error("Fund transaction not found");
+    }
+
+    // Check if already cancelled
+    if (originalTx.status === "cancelled" || originalTx.isCancelled) {
+      console.log("⚠️ Transaction already cancelled");
+      return {
+        transaction: originalTx,
+        alreadyCancelled: true,
+      };
+    }
+
+    console.log("✅ Original transaction found:", {
+      number: originalTx.transactionNumber,
+      amount: originalTx.amount,
+      account: originalTx.account,
+    });
+
+    // ========================================
+    // STEP 2: REVERSE OUTSTANDING SETTLEMENTS
+    // ========================================
+    console.log("\n🔄 STEP 2: Reversing outstanding settlements...");
+    const reversedSettlementsResult = await reverseOutstandingSettlements({
+      transactionId: originalTx._id,
+      transactionType,
+      transactionNumber: originalTx.transactionNumber,
+      accountId: originalTx.account,
+      amount: originalTx.amount,
+      userId,
+      reason,
+      session,
+    });
+
+    console.log(`✅ Reversed ${reversedSettlementsResult.count} settlement(s)`);
+
+    // ========================================
+    // STEP 3: GET CASH/BANK LEDGER ENTRY (for adjustment tracking)
+    // ========================================
+    console.log("\n💰 STEP 3: Getting cash/bank ledger entry...");
+    const cashBankEntry = await CashBankLedgerModel.findOne({
+      transaction: originalTx._id,
+      transactionType: transactionType.toLowerCase(),
+      entryStatus: "active",
+    }).session(session);
+
+    if (!cashBankEntry) {
+      console.warn("⚠️ No cash/bank ledger entry found");
+    } else {
+      console.log("✅ Cash/Bank entry found:", {
+        id: cashBankEntry._id,
+        amount: cashBankEntry.amount,
+        entryType: cashBankEntry.entryType,
+      });
+    }
+
+    // ========================================
+    // ✅ NEW: STEP 3.5: MARK CASH/BANK LEDGER AS REVERSED/CANCELLED
+    // ========================================
+    if (cashBankEntry) {
+      console.log("\n💰 STEP 3.5: Marking cash/bank ledger as reversed...");
+
+      cashBankEntry.entryStatus = "reversed";
+      cashBankEntry.reversedAt = new Date();
+      cashBankEntry.reversedBy = userId;
+      cashBankEntry.reversalReason = reason;
+
+      await cashBankEntry.save({ session });
+      console.log("✅ Cash/Bank ledger marked as reversed");
+    }
+
+    // ========================================
+    // STEP 4: MARK TRANSACTION AS CANCELLED
+    // ========================================
+    console.log("\n🚫 STEP 4: Marking transaction as cancelled...");
+    originalTx.status = "cancelled";
+    originalTx.isCancelled = true;
+    originalTx.cancelledAt = new Date();
+    originalTx.cancelledBy = userId;
+    originalTx.cancellationReason = reason;
+
+    await originalTx.save({ session });
+    console.log("✅ Transaction marked as cancelled");
+
+    // ========================================
+    // STEP 5: CREATE CANCELLATION ADJUSTMENT ENTRY
+    // ========================================
+    console.log("\n📋 STEP 5: Creating cancellation adjustment entry...");
+    const adjustmentEntry =
+      await createFundTransactionCancellationAdjustmentEntry({
+        cancelledTransaction: originalTx,
+        transactionType,
+        reversedSettlements: reversedSettlementsResult.settlements,
+        cashBankEntry,
+        cancelledBy: userId,
+        reason,
+        session,
+      });
+
+    console.log(
+      "✅ Cancellation adjustment entry created:",
+      adjustmentEntry.adjustmentNumber
+    );
+
+    // ========================================
+    // STEP 6: MARK MONTHLY BALANCE AS DIRTY
+    // ========================================
+    console.log("\n📅 STEP 6: Marking monthly balance as dirty...");
+    const dirtyTaggingResult = await markMonthlyBalanceDirtyForFundTransaction({
+      accountId: originalTx.account,
+      transactionDate: originalTx.transactionDate,
+      company: originalTx.company,
+      branch: originalTx.branch,
+      session,
+    });
+
+    console.log("✅ Monthly balance marked for recalculation");
+
+    console.log("\n✅ ===== FUND TRANSACTION CANCELLED SUCCESSFULLY =====\n");
+
+    return {
+      transaction: originalTx,
+      adjustmentEntry: {
+        id: adjustmentEntry._id,
+        adjustmentNumber: adjustmentEntry.adjustmentNumber,
+        cancelledAmount: originalTx.amount,
+      },
+      settlements: {
+        reversed: reversedSettlementsResult.count,
+        details: reversedSettlementsResult.settlements,
+      },
+      cashBankEntry: cashBankEntry
+        ? {
+            id: cashBankEntry._id,
+            amount: cashBankEntry.amount,
+            note: "Will be zeroed by nightly calculation",
+          }
+        : null,
+    };
+  } catch (error) {
+    console.error("\n❌ Cancellation failed:", error.message);
+    throw error;
+  }
+};
+
+/**
+ * Handle receipt/payment management during Sale/Purchase edit
+ * Decides: Create / Edit / Cancel / Do Nothing
+ *
+ * Scenarios:
+ * 1. Receipt exists, amount changed (not 0) → Edit receipt
+ * 2. Receipt exists, amount = 0 → Cancel receipt
+ * 3. No receipt, amount > 0 → Create receipt
+ * 4. No receipt, amount = 0 → Do nothing
+ */
+export const handleReceiptOnEdit = async ({
+  transactionId,
+  transactionType,
+  oldPaidAmount,
+  newPaidAmount,
+  accountId,
+  accountName,
+  company,
+  branch,
+  transactionDate,
+  netAmount,
+  previousBalanceAmount,
+  user,
+  session,
+}) => {
+  console.log("\n💰 ===== HANDLING RECEIPT/PAYMENT ON EDIT =====");
+  console.log("Transaction Type:", transactionType);
+  console.log("Old Paid Amount:", oldPaidAmount);
+  console.log("New Paid Amount:", newPaidAmount);
+
+  // Determine receipt type based on transaction type
+  const receiptType =
+    transactionType === "sale" || transactionType === "sales_return"
+      ? "receipt"
+      : "payment";
+
+  console.log("Receipt Type:", receiptType);
+
+  try {
+    // ========================================
+    // STEP 1: FIND EXISTING RECEIPT/PAYMENT
+    // ========================================
+    const ReceiptModel = getTransactionModel(receiptType);
+
+    const existingReceipt = await ReceiptModel.findOne({
+      reference: transactionId,
+      // referenceType: transactionType,
+      company,
+      branch,
+      status: "active", // ✅ Only find active receipts
+    }).session(session);
+
+    console.log("existingReceipt", existingReceipt);
+    console.log("existingReceipt", {
+      reference: transactionId,
+
+      company,
+      branch,
+      status: "active", // ✅ Only find active receipts
+    });
+
+    console.log("Existing receipt found:", !!existingReceipt);
+    if (existingReceipt) {
+      console.log("Existing receipt ID:", existingReceipt._id);
+      console.log(
+        "Existing receipt number:",
+        existingReceipt.transactionNumber
+      );
+    }
+
+    // ========================================
+    // SCENARIO 1: Receipt exists, amount changed (not 0) → EDIT
+    // ========================================
+    if (existingReceipt && newPaidAmount > 0) {
+      console.log("\n📝 SCENARIO 1: Editing existing receipt");
+
+      const totalAmountForReceipt = netAmount + (previousBalanceAmount || 0);
+      const closingBalanceAmountForReceipt =
+        totalAmountForReceipt - newPaidAmount;
+
+      const editResult = await editFundTransaction({
+        transactionId: existingReceipt._id,
+        transactionType: receiptType,
+        updateData: {
+          amount: newPaidAmount,
+          previousBalanceAmount: totalAmountForReceipt,
+          closingBalanceAmount: closingBalanceAmountForReceipt,
+        },
+        user,
+      });
+
+      console.log("✅ Receipt edited successfully");
+      return {
+        action: "edited",
+        receiptType,
+        receipt: editResult.transaction,
+        adjustmentEntry: editResult.adjustmentEntry,
+        settlements: editResult.settlements,
+      };
+    }
+
+    // ========================================
+    // SCENARIO 2: Receipt exists, amount = 0 → CANCEL
+    // ========================================
+    if (existingReceipt && newPaidAmount === 0) {
+      console.log("\n❌ SCENARIO 2: Cancelling existing receipt");
+
+      const cancelResult = await cancelFundTransaction({
+        transactionId: existingReceipt._id,
+        transactionType: receiptType,
+        userId: user._id,
+        reason: "Paid amount set to 0 during transaction edit",
+        session,
+      });
+
+      console.log("✅ Receipt cancelled successfully");
+      return {
+        action: "cancelled",
+        receiptType,
+        receipt: cancelResult.transaction,
+        adjustmentEntry: cancelResult.adjustmentEntry,
+        settlements: cancelResult.settlements,
+      };
+    }
+
+    // ========================================
+    // SCENARIO 3: No receipt, amount > 0 → CREATE
+    // ========================================
+    if (!existingReceipt && newPaidAmount > 0) {
+      console.log("\n➕ SCENARIO 3: Creating new receipt");
+
+      const totalAmountForReceipt = netAmount + (previousBalanceAmount || 0);
+      const closingBalanceAmountForReceipt =
+        totalAmountForReceipt - newPaidAmount;
+
+      const createResult = await createFundTransaction(
+        {
+          transactionType: receiptType,
+          account: accountId,
+          accountName: accountName,
+          amount: newPaidAmount,
+          previousBalanceAmount: totalAmountForReceipt,
+          closingBalanceAmount: closingBalanceAmountForReceipt,
+          company,
+          branch,
+          paymentMode: "cash",
+          reference: transactionId,
+          referenceModel: transactionTypeToModelName[transactionType] || "Sale",
+          referenceType: transactionType,
+          transactionDate: transactionDate || new Date(),
+          user,
+        },
+        session
+      );
+
+      console.log("✅ Receipt created successfully");
+      return {
+        action: "created",
+        receiptType,
+        receipt: createResult.transaction,
+        settlementsCount: createResult.settlementsCount,
+      };
+    }
+
+    // ========================================
+    // SCENARIO 4: No receipt, amount = 0 → DO NOTHING
+    // ========================================
+    console.log("\n⏭️ SCENARIO 4: No receipt, amount = 0, nothing to do");
+    return {
+      action: "none",
+      receiptType,
+      message: "No receipt exists and paid amount is 0",
+    };
+  } catch (error) {
+    console.error("\n❌ Receipt handling failed:", error.message);
+    throw error;
+  } finally {
+    console.log("\n✅ ===== RECEIPT HANDLING COMPLETED =====\n");
   }
 };

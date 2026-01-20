@@ -304,3 +304,92 @@ export const createFundTransactionAdjustmentEntry = async ({
 
   return adjustmentEntry;
 };
+
+
+/**
+ * Create adjustment entry when a fund transaction (Receipt/Payment) is cancelled
+ * Records the cancellation for audit trail and compliance
+ */
+export const createFundTransactionCancellationAdjustmentEntry = async ({
+  cancelledTransaction,
+  transactionType,
+  reversedSettlements,
+  cashBankEntry,
+  cancelledBy,
+  reason = "Payment removed during transaction edit",
+  session,
+}) => {
+  console.log("\n📋 ===== CREATING CANCELLATION ADJUSTMENT ENTRY =====");
+
+  // Generate adjustment number
+  const adjustmentNumber = await AdjustmentEntry.generateAdjustmentNumber(
+    cancelledTransaction.company,
+    cancelledTransaction.branch,
+    session
+  );
+
+  // Prepare settlements summary
+  const settlementsSummary = {
+    oldSettlementsCount: reversedSettlements.length,
+    newSettlementsCount: 0,
+    outstandingsReversed: reversedSettlements.map((s) => s.outstandingNumber),
+    outstandingsSettled: [],
+  };
+
+  // Prepare cash/bank impact
+  const cashBankImpact = cashBankEntry ? {
+    accountId: cashBankEntry.cashAccount || cashBankEntry.bankAccount,
+    accountName: cashBankEntry.cashAccountName || cashBankEntry.bankAccountName,
+    reversedLedgerEntry: cashBankEntry._id,
+    newLedgerEntry: null, // No new entry for cancellation
+  } : null;
+
+  // Build reason text
+  const fullReason = `${transactionType.charAt(0).toUpperCase() + transactionType.slice(1)} cancelled - Amount ₹${cancelledTransaction.amount} removed`;
+
+  // Create adjustment entry
+  const adjustmentEntry = new AdjustmentEntry({
+    company: cancelledTransaction.company,
+    branch: cancelledTransaction.branch,
+    
+    // Original transaction reference
+    originalTransaction: cancelledTransaction._id,
+    originalTransactionModel: transactionType.charAt(0).toUpperCase() + transactionType.slice(1),
+    originalTransactionNumber: cancelledTransaction.transactionNumber,
+    originalTransactionDate: cancelledTransaction.transactionDate,
+    
+    // Adjustment details
+    adjustmentNumber,
+    adjustmentDate: new Date(),
+    adjustmentType: "amount_change",
+    
+    // Affected account
+    affectedAccount: cancelledTransaction.account,
+    affectedAccountName: cancelledTransaction.accountName,
+    
+    // Amount changes
+    amountDelta: -cancelledTransaction.amount, // Negative because we're removing the amount
+    oldAmount: cancelledTransaction.amount,
+    newAmount: 0,
+    
+    // Cash/Bank and Settlement impacts
+    cashBankImpact,
+    settlementsSummary,
+    
+    // Audit fields
+    reason: fullReason,
+    notes: `Transaction cancelled. ${reversedSettlements.length} settlement(s) reversed. ${reason}`,
+    editedBy: cancelledBy,
+    
+    // Status
+    status: "active",
+    isSystemGenerated: true,
+  });
+
+  await adjustmentEntry.save({ session });
+
+  console.log("✅ Cancellation adjustment entry created:", adjustmentNumber);
+
+  return adjustmentEntry;
+};
+
