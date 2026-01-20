@@ -16,7 +16,7 @@ if (ENV === "development") {
 } else {
 
   console.log("Production Environment");
-  baseUrl = "https://farm2cart.camet.in/api";
+  baseUrl = "https://farm2cart.camet.in/api/hai/";
 }
 
 export const api = axios.create({
