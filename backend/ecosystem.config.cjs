@@ -1,23 +1,46 @@
-// ecosystem.config.cjs
 module.exports = {
   apps: [
+    // TEST API
     {
-      name: "vegetable-billing-api",
-      script: "./server.js",   // Main entry point of the API
-      instances: "max",      // Scales API across all CPU cores
-      exec_mode: "cluster",  // Enables load balancing for the API
+      name: "vegetable-billing-api-test",
+      script: "./server.js",
+      instances: "max",
+      exec_mode: "cluster",
       env: {
         NODE_ENV: "production",
-        PORT: 10000 // Optional: Override default port if needed
+        PORT: 10000
       }
     },
+    // TEST WORKER
+    {
+      name: "report-worker-test",
+      script: "./worker.js",
+      instances: 1,
+      exec_mode: "fork",
+      kill_timeout: 10000,
+      env: {
+        NODE_ENV: "production"
+      }
+    },
+
+    // MAIN API
+    {
+      name: "vegetable-billing-api",
+      script: "./server.js",
+      instances: "max",
+      exec_mode: "cluster",
+      env: {
+        NODE_ENV: "production",
+        PORT: 11000   // use a different port for main
+      }
+    },
+    // MAIN WORKER
     {
       name: "report-worker",
       script: "./worker.js",
-      instances: 1,          // Keep 1 instance for workers to avoid duplicate job processing issues
+      instances: 1,
       exec_mode: "fork",
-      // Important for BullMQ: Give the worker time to finish the current job before killing it
-      kill_timeout: 10000,   // Wait 10 seconds for graceful shutdown
+      kill_timeout: 10000,
       env: {
         NODE_ENV: "production"
       }
