@@ -13,17 +13,11 @@ const TransactionHeader = ({
   isEditMode = false,
   transactionNumber,
 }) => {
-  console.log("transaction header component renders");
-
   // Convert date string to Date object for DatePicker
   const dateValue = date ? new Date(date) : new Date();
 
   // Handle date change
   const handleDateChange = (selectedDate) => {
-
-    console.log("selectedDate",selectedDate);
-    console.log("selectedDate",date);
-    
     if (selectedDate) {
       // Convert to YYYY-MM-DD format for backend
       const year = selectedDate.getFullYear();
@@ -32,7 +26,7 @@ const TransactionHeader = ({
       const formattedDate = `${year}-${month}-${day}`;
 
       console.log("formatted Date", formattedDate);
-      
+
       updateTransactionField("transactionDate", formattedDate);
     }
   };
@@ -43,13 +37,18 @@ const TransactionHeader = ({
     updateTransactionField("transactionType", currentTransactionType);
   }, [currentTransactionType, updateTransactionField]);
 
+  const isProduction = import.meta.env.VITE_ENV === "production";
+
+  console.log(isProduction);
+  
+
   return (
     <div className="bg-white shadow-sm border-b px-4 py-2">
       <div className="flex items-center justify-between">
         <h1 className="text-sm font-bold text-slate-800 flex items-center gap-2 ">
           {isEditMode ? "Edit" : "New"}{" "}
           {capitalizeFirstLetter(currentTransactionType)}
-          {isEditMode  && (
+          {isEditMode && (
             <span className="ml-2">
               <TransactionNumberBadge transactionNumber={transactionNumber} />
             </span>
@@ -63,6 +62,7 @@ const TransactionHeader = ({
               Date
             </label>
             <DatePicker
+              disabled={isProduction}
               selected={dateValue}
               onChange={handleDateChange}
               dateFormat="dd/MM/yyyy"
