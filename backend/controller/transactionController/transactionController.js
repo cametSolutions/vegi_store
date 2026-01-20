@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { set } from "mongoose";
 import { processTransaction } from "../../helpers/transactionHelpers/transactionProcessor.js";
 import {
   calculateTransactionDeltas,
@@ -26,6 +26,8 @@ import {
   updateOriginalTransactionRecord,
 } from "../../helpers/transactionHelpers/transactionEditHelper.js";
 import { triggerOffsetAfterEdit } from "../../helpers/transactionHelpers/offsetTriggerHooks.js";
+import OutstandingSettlementModel from "../../model/OutstandingSettlementModel.js";
+import OutstandingModel from "../../model/OutstandingModel.js";
 
 /**
  * get transactions (handles sales, purchase, sales_return, purchase_return)
@@ -89,7 +91,7 @@ export const getTransactions = async (req, res) => {
       filter,
       page,
       limit,
-      sort
+      sort,
     );
 
     res.status(200).json(result);
@@ -168,8 +170,6 @@ export const createTransaction = async (req, res) => {
     // Process transaction using helper
     const result = await processTransaction(transactionData, userId, session);
 
- 
-
     // Create receipt if paid amount > 0
     let receiptResult = null;
     if (paidAmount > 0) {
@@ -205,7 +205,7 @@ export const createTransaction = async (req, res) => {
           date: transactionData.date || new Date(),
           user: req.user,
         },
-        session
+        session,
       );
     }
 
@@ -280,7 +280,26 @@ export const getTransactionDetail = async (req, res) => {
       _id: transactionId,
       company: companyId,
       branch: branchId,
-    });
+    }).lean();
+
+    /// if transaction type is sale ,find the settlements also;
+    if (transactionType === "sale") {
+      //find outstanding of this sale
+      const outstanding = await OutstandingModel.findOne({
+        sourceTransaction: transactionId,
+      });
+
+      /// find settlement count
+      let settlementCount = 0;
+
+      if (outstanding) {
+        settlementCount = await OutstandingSettlementModel.countDocuments({
+          outstanding: outstanding._id,
+        });
+      }
+
+      transaction.settlementCount = settlementCount || 0;
+    }
 
     if (!transaction) {
       return res.status(404).json({
@@ -318,13 +337,12 @@ export const editTransaction = async (req, res) => {
     const originalTransaction = await fetchOriginalTransaction(
       transactionId,
       updatedData.transactionType,
-      session
+      session,
     );
 
-    const oldAccount= originalTransaction.account;
+    const oldAccount = originalTransaction.account;
 
     console.log("originalTransaction", originalTransaction);
-    
 
     if (!originalTransaction) {
       await session.abortTransaction();
@@ -362,7 +380,7 @@ export const editTransaction = async (req, res) => {
       await applyStockDeltas(
         deltas.stockDelta,
         originalTransaction.branch,
-        session
+        session,
       );
     }
 
@@ -374,7 +392,7 @@ export const editTransaction = async (req, res) => {
       updatedData,
       deltas,
       userId,
-      session
+      session,
     );
 
     // console.log("adjustment entries", adjustmentResult);
@@ -391,7 +409,7 @@ export const editTransaction = async (req, res) => {
       updatedData,
       deltas,
       userId,
-      session
+      session,
     );
 
     // ========================================
@@ -400,7 +418,7 @@ export const editTransaction = async (req, res) => {
     await markMonthlyBalancesForRecalculation(
       originalTransaction,
       updatedData,
-      session
+      session,
     );
 
     // ========================================
@@ -410,16 +428,15 @@ export const editTransaction = async (req, res) => {
       originalTransaction,
       updatedData,
       userId,
-      session
+      session,
     );
-
 
     // Step 3: ✅ ADD THIS - Trigger offset after edit
     await triggerOffsetAfterEdit(
       oldAccount,
       updatedTransaction,
       userId,
-      session
+      session,
     );
 
     // Commit transaction

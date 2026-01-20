@@ -103,7 +103,7 @@ const CurrentSelection = ({ selectedCompany, selectedBranch }) => (
 
 const CompanyMenuItem = ({ companyAccess, selectedCompany, onSelect }) => (
   <DropdownMenuItem
-    key={companyAccess._id}
+    key={companyAccess?._id}
     onClick={() => onSelect(companyAccess)}
     className="cursor-pointer text-xs py-2 focus:bg-slate-50"
   >
@@ -127,20 +127,20 @@ const CompanyMenuItem = ({ companyAccess, selectedCompany, onSelect }) => (
 
 const BranchMenuItem = ({ branch, selectedBranch, onSelect }) => (
   <DropdownMenuItem
-    key={branch._id}
+    key={branch?._id}
     onClick={() => onSelect(branch)}
     className="cursor-pointer text-xs py-2 focus:bg-slate-50"
   >
     <div
       className={`mr-2 p-1 rounded-sm ${
-        selectedBranch?._id === branch._id
+        selectedBranch?._id === branch?._id
           ? "bg-emerald-100 text-emerald-600"
           : "bg-slate-100 text-slate-500"
       }`}
     >
       <GitBranch className="w-3.5 h-3.5" />
     </div>
-    <span className="truncate flex-1">{branch.branchName}</span>
+    <span className="truncate flex-1">{branch?.branchName}</span>
     {selectedBranch?._id === branch._id && (
       <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
     )}
@@ -412,7 +412,7 @@ const ProfileDropdown = () => {
                 {loggedUser?.access?.length > 0 ? (
                   loggedUser.access.map((acc) => (
                     <CompanyMenuItem
-                      key={acc._id}
+                      key={acc?._id}
                       companyAccess={acc}
                       selectedCompany={selectedCompany}
                       onSelect={handleSelectCompany}
@@ -438,11 +438,11 @@ const ProfileDropdown = () => {
                 {loggedUser?.access?.find(
                   (a) => a.company?._id === selectedCompany?._id
                 )?.branches?.length > 0 ? (
-                  loggedUser.access
-                    .find((a) => a.company._id === selectedCompany?._id)
+                  loggedUser?.access
+                    .find((a) => a?.company?._id === selectedCompany?._id)
                     .branches.map((b) => (
                       <BranchMenuItem
-                        key={b._id}
+                        key={b?._id}
                         branch={b}
                         selectedBranch={selectedBranch}
                         onSelect={handleSelectBranch}
