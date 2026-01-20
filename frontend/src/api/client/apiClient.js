@@ -14,6 +14,8 @@ if (ENV === "development") {
 } else if (ENV === "testing") {
   baseUrl = "https://farm2carttest.camet.in/api";
 } else {
+
+  console.log("Production Environment");
   baseUrl = "https://farm2cart.camet.in/api";
 }
 
