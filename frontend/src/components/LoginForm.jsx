@@ -62,7 +62,7 @@ export const LoginForm = ({ onSubmit, isLoading = false }) => {
             className="absolute -top-1 -right-1 w-4 h-4 bg-orange-400 rounded-full border-2 border-white/20"
           />
         </div>
-        <h2 className="text-2xl font-bold text-white tracking-tight">Welcome Back</h2>
+        <h2 className="text-2xl font-bold text-white tracking-tight">Welcome Back main</h2>
         <p className="text-white/60 text-sm mt-2">Manage your inventory efficiently</p>
       </motion.div>
 
