@@ -1,6 +1,6 @@
 module.exports = {
   apps: [
-    // TEST API
+    // TEST API  -> port 10000
     {
       name: "vegetable-billing-api-test",
       script: "./server.js",
@@ -23,7 +23,7 @@ module.exports = {
       }
     },
 
-    // MAIN API
+    // MAIN API -> port 4500
     {
       name: "vegetable-billing-api",
       script: "./server.js",
@@ -31,7 +31,7 @@ module.exports = {
       exec_mode: "cluster",
       env: {
         NODE_ENV: "production",
-        PORT: 11000   // use a different port for main
+        PORT: 4500
       }
     },
     // MAIN WORKER
