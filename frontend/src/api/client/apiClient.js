@@ -4,6 +4,9 @@ import { toast } from "sonner";
 let baseUrl;
 
 const ENV = import.meta.env.VITE_ENV;
+
+console.log(ENV);
+
 // Base axios instance
 
 if (ENV === "development") {
