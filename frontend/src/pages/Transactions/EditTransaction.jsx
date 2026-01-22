@@ -198,6 +198,8 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
               onDiscountChange={handleDiscountChange}
               onPaidAmountChange={handlePaidAmountChange}
               transactionType={transactionData.transactionType}
+              accountType={transactionData.accountType}
+
             />
 
             <TransactionActions

@@ -9,7 +9,7 @@ import {
   transactionTypeToModelName,
 } from "../../helpers/transactionHelpers/transactionMappers.js";
 import { sleep } from "../../../shared/utils/delay.js";
-fetchOriginalTransaction
+fetchOriginalTransaction;
 import {
   createFundTransaction,
   handleReceiptOnEdit,
@@ -95,7 +95,7 @@ export const getTransactions = async (req, res) => {
       filter,
       page,
       limit,
-      sort
+      sort,
     );
 
     res.status(200).json(result);
@@ -209,7 +209,7 @@ export const createTransaction = async (req, res) => {
           date: transactionData.date || new Date(),
           user: req.user,
         },
-        session
+        session,
       );
     }
 
@@ -299,7 +299,7 @@ export const getTransactionDetail = async (req, res) => {
       if (outstanding) {
         settlementCount = await OutstandingSettlementModel.countDocuments({
           outstanding: outstanding._id,
-          settlementStatus:"active",
+          settlementStatus: "active",
         });
       }
 
@@ -342,7 +342,7 @@ export const editTransaction = async (req, res) => {
     const originalTransaction = await fetchOriginalTransaction(
       transactionId,
       updatedData.transactionType,
-      session
+      session,
     );
 
     const oldAccount = originalTransaction.account;
@@ -400,7 +400,7 @@ export const editTransaction = async (req, res) => {
       await applyStockDeltas(
         deltas.stockDelta,
         originalTransaction.branch,
-        session
+        session,
       );
     }
 
@@ -412,7 +412,7 @@ export const editTransaction = async (req, res) => {
       updatedData,
       deltas,
       userId,
-      session
+      session,
     );
 
     // console.log("adjustment entries", adjustmentResult);
@@ -429,7 +429,16 @@ export const editTransaction = async (req, res) => {
       updatedData,
       deltas,
       userId,
-      session
+      session,
+    );
+
+    // ========================================
+    // STEP 6: Mark Monthly Balances as Dirty
+    // ========================================
+    await markMonthlyBalancesForRecalculation(
+      originalTransaction,
+      updatedData,
+      session,
     );
 
     // ========================================
@@ -462,24 +471,13 @@ export const editTransaction = async (req, res) => {
 
       console.log(
         "✅ Receipt/payment handling completed:",
-        receiptHandlingResult.action
+        receiptHandlingResult.action,
       );
     } else {
       console.log("⏭️ Paid amount unchanged, skipping receipt handling");
     }
 
-    // ========================================
-    // STEP 6: Mark Monthly Balances as Dirty
-    // ========================================
-    await markMonthlyBalancesForRecalculation(
-      originalTransaction,
-      updatedData,
-      session
-    );
-
-
     // console.log("deltas",deltas);
-    
 
     // ========================================
     // STEP 7: Update Original Transaction Document
@@ -488,7 +486,7 @@ export const editTransaction = async (req, res) => {
       originalTransaction,
       updatedData,
       userId,
-      session
+      session,
     );
 
     // Step 8: ✅ ADD THIS - Trigger offset after edit
@@ -496,7 +494,7 @@ export const editTransaction = async (req, res) => {
       oldAccount,
       updatedTransaction,
       userId,
-      session
+      session,
     );
 
     // Commit transaction
