@@ -334,7 +334,7 @@ export const getBatchAdjustedLedgers = async (
           txnNum: "$transactionNumber",
           company: "$company",
           branch: "$branch",
-          account: "$account",
+          currentAccount: "$account",
         },
         pipeline: [
           {
@@ -344,51 +344,128 @@ export const getBatchAdjustedLedgers = async (
                   { $eq: ["$company", "$$company"] },
                   { $eq: ["$branch", "$$branch"] },
                   { $eq: ["$originalTransactionNumber", "$$txnNum"] },
-                  { $eq: ["$affectedAccount", "$$account"] },
                   { $eq: ["$status", "active"] },
                   { $eq: ["$isReversed", false] },
                 ],
               },
             },
           },
-          { $group: { _id: null, totalAmountDelta: { $sum: "$amountDelta" } } },
+          {
+            $addFields: {
+              // Properly check if oldAccount exists
+              hasOldAccount: {
+                $cond: [
+                  { $ifNull: ["$oldAccount", false] },
+                  true,
+                  false
+                ]
+              },
+              isAccountChange: {
+                $and: [
+                  { $ifNull: ["$oldAccount", false] },
+                  { $ne: ["$oldAccount", "$affectedAccount"] }
+                ]
+              }
+            }
+          },
+          {
+            $addFields: {
+              adjustmentType: {
+                $cond: [
+                  // Case 1: OLD account being zeroed out
+                  {
+                    $and: [
+                      "$hasOldAccount",
+                      { $eq: ["$oldAccount", "$$currentAccount"] },
+                      "$isAccountChange"
+                    ]
+                  },
+                  "ZERO_OUT_OLD",
+                  {
+                    $cond: [
+                      // Case 2: AFFECTED account
+                      { $eq: ["$affectedAccount", "$$currentAccount"] },
+                      {
+                        $cond: [
+                          "$isAccountChange",
+                          "ADD_NEW_AMOUNT",
+                          "ADD_DELTA"
+                        ]
+                      },
+                      "NONE"
+                    ]
+                  }
+                ]
+              },
+              adjustmentValue: {
+                $cond: [
+                  // Case 1: Zero out old account
+                  {
+                    $and: [
+                      "$hasOldAccount",
+                      { $eq: ["$oldAccount", "$$currentAccount"] },
+                      "$isAccountChange"
+                    ]
+                  },
+                  { $multiply: ["$oldAmount", -1] },
+                  {
+                    $cond: [
+                      // Case 2: Affected account
+                      { $eq: ["$affectedAccount", "$$currentAccount"] },
+                      {
+                        $cond: [
+                          "$isAccountChange",
+                          "$newAmount",
+                          "$amountDelta"
+                        ]
+                      },
+                      0
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            $project: {
+              affectedAccount: 1,
+              oldAccount: 1,
+              amountDelta: 1,
+              oldAmount: 1,
+              newAmount: 1,
+              adjustmentType: 1,
+              adjustmentValue: 1,
+              hasOldAccount: 1,
+              isAccountChange: 1
+            },
+          },
         ],
         as: "adjustments",
       },
     },
     {
       $addFields: {
-        totalAmountDelta: {
-          $ifNull: [{ $arrayElemAt: ["$adjustments.totalAmountDelta", 0] }, 0],
-        },
-        effectiveAmount: {
-          $add: [
-            "$amount",
-            {
-              $ifNull: [
-                { $arrayElemAt: ["$adjustments.totalAmountDelta", 0] },
-                0,
-              ],
-            },
-          ],
-        },
+        effectiveAdjustment: {
+          $sum: "$adjustments.adjustmentValue"
+        }
+      }
+    },
+    {
+      $addFields: {
+        effectiveAmount: { $add: ["$amount", "$effectiveAdjustment"] },
         signedAmount: {
           $multiply: [
-            {
-              $add: [
-                "$amount",
-                {
-                  $ifNull: [
-                    { $arrayElemAt: ["$adjustments.totalAmountDelta", 0] },
-                    0,
-                  ],
-                },
-              ],
-            },
+            { $add: ["$amount", "$effectiveAdjustment"] },
             { $cond: [{ $eq: ["$ledgerSide", "debit"] }, 1, -1] },
           ],
         },
       },
+    },
+    // Filter out zero effective amounts
+    {
+      $match: {
+        effectiveAmount: { $ne: 0 }
+      }
     },
     { $sort: { account: 1, transactionDate: 1, createdAt: 1 } },
     {
@@ -483,11 +560,10 @@ export const getBatchAdjustedLedgers = async (
             ],
           },
         },
+        transactionCount: { $sum: 1 },
       },
     },
   ]);
-
-  console.log("sldfledgers", ledgers);
 
   const ledgerMap = {};
 
@@ -544,6 +620,11 @@ export const getBatchAdjustedLedgers = async (
 
   return ledgerMap;
 };
+
+
+
+
+
 
 // =============================================================================
 // REPORT PATHS

@@ -109,7 +109,10 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
       let cr = 0;
       console.log(txn);
 
-      const amount = Math.abs(txn.effectiveAmount || txn.amount || 0);
+      const amount = Math.abs(txn.effectiveAmount || 0);
+
+      console.log(amount);
+      
       const type = txn.transactionType?.toLowerCase();
 
       const drTypes = ["sale", "purchase_return", "payment", "sales_payment"];
@@ -341,10 +344,10 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                               </div>
                             </td>
                             <td className="px-4 py-2.5 text-right text-xs text-slate-600 font-mono tracking-tight border-r border-slate-300">
-                              {txn.dr > 0 ? formatINR(txn.dr) : ""}
+                              {txn.dr > 0 ? formatINR(txn.dr) : "0"}
                             </td>
                             <td className="px-4 py-2.5 text-right text-xs text-slate-600 font-mono tracking-tight">
-                              {txn.cr > 0 ? formatINR(txn.cr) : ""}
+                              {txn.cr > 0 ? formatINR(txn.cr) : "0"}
                             </td>
                           </tr>
                         ))}
@@ -406,14 +409,14 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                             ? formatINR(
                                 Math.abs(statementData.summary.closingBalance)
                               )
-                            : ""}
+                            : "0.00"}
                         </td>
                         <td className="sticky bottom-0 z-30 px-4 py-3 text-right text-sm font-bold text-indigo-700 font-mono tracking-tight border-t border-slate-300 bg-indigo-50">
                           {statementData.summary?.closingBalance < 0
                             ? formatINR(
                                 Math.abs(statementData.summary.closingBalance)
                               )
-                            : ""}
+                            : "0.00"}
                         </td>
                       </tr>
                     </tfoot>

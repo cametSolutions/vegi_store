@@ -58,7 +58,7 @@ export const createFundTransaction = async (data, session = null) => {
       !["receipt", "payment"].includes(transactionType.toLowerCase())
     ) {
       throw new Error(
-        'Invalid transaction type. Must be "receipt" or "payment"'
+        'Invalid transaction type. Must be "receipt" or "payment"',
       );
     }
 
@@ -76,7 +76,7 @@ export const createFundTransaction = async (data, session = null) => {
     // Step 1: Validate transaction data
     const validationError = await validateTransactionData(
       transactionData,
-      activeSession
+      activeSession,
     );
     if (validationError) {
       throw new Error(validationError.message);
@@ -90,9 +90,8 @@ export const createFundTransaction = async (data, session = null) => {
     }
 
     // Step 2: Get party account details
-    const partyAccount = await AccountMaster.findById(finalAccountId).session(
-      activeSession
-    );
+    const partyAccount =
+      await AccountMaster.findById(finalAccountId).session(activeSession);
 
     if (!partyAccount) {
       throw new Error("Party account not found");
@@ -178,7 +177,7 @@ export const createFundTransaction = async (data, session = null) => {
           transactionData.narration || `${transactionType} transaction`,
         createdBy: user._id,
       },
-      activeSession
+      activeSession,
     );
 
     // Step 11: Update monthly balance
@@ -192,7 +191,7 @@ export const createFundTransaction = async (data, session = null) => {
         ledgerSide: partyLedgerSide,
         amount: amount,
       },
-      activeSession
+      activeSession,
     );
 
     console.log("shouldManageSession", shouldManageSession);
@@ -207,7 +206,7 @@ export const createFundTransaction = async (data, session = null) => {
       settlementsCount: settlementDetails.length,
       totalSettled: settlementDetails.reduce(
         (sum, s) => sum + s.settledAmount,
-        0
+        0,
       ),
       cashBankEntry: {
         id: ledgerEntry._id,
@@ -247,6 +246,7 @@ export const editFundTransaction = async ({
   transactionType,
   updateData,
   user,
+  skipMonthlyBalance = false,
 }) => {
   console.log("\n🔄 ===== STARTING FUND TRANSACTION EDIT =====");
   console.log("Transaction ID:", transactionId);
@@ -263,9 +263,8 @@ export const editFundTransaction = async ({
     // ========================================
     console.log("\n📋 STEP 1: Fetching original transaction...");
     const TransactionModel = getTransactionModel(transactionType);
-    const originalTx = await TransactionModel.findById(transactionId).session(
-      session
-    );
+    const originalTx =
+      await TransactionModel.findById(transactionId).session(session);
 
     if (!originalTx) {
       throw new Error("Transaction not found");
@@ -362,7 +361,7 @@ export const editFundTransaction = async ({
     // STEP 7: GET PARTY ACCOUNT DETAILS
     // ========================================
     const partyAccount = await AccountMaster.findById(
-      originalTx.account
+      originalTx.account,
     ).session(session);
 
     if (!partyAccount) {
@@ -433,15 +432,23 @@ export const editFundTransaction = async ({
     // ========================================
     // STEP 11: MARK MONTHLY BALANCE AS DIRTY
     // ========================================
-    console.log("\n📅 STEP 11: Marking monthly balance as dirty...");
-    const dirtyTaggingResult = await markMonthlyBalanceDirtyForFundTransaction({
-      accountId: originalTx.account,
-      transactionDate: originalTx.transactionDate,
-      company: originalTx.company,
-      branch: originalTx.branch,
-      session,
-    });
-    console.log("✅ Monthly balance marked for recalculation");
+    if (!skipMonthlyBalance) {
+      // ✅ NEW check
+      console.log("\n📅 STEP 11: Marking monthly balance as dirty...");
+      const dirtyTaggingResult =
+        await markMonthlyBalanceDirtyForFundTransaction({
+          accountId: originalTx.account,
+          transactionDate: originalTx.transactionDate,
+          company: originalTx.company,
+          branch: originalTx.branch,
+          session,
+        });
+      console.log("✅ Monthly balance marked for recalculation");
+    } else {
+      console.log(
+        "\n⏭️ STEP 11: Skipping monthly balance (handled by parent transaction)",
+      );
+    }
 
     // ========================================
     // STEP 12: CREATE ADJUSTMENT ENTRY (✅ UPDATED)
@@ -479,7 +486,7 @@ export const editFundTransaction = async ({
         created: newSettlements.length,
         totalSettled: newSettlements.reduce(
           (sum, s) => sum + s.settledAmount,
-          0
+          0,
         ),
       },
       cashBankUpdate: {
@@ -510,6 +517,7 @@ export const cancelFundTransaction = async ({
   userId,
   reason = "Payment removed during transaction edit",
   session,
+  skipMonthlyBalance = false, // ✅ NEW parameter
 }) => {
   console.log("\n❌ ===== CANCELLING FUND TRANSACTION =====");
   console.log("Transaction ID:", transactionId);
@@ -521,9 +529,8 @@ export const cancelFundTransaction = async ({
     // ========================================
     console.log("\n📋 STEP 1: Fetching original transaction...");
     const TransactionModel = getTransactionModel(transactionType);
-    const originalTx = await TransactionModel.findById(transactionId).session(
-      session
-    );
+    const originalTx =
+      await TransactionModel.findById(transactionId).session(session);
 
     if (!originalTx) {
       throw new Error("Fund transaction not found");
@@ -626,22 +633,29 @@ export const cancelFundTransaction = async ({
 
     console.log(
       "✅ Cancellation adjustment entry created:",
-      adjustmentEntry.adjustmentNumber
+      adjustmentEntry.adjustmentNumber,
     );
 
     // ========================================
     // STEP 6: MARK MONTHLY BALANCE AS DIRTY
     // ========================================
-    console.log("\n📅 STEP 6: Marking monthly balance as dirty...");
-    const dirtyTaggingResult = await markMonthlyBalanceDirtyForFundTransaction({
-      accountId: originalTx.account,
-      transactionDate: originalTx.transactionDate,
-      company: originalTx.company,
-      branch: originalTx.branch,
-      session,
-    });
-
-    console.log("✅ Monthly balance marked for recalculation");
+    if (!skipMonthlyBalance) {
+      // ✅ NEW check
+      console.log("\n📅 STEP 6: Marking monthly balance as dirty...");
+      const dirtyTaggingResult =
+        await markMonthlyBalanceDirtyForFundTransaction({
+          accountId: originalTx.account,
+          transactionDate: originalTx.transactionDate,
+          company: originalTx.company,
+          branch: originalTx.branch,
+          session,
+        });
+      console.log("✅ Monthly balance marked for recalculation");
+    } else {
+      console.log(
+        "\n⏭️ STEP 6: Skipping monthly balance (handled by parent transaction)",
+      );
+    }
 
     console.log("\n✅ ===== FUND TRANSACTION CANCELLED SUCCESSFULLY =====\n");
 
@@ -736,7 +750,7 @@ export const handleReceiptOnEdit = async ({
       console.log("Existing receipt ID:", existingReceipt._id);
       console.log(
         "Existing receipt number:",
-        existingReceipt.transactionNumber
+        existingReceipt.transactionNumber,
       );
     }
 
@@ -759,6 +773,7 @@ export const handleReceiptOnEdit = async ({
           closingBalanceAmount: closingBalanceAmountForReceipt,
         },
         user,
+        skipMonthlyBalance: true, // ✅ NEW: Parent will handle it
       });
 
       console.log("✅ Receipt edited successfully");
@@ -783,6 +798,7 @@ export const handleReceiptOnEdit = async ({
         userId: user._id,
         reason: "Paid amount set to 0 during transaction edit",
         session,
+        skipMonthlyBalance: true, // ✅ NEW: Parent will handle it
       });
 
       console.log("✅ Receipt cancelled successfully");
@@ -822,7 +838,7 @@ export const handleReceiptOnEdit = async ({
           transactionDate: transactionDate || new Date(),
           user,
         },
-        session
+        session,
       );
 
       console.log("✅ Receipt created successfully");

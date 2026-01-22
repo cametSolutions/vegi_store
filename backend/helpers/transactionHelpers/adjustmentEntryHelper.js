@@ -1,4 +1,3 @@
-
 import AdjustmentEntry from "../../model/AdjustmentEntryModel.js";
 import { determineTransactionBehavior } from "./modelFindHelper.js";
 import { transactionTypeToModelName } from "./transactionMappers.js";
@@ -20,13 +19,30 @@ export const createAdjustmentEntries = async (
   updated,
   deltas,
   userId,
-  session
+  session,
 ) => {
+  // ========================================
+  // 0. Early Return if No Changes
+  // ========================================
+  const hasNoChanges =
+    !deltas.accountChanged &&
+    !deltas.itemsChanged &&
+    deltas.netAmountDelta === 0 &&
+    (!deltas.stockDelta || deltas.stockDelta.length === 0);
+
+  if (hasNoChanges) {
+    console.log("⏭️ No changes detected - skipping adjustment entry creation");
+    return {
+      adjustmentEntry: null,
+      message: "No changes detected. No adjustment entry created.",
+      skipped: true,
+    };
+  }
   // Sale/Purchase Return: Dr (debit side) - Customer owes you
   // Purchase/Sales Return: Cr (credit side) - You owe supplier
   const behavior = determineTransactionBehavior(updated.transactionType);
 
-  console.log("behavior", behavior);
+  console.log("deltas", deltas);
 
   // ========================================
   // 1. Generate Adjustment Number
@@ -34,7 +50,7 @@ export const createAdjustmentEntries = async (
   const adjustmentNumber = await AdjustmentEntry.generateAdjustmentNumber(
     updated.company,
     updated.branch,
-    session
+    session,
   );
 
   // ========================================
@@ -59,7 +75,7 @@ export const createAdjustmentEntries = async (
         branch: updated.branch,
         originalTransaction: original._id,
         originalTransactionModel: transactionTypeToModelName(
-          original.transactionType
+          original.transactionType,
         ),
         originalTransactionNumber: original.transactionNumber,
         originalTransactionDate: original.transactionDate,
@@ -95,7 +111,7 @@ export const createAdjustmentEntries = async (
             newRate = 0;
           } else {
             const originalItem = original.items.find(
-              (item) => item.item.toString() === delta.item.toString()
+              (item) => item.item.toString() === delta.item.toString(),
             );
             oldQuantity = originalItem ? originalItem.quantity : 0;
             newQuantity = oldQuantity + delta.quantityDelta;
@@ -143,8 +159,10 @@ export const createAdjustmentEntries = async (
         isSystemGenerated: true,
       },
     ],
-    { session }
+    { session },
   );
+
+  console.log("adj", adjustmentEntry);
 
   console.log("✅ Adjustment created:", {
     adjustmentNumber,
@@ -166,7 +184,7 @@ export const createCashAccountAdjustment = async (
   updated,
   deltas,
   userId,
-  session
+  session,
 ) => {
   if (deltas.netAmountDelta === 0) {
     return null;
@@ -222,7 +240,7 @@ export const createFundTransactionAdjustmentEntry = async ({
   originalTransaction,
   transactionType,
   deltas,
-  deletedSettlements,
+  reversedSettlements,
   newSettlements,
   deletedCashBankEntry, // ✅ UPDATED: Changed from reversedCashBankEntry
   newCashBankEntry,
@@ -232,10 +250,14 @@ export const createFundTransactionAdjustmentEntry = async ({
 }) => {
   console.log("\n📋 ===== CREATING ADJUSTMENT ENTRY =====");
 
+  console.log({
+    reversedSettlements,
+  });
+
   const adjustmentNumber = await AdjustmentEntry.generateAdjustmentNumber(
     originalTransaction.company,
     originalTransaction.branch,
-    session
+    session,
   );
 
   // Determine adjustment type
@@ -250,9 +272,9 @@ export const createFundTransactionAdjustmentEntry = async ({
 
   // Prepare settlements summary
   const settlementsSummary = {
-    oldSettlementsCount: deletedSettlements.length,
+    oldSettlementsCount: reversedSettlements.length,
     newSettlementsCount: newSettlements.length,
-    outstandingsReversed: deletedSettlements.map((s) => s.outstandingNumber),
+    outstandingsReversed: reversedSettlements.map((s) => s.outstandingNumber),
     outstandingsSettled: newSettlements.map((s) => s.outstandingNumber),
   };
 
@@ -305,7 +327,6 @@ export const createFundTransactionAdjustmentEntry = async ({
   return adjustmentEntry;
 };
 
-
 /**
  * Create adjustment entry when a fund transaction (Receipt/Payment) is cancelled
  * Records the cancellation for audit trail and compliance
@@ -325,7 +346,7 @@ export const createFundTransactionCancellationAdjustmentEntry = async ({
   const adjustmentNumber = await AdjustmentEntry.generateAdjustmentNumber(
     cancelledTransaction.company,
     cancelledTransaction.branch,
-    session
+    session,
   );
 
   // Prepare settlements summary
@@ -337,12 +358,15 @@ export const createFundTransactionCancellationAdjustmentEntry = async ({
   };
 
   // Prepare cash/bank impact
-  const cashBankImpact = cashBankEntry ? {
-    accountId: cashBankEntry.cashAccount || cashBankEntry.bankAccount,
-    accountName: cashBankEntry.cashAccountName || cashBankEntry.bankAccountName,
-    reversedLedgerEntry: cashBankEntry._id,
-    newLedgerEntry: null, // No new entry for cancellation
-  } : null;
+  const cashBankImpact = cashBankEntry
+    ? {
+        accountId: cashBankEntry.cashAccount || cashBankEntry.bankAccount,
+        accountName:
+          cashBankEntry.cashAccountName || cashBankEntry.bankAccountName,
+        reversedLedgerEntry: cashBankEntry._id,
+        newLedgerEntry: null, // No new entry for cancellation
+      }
+    : null;
 
   // Build reason text
   const fullReason = `${transactionType.charAt(0).toUpperCase() + transactionType.slice(1)} cancelled - Amount ₹${cancelledTransaction.amount} removed`;
@@ -351,36 +375,37 @@ export const createFundTransactionCancellationAdjustmentEntry = async ({
   const adjustmentEntry = new AdjustmentEntry({
     company: cancelledTransaction.company,
     branch: cancelledTransaction.branch,
-    
+
     // Original transaction reference
     originalTransaction: cancelledTransaction._id,
-    originalTransactionModel: transactionType.charAt(0).toUpperCase() + transactionType.slice(1),
+    originalTransactionModel:
+      transactionType.charAt(0).toUpperCase() + transactionType.slice(1),
     originalTransactionNumber: cancelledTransaction.transactionNumber,
     originalTransactionDate: cancelledTransaction.transactionDate,
-    
+
     // Adjustment details
     adjustmentNumber,
     adjustmentDate: new Date(),
     adjustmentType: "amount_change",
-    
+
     // Affected account
     affectedAccount: cancelledTransaction.account,
     affectedAccountName: cancelledTransaction.accountName,
-    
+
     // Amount changes
     amountDelta: -cancelledTransaction.amount, // Negative because we're removing the amount
     oldAmount: cancelledTransaction.amount,
     newAmount: 0,
-    
+
     // Cash/Bank and Settlement impacts
     cashBankImpact,
     settlementsSummary,
-    
+
     // Audit fields
     reason: fullReason,
     notes: `Transaction cancelled. ${reversedSettlements.length} settlement(s) reversed. ${reason}`,
     editedBy: cancelledBy,
-    
+
     // Status
     status: "active",
     isSystemGenerated: true,
@@ -392,4 +417,3 @@ export const createFundTransactionCancellationAdjustmentEntry = async ({
 
   return adjustmentEntry;
 };
-

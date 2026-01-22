@@ -299,7 +299,7 @@ export const getTransactionDetail = async (req, res) => {
       if (outstanding) {
         settlementCount = await OutstandingSettlementModel.countDocuments({
           outstanding: outstanding._id,
-          status:"active",
+          settlementStatus:"active",
         });
       }
 
@@ -476,6 +476,10 @@ export const editTransaction = async (req, res) => {
       updatedData,
       session
     );
+
+
+    // console.log("deltas",deltas);
+    
 
     // ========================================
     // STEP 7: Update Original Transaction Document
