@@ -442,7 +442,7 @@ export const editTransaction = async (req, res) => {
     );
 
     // ========================================
-    // ✅ NEW: STEP 5.5: Handle Receipt/Payment Management
+    // ✅ NEW: STEP 7: Handle Receipt/Payment Management
     // ========================================
     let receiptHandlingResult = null;
 
@@ -480,7 +480,7 @@ export const editTransaction = async (req, res) => {
     // console.log("deltas",deltas);
 
     // ========================================
-    // STEP 7: Update Original Transaction Document
+    // STEP 8: Update Original Transaction Document
     // ========================================
     const updatedTransaction = await updateOriginalTransactionRecord(
       originalTransaction,
@@ -489,7 +489,7 @@ export const editTransaction = async (req, res) => {
       session,
     );
 
-    // Step 8: ✅ ADD THIS - Trigger offset after edit
+    // Step 9: ✅ ADD THIS - Trigger offset after edit
     await triggerOffsetAfterEdit(
       oldAccount,
       updatedTransaction,

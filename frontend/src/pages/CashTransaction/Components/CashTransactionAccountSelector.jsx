@@ -167,10 +167,7 @@ const CashTransactionAccountSelector = ({
     (account) => {
       const truncatedName = truncate(account.accountName, TRUNCATE_LENGTH);
       setSearchTerm(truncatedName);
-      console.log("Transaction Type:", transactionType); // Add this for debugging
-      console.log("Outstanding Dr:", account.outstandingDr);
-      console.log("Outstanding Cr:", account.outstandingCr);
-      console.log("Outstanding Cr:", transactionType);
+      
 
       // Select previous balance based on transaction type
       const previousBalance =
