@@ -38,7 +38,7 @@ export const useTransactionActions = (transactionData, isEditMode = false) => {
         // Update existing transaction
         await updateMutation
           .mutateAsync({
-            id: transactionData.id,
+            id: transactionData?._id,
             formData: transactionData,
             transactionType: transactionData.transactionType,
           });

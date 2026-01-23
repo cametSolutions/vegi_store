@@ -9,8 +9,11 @@ import {
   transactionTypeToModelName,
 } from "../../helpers/transactionHelpers/transactionMappers.js";
 import { sleep } from "../../../shared/utils/delay.js";
-
-import { createFundTransaction } from "../../services/fundTransactionService.js";
+fetchOriginalTransaction;
+import {
+  createFundTransaction,
+  handleReceiptOnEdit,
+} from "../../services/fundTransactionService.js";
 import { fetchOriginalTransaction } from "../../helpers/transactionHelpers/modelFindHelper.js";
 import { applyStockDeltas } from "../../helpers/transactionHelpers/stockManager.js";
 import {
@@ -28,6 +31,7 @@ import {
 import { triggerOffsetAfterEdit } from "../../helpers/transactionHelpers/offsetTriggerHooks.js";
 import OutstandingSettlementModel from "../../model/OutstandingSettlementModel.js";
 import OutstandingModel from "../../model/OutstandingModel.js";
+import { validateAccountChangeOnEdit } from "../../helpers/FundTransactionHelper/FundTransactionHelper.js";
 
 /**
  * get transactions (handles sales, purchase, sales_return, purchase_return)
@@ -273,7 +277,7 @@ export const createTransaction = async (req, res) => {
 export const getTransactionDetail = async (req, res) => {
   try {
     const { transactionId } = req.params;
-    const { companyId, branchId, transactionType } = req.query;
+    const { companyId, branchId, transactionType, isEdit } = req.query;
     const TransactionModel = getTransactionModel(transactionType);
 
     const transaction = await TransactionModel.findOne({
@@ -282,29 +286,73 @@ export const getTransactionDetail = async (req, res) => {
       branch: branchId,
     }).lean();
 
-    /// if transaction type is sale ,find the settlements also;
+    if (!transaction) {
+      return res.status(404).json({
+        message: "Transaction not found",
+      });
+    }
+
+    // Handle isEdit logic
+    if (isEdit === "true") {
+      // Case 1: Receipt or Payment
+      if (transactionType === "receipt" || transactionType === "payment") {
+        // Fetch sum of closingBalanceAmount for pending outstandings
+        const outstandings = await OutstandingModel.find({
+          account: transaction.account,
+          company: companyId,
+          branch: branchId,
+          status: {$in: ["pending", "partial"]},
+        }).lean();
+
+        const sumOfClosingBalance = outstandings.reduce(
+          (sum, outstanding) => sum + (outstanding.closingBalanceAmount || 0),
+          0,
+        );
+        console.log("outstandings", outstandings);
+
+        // console.log("sumOfClosingBalance", sumOfClosingBalance);
+        console.log({
+          account: transaction.account,
+          company: companyId,
+          branch: branchId,
+          status: "pending",
+        });
+
+        // Tweak previousBalanceAmount
+        transaction.previousBalanceAmount =
+          sumOfClosingBalance + (transaction.amount || 0);
+      }
+
+      // Case 2: Sale
+      if (transactionType === "sale") {
+        // Find outstanding for this sale
+        const outstanding = await OutstandingModel.findOne({
+          sourceTransaction: transactionId,
+        }).lean();
+
+        if (outstanding) {
+          // Tweak paidAmount
+          transaction.paidAmount = outstanding.paidAmount || 0;
+        }
+      }
+    }
+
+    // Find settlement count for sale (original logic - runs always)
     if (transactionType === "sale") {
-      //find outstanding of this sale
       const outstanding = await OutstandingModel.findOne({
         sourceTransaction: transactionId,
       });
 
-      /// find settlement count
       let settlementCount = 0;
 
       if (outstanding) {
         settlementCount = await OutstandingSettlementModel.countDocuments({
           outstanding: outstanding._id,
+          settlementStatus: "active",
         });
       }
 
       transaction.settlementCount = settlementCount || 0;
-    }
-
-    if (!transaction) {
-      return res.status(404).json({
-        message: "Transaction not found",
-      });
     }
 
     return res.status(200).json(transaction);
@@ -342,7 +390,22 @@ export const editTransaction = async (req, res) => {
 
     const oldAccount = originalTransaction.account;
 
-    console.log("originalTransaction", originalTransaction);
+    // ========================================
+    // ✅ NEW: STEP 1.5: Validate Account Change
+    // ========================================
+    try {
+      await validateAccountChangeOnEdit({
+        originalTransaction,
+        updatedData,
+        session,
+      });
+    } catch (validationError) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: validationError.message,
+      });
+    }
 
     if (!originalTransaction) {
       await session.abortTransaction();
@@ -413,13 +476,51 @@ export const editTransaction = async (req, res) => {
     );
 
     // ========================================
-    // STEP 7: Mark Monthly Balances as Dirty
+    // STEP 6: Mark Monthly Balances as Dirty
     // ========================================
     await markMonthlyBalancesForRecalculation(
       originalTransaction,
       updatedData,
       session,
     );
+
+    // ========================================
+    // ✅ NEW: STEP 7: Handle Receipt/Payment Management
+    // ========================================
+    let receiptHandlingResult = null;
+
+    // Check if paid amount changed
+    const oldPaidAmount = originalTransaction.paidAmount || 0;
+    const newPaidAmount = updatedData.paidAmount || 0;
+
+    if (oldPaidAmount !== newPaidAmount) {
+      console.log("\n💰 Paid amount changed, handling receipt/payment...");
+
+      receiptHandlingResult = await handleReceiptOnEdit({
+        transactionId: originalTransaction._id,
+        transactionType: updatedData.transactionType,
+        oldPaidAmount,
+        newPaidAmount,
+        accountId: updatedData.account,
+        accountName: updatedData.accountName,
+        company: updatedData.company,
+        branch: updatedData.branch,
+        transactionDate: updatedData.transactionDate,
+        netAmount: updatedData.netAmount,
+        previousBalanceAmount: updatedData.previousBalanceAmount,
+        user: req.user,
+        session,
+      });
+
+      console.log(
+        "✅ Receipt/payment handling completed:",
+        receiptHandlingResult.action,
+      );
+    } else {
+      console.log("⏭️ Paid amount unchanged, skipping receipt handling");
+    }
+
+    // console.log("deltas",deltas);
 
     // ========================================
     // STEP 8: Update Original Transaction Document
@@ -431,7 +532,7 @@ export const editTransaction = async (req, res) => {
       session,
     );
 
-    // Step 3: ✅ ADD THIS - Trigger offset after edit
+    // Step 9: ✅ ADD THIS - Trigger offset after edit
     await triggerOffsetAfterEdit(
       oldAccount,
       updatedTransaction,

@@ -91,7 +91,8 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
       selectedCompanyFromStore._id,
       selectedBranchFromStore._id,
       editTransactionData._id,
-      currentTransactionType
+      currentTransactionType,
+      "true"// iSEdit
     ),
   });
 
@@ -198,6 +199,8 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
               onDiscountChange={handleDiscountChange}
               onPaidAmountChange={handlePaidAmountChange}
               transactionType={transactionData.transactionType}
+              accountType={transactionData.accountType}
+
             />
 
             <TransactionActions

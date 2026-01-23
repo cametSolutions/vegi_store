@@ -12,6 +12,7 @@ import CustomMoonLoader from "../../components/loaders/CustomMoonLoader";
 import { transactionQueries } from "@/hooks/queries/transaction.queries";
 import { addTransactionDataToStore } from "@/store/slices/transactionSlice";
 import { useQuery } from "@tanstack/react-query";
+import AmountEditWarningDialog from "@/components/modals/AmountEditWarningDialog";
 
 const TransactionHeader = React.memo(CashTransactionHeaderComponent);
 const CashTransactionAction = React.memo(TransactionActionsComponent);
@@ -25,6 +26,11 @@ const EditCashTransaction = ({
 }) => {
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
+  const [fetchWithLatest, setFetchWithLatest] = useState(false);
+  const [showAmountWarningDialog, setShowAmountWarningDialog] = useState(false);
+  const [hasShownWarning, setHasShownWarning] = useState(false);
+  const [isAmountEditable, setIsAmountEditable] = useState(false); // NEW: Control amount field editability
+
   const {
     CashtransactionData,
     resetCashTransactionData,
@@ -45,11 +51,8 @@ const EditCashTransaction = ({
     [location, CashtransactionData.transactionType]
   );
 
-
-
   useEffect(() => {
     resetCashTransactionData(currentTransactionType);
-    //// add to global state that edit mode is true and the transaction id
     updateCashtransactionData({
       isEditMode: true,
       editTransactionId: editTransactionData._id,
@@ -64,7 +67,7 @@ const EditCashTransaction = ({
     };
   }, [resetCashTransactionData]);
 
-  //// fetch the details of the tns for which we need the edit to be done///
+  // Fetch transaction details - queryKey includes fetchWithLatest for proper refetch
   const {
     data: transactionResponse,
     isLoading: transactionLoading,
@@ -74,16 +77,30 @@ const EditCashTransaction = ({
       selectedCompanyFromStore._id,
       selectedBranchFromStore._id,
       editTransactionData._id,
-      currentTransactionType
+      currentTransactionType,
+      fetchWithLatest ? "true" : undefined
     ),
+    // Ensure query key includes the fetchWithLatest parameter for proper cache distinction
+    queryKey: [
+      "transaction",
+      selectedCompanyFromStore._id,
+      selectedBranchFromStore._id,
+      editTransactionData._id,
+      currentTransactionType,
+      fetchWithLatest ? "latest" : "original",
+    ],
   });
 
-  /// update the transaction data when the transaction response changes
+  // Update transaction data when response changes
   useEffect(() => {
     if (transactionResponse) {
-      updateCashtransactionData(transactionResponse);
+      const dataToUpdate = fetchWithLatest
+        ? { ...transactionResponse, amount: "" }
+        : transactionResponse;
 
-      //// this is to  prevent the navigation in the nav bar when we are in edit mode
+      updateCashtransactionData(dataToUpdate);
+
+      // Prevent navigation in nav bar when in edit mode
       dispatch(
         addTransactionDataToStore({
           isEditMode: true,
@@ -91,31 +108,54 @@ const EditCashTransaction = ({
           transactionType: currentTransactionType,
         })
       );
+
+      // Enable amount field after fetching with latest data
+      if (fetchWithLatest) {
+        setIsAmountEditable(true);
+      }
     }
-  }, [transactionResponse, updateCashtransactionData]);
+  }, [transactionResponse, updateCashtransactionData, dispatch, editTransactionData._id, currentTransactionType, fetchWithLatest]);
 
+  // Handle amount field click - show warning dialog only once
+  const handleAmountFieldClick = useCallback(() => {
+    if (!hasShownWarning && !isAmountEditable) {
+      setShowAmountWarningDialog(true);
+    }
+  }, [hasShownWarning, isAmountEditable]);
 
-    const handleCancel = () => {
-      console.log("cal");
-      
-      resetCashTransactionData(currentTransactionType);
-       
-      handleCancelEdit();
-    
-    };
+  // Handle dialog confirmation - refetch with latest data
+  const handleWarningConfirm = useCallback(() => {
+    setShowAmountWarningDialog(false);
+    setHasShownWarning(true); // Mark that warning has been shown
+    setFetchWithLatest(true); // This will trigger refetch due to queryKey change
+  }, []);
 
-  // Empty dependency array means this only sets up on mount
-  // console.log("Cash transaction data:", CashtransactionData);
+  // Handle dialog close
+  const handleWarningClose = useCallback(() => {
+    setShowAmountWarningDialog(false);
+  }, []);
+
+  const handleCancel = () => {
+    resetCashTransactionData(currentTransactionType);
+    handleCancelEdit();
+  };
+
   return (
     <div>
       <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br bg-white overflow-hidden">
-        {/* Header */}
-
-        {isLoading && (
+        {/* Loading overlay */}
+        {(isLoading || transactionLoading) && (
           <div className="absolute inset-0 bg-white/60 z-50 flex items-center justify-center">
             <CustomMoonLoader />
           </div>
         )}
+
+        {/* Amount Edit Warning Dialog */}
+        <AmountEditWarningDialog
+          isOpen={showAmountWarningDialog}
+          onClose={handleWarningClose}
+          onConfirm={handleWarningConfirm}
+        />
 
         <TransactionHeader
           currentTransactionType={currentTransactionType}
@@ -141,12 +181,13 @@ const EditCashTransaction = ({
               updateCashtransactionData={updateCashtransactionData}
               branch={selectedBranchFromStore?._id}
               company={selectedCompanyFromStore?._id}
-              // resetCashTransactionData={resetCashTransactionData}
+              isEditMode={!isAmountEditable} // Pass the inverse - when editable, not in locked edit mode
+              onAmountFieldClick={handleAmountFieldClick}
             />
           </div>
 
           {/* Bank Payment Details - Middle */}
-          <div className="flex-1 bg-white  overflow-auto">
+          <div className="flex-1 bg-white overflow-auto">
             <TransactionBankPaymentDetails
               chequeNumber={CashtransactionData?.chequeNumber}
               bank={CashtransactionData?.bank}
@@ -160,7 +201,7 @@ const EditCashTransaction = ({
           </div>
 
           {/* Transaction Actions - Bottom */}
-          <div className="w-full mt-auto ">
+          <div className="w-full mt-auto">
             <CashTransactionAction
               CashtransactionData={CashtransactionData}
               onLoadingChange={setIsLoading}

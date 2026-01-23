@@ -258,8 +258,7 @@ const TransactionAccountSelector = ({
   // );
 
   const handleInputChange = (e) => {
-
-    if(settlementCount > 0){
+    if (settlementCount > 0) {
       setShowWarning(true);
       return;
     }
@@ -324,6 +323,10 @@ const TransactionAccountSelector = ({
    */
   const handleAccountTypeChange = useCallback(
     (newType) => {
+      if (settlementCount > 0) {
+        setShowWarning(true);
+        return;
+      }
       updateTransactionData({
         accountType: newType,
         accountName: "",
@@ -335,7 +338,7 @@ const TransactionAccountSelector = ({
       });
       setSearchTerm("");
     },
-    [updateTransactionData],
+    [updateTransactionData,settlementCount],
   );
 
   /**
@@ -343,7 +346,7 @@ const TransactionAccountSelector = ({
    */
   const handleClearAccount = useCallback(() => {
     console.log(settlementCount);
-    
+
     if (settlementCount > 0) {
       setShowWarning(true);
     } else {
@@ -379,9 +382,9 @@ const TransactionAccountSelector = ({
   );
 
   const handleClearSettlements = () => {
-   updateTransactionData({
-     paidAmount: 0
-   })
+    updateTransactionData({
+      paidAmount: 0,
+    });
   };
 
   const handleCancel = () => {

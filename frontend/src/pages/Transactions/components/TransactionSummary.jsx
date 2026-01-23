@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { NumericFormat } from "react-number-format";
 
 const TransactionSummaryComponent = ({
@@ -10,7 +10,12 @@ const TransactionSummaryComponent = ({
   onDiscountChange,
   onPaidAmountChange,
   transactionType,
+  accountType,
 }) => {
+
+
+  
+
   // UPDATED: Added 'focus:outline-none' to explicitly override browser default focus states
   const baseInputClass =
     "w-full text-right font-mono text-xs bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus:ring-offset-0 p-0 shadow-none";
@@ -48,7 +53,7 @@ const TransactionSummaryComponent = ({
           </label>
           <div className={`${wrapperClass} bg-white border-slate-300`}>
             <NumericFormat
-            disabled={transactionType === "stock_adjustment"}
+              disabled={transactionType === "stock_adjustment"}
               value={discount === 0 ? "" : discount}
               onValueChange={(values) =>
                 onDiscountChange(values.floatValue || 0)
@@ -89,7 +94,7 @@ const TransactionSummaryComponent = ({
         <div className="flex-1"></div>
 
         {/* 4. Payment Received / Paid */}
-        {transactionType === "sale" && (
+        {transactionType === "sale" && accountType === "customer" && (
           <div className="flex flex-col w-32">
             <label className="text-[10px] text-blue-600 font-medium mb-0.5 ml-1">
               {transactionType === "sale" ||

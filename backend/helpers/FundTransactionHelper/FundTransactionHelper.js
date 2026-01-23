@@ -1,5 +1,5 @@
-import { ReceiptModel, PaymentModel } from '../../model/FundTransactionMode.js';
-import AccountMasterModel from '../../model/masters/AccountMasterModel.js';
+import { ReceiptModel, PaymentModel } from "../../model/FundTransactionMode.js";
+import AccountMasterModel from "../../model/masters/AccountMasterModel.js";
 
 /**
  * Validate transaction data before processing
@@ -12,40 +12,40 @@ export const validateTransactionData = async (data, session) => {
     company,
     branch,
     transactionType,
-    
+
     account,
-    amount
+    amount,
   } = data;
 
   // Check required fields
   if (!company || !branch || !transactionType) {
     return {
       status: 400,
-      message: 'Required fields are missing: company, branch, transactionType'
+      message: "Required fields are missing: company, branch, transactionType",
     };
   }
 
   // Check for account (either accountId or account)
-  const finalAccountId =  account;
+  const finalAccountId = account;
   if (!finalAccountId) {
     return {
       status: 400,
-      message: 'Either accountId or account field is required'
+      message: "Either accountId or account field is required",
     };
   }
 
   if (!amount) {
     return {
       status: 400,
-      message: 'Amount is required'
+      message: "Amount is required",
     };
   }
 
   // Validate transaction type
-  if (!['receipt', 'payment'].includes(transactionType.toLowerCase())) {
+  if (!["receipt", "payment"].includes(transactionType.toLowerCase())) {
     return {
       status: 400,
-      message: 'Invalid transaction type. Must be receipt or "payment"'
+      message: 'Invalid transaction type. Must be receipt or "payment"',
     };
   }
 
@@ -53,33 +53,37 @@ export const validateTransactionData = async (data, session) => {
   if (amount <= 0) {
     return {
       status: 400,
-      message: 'Amount must be greater than 0'
+      message: "Amount must be greater than 0",
     };
   }
 
   // Verify account exists
-  const accountDoc = await AccountMasterModel.findById(finalAccountId).session(session);
+  const accountDoc = await AccountMasterModel.findById(finalAccountId).session(
+    session
+  );
   if (!accountDoc) {
     return {
       status: 404,
-      message: 'Account not found'
+      message: "Account not found",
     };
   }
 
   // Validate payment mode if provided
-  const validPaymentModes = ['cash', 'cheque', 'dd', 'bankTransfer'];
+  const validPaymentModes = ["cash", "cheque", "dd", "bankTransfer"];
   if (data.paymentMode && !validPaymentModes.includes(data.paymentMode)) {
     return {
       status: 400,
-      message: `Invalid payment mode. Must be one of: ${validPaymentModes.join(', ')}`
+      message: `Invalid payment mode. Must be one of: ${validPaymentModes.join(
+        ", "
+      )}`,
     };
   }
 
   // If cheque, validate cheque number
-  if (data.paymentMode === 'cheque' && !data.chequeNumber) {
+  if (data.paymentMode === "cheque" && !data.chequeNumber) {
     return {
       status: 400,
-      message: 'Cheque number is required for cheque payment mode'
+      message: "Cheque number is required for cheque payment mode",
     };
   }
 
@@ -92,8 +96,8 @@ export const validateTransactionData = async (data, session) => {
  * @returns {mongoose.Model} - ReceiptModel or PaymentModel
  */
 export const getTransactionModel = (transactionType) => {
-  return transactionType.toLowerCase() === 'receipt' 
-    ? ReceiptModel 
+  return transactionType.toLowerCase() === "receipt"
+    ? ReceiptModel
     : PaymentModel;
 };
 
@@ -109,7 +113,7 @@ export const prepareTransactionData = (body, user = null) => {
     branch,
     transactionType,
     transactionDate,
-    
+
     account,
     accountName,
     previousBalanceAmount,
@@ -122,7 +126,7 @@ export const prepareTransactionData = (body, user = null) => {
     description,
     createdBy,
     reference,
-    referenceModel
+    referenceModel,
   } = body;
 
   // Use accountId if available, otherwise use account
@@ -134,19 +138,19 @@ export const prepareTransactionData = (body, user = null) => {
     transactionType: transactionType.toLowerCase(),
     transactionDate: transactionDate || new Date(),
     account: finalAccountId,
-    accountName: accountName || '',
+    accountName: accountName || "",
     previousBalanceAmount: previousBalanceAmount || 0,
     amount,
     closingBalanceAmount: closingBalanceAmount || 0,
-    paymentMode: paymentMode || 'cash',
+    paymentMode: paymentMode || "cash",
     chequeNumber: chequeNumber || null,
     bank: bank || null,
-    narration: narration || '',
-    description: description || '',
+    narration: narration || "",
+    description: description || "",
     settlementDetails: [], // Will be populated after FIFO settlement
     reference: reference || null,
     referenceModel: referenceModel || null,
-    createdBy: createdBy || user?._id || null
+    createdBy: createdBy || user?._id || null,
   };
 };
 
@@ -162,21 +166,19 @@ export const calculateTransactionSummary = (transactions) => {
     byPaymentMode: {},
     fullySettled: 0,
     partiallySettled: 0,
-    unsettled: 0
+    unsettled: 0,
   };
 
-  transactions.forEach(txn => {
+  transactions.forEach((txn) => {
     summary.totalAmount += txn.amount;
 
     // Count by payment mode
-    const mode = txn.paymentMode || 'unknown';
+    const mode = txn.paymentMode || "unknown";
     summary.byPaymentMode[mode] = (summary.byPaymentMode[mode] || 0) + 1;
 
     // Settlement status
-    const settledAmount = txn.settlementDetails?.reduce(
-      (sum, s) => sum + s.settledAmount, 
-      0
-    ) || 0;
+    const settledAmount =
+      txn.settlementDetails?.reduce((sum, s) => sum + s.settledAmount, 0) || 0;
 
     if (settledAmount === 0) {
       summary.unsettled++;
@@ -196,10 +198,11 @@ export const calculateTransactionSummary = (transactions) => {
  * @returns {Object} - Formatted transaction
  */
 export const formatTransactionForDisplay = (transaction) => {
-  const settledAmount = transaction.settlementDetails?.reduce(
-    (sum, s) => sum + s.settledAmount,
-    0
-  ) || 0;
+  const settledAmount =
+    transaction.settlementDetails?.reduce(
+      (sum, s) => sum + s.settledAmount,
+      0
+    ) || 0;
 
   const unsettledAmount = transaction.amount - settledAmount;
 
@@ -213,14 +216,15 @@ export const formatTransactionForDisplay = (transaction) => {
     paymentMode: transaction.paymentMode,
     settledAmount,
     unsettledAmount,
-    settlementStatus: unsettledAmount === 0 
-      ? 'fully_settled' 
-      : settledAmount > 0 
-        ? 'partially_settled' 
-        : 'unsettled',
+    settlementStatus:
+      unsettledAmount === 0
+        ? "fully_settled"
+        : settledAmount > 0
+        ? "partially_settled"
+        : "unsettled",
     settlementsCount: transaction.settlementDetails?.length || 0,
     narration: transaction.narration,
-    createdAt: transaction.createdAt
+    createdAt: transaction.createdAt,
   };
 };
 
@@ -231,13 +235,17 @@ export const formatTransactionForDisplay = (transaction) => {
  */
 export const validateTransactionForDeletion = (transaction) => {
   // Check if transaction has settlements
-  if (transaction.settlementDetails && transaction.settlementDetails.length > 0) {
+  if (
+    transaction.settlementDetails &&
+    transaction.settlementDetails.length > 0
+  ) {
     // You might want to allow deletion but reverse settlements
     // Or prevent deletion entirely
     return {
       status: 400,
-      message: 'Cannot delete transaction with settlements. Consider reversing the transaction instead.',
-      settlementCount: transaction.settlementDetails.length
+      message:
+        "Cannot delete transaction with settlements. Consider reversing the transaction instead.",
+      settlementCount: transaction.settlementDetails.length,
     };
   }
 
@@ -289,7 +297,7 @@ export const buildTransactionQuery = (filters) => {
   }
 
   if (filters.transactionNumber) {
-    query.transactionNumber = new RegExp(filters.transactionNumber, 'i');
+    query.transactionNumber = new RegExp(filters.transactionNumber, "i");
   }
 
   return query;
@@ -310,7 +318,10 @@ export const validateEditRequest = async (
   session
 ) => {
   // Check if trying to change party account (not allowed)
-  if (updateData.account && updateData.account.toString() !== originalTx.account.toString()) {
+  if (
+    updateData.account &&
+    updateData.account.toString() !== originalTx.account.toString()
+  ) {
     throw new Error(
       "Cannot change party account. Please create a new transaction instead."
     );
@@ -320,7 +331,7 @@ export const validateEditRequest = async (
   if (updateData.transactionDate) {
     const originalDate = new Date(originalTx.transactionDate).toDateString();
     const newDate = new Date(updateData.transactionDate).toDateString();
-    
+
     if (originalDate !== newDate) {
       throw new Error(
         "Transaction date editing is currently restricted. Please contact administrator."
@@ -337,7 +348,10 @@ export const validateEditRequest = async (
 
   // Validate payment mode if provided
   const validPaymentModes = ["cash", "cheque", "dd", "bankTransfer"];
-  if (updateData.paymentMode && !validPaymentModes.includes(updateData.paymentMode)) {
+  if (
+    updateData.paymentMode &&
+    !validPaymentModes.includes(updateData.paymentMode)
+  ) {
     throw new Error(
       `Invalid payment mode. Must be one of: ${validPaymentModes.join(", ")}`
     );
@@ -348,5 +362,73 @@ export const validateEditRequest = async (
     throw new Error("Cheque number is required for cheque payment mode");
   }
 
+  return true;
+};
+
+/**
+ * Validate if account (customer/supplier) can be changed
+ * Blocks change if paid amount > 0 (payment/receipt exists)
+ *
+ * @throws Error if account change is not allowed
+ */
+export const validateAccountChangeOnEdit = async ({
+  originalTransaction,
+  updatedData,
+  session,
+}) => {
+  console.log("\n🔒 ===== VALIDATING ACCOUNT CHANGE =====");
+
+  // Check if account is being changed
+  const accountChanged =
+    updatedData.account &&
+    originalTransaction.account.toString() !== updatedData.account.toString();
+
+  if (!accountChanged) {
+    console.log("✅ Account not changed, validation passed");
+    return true;
+  }
+
+  console.log("⚠️ Account change detected");
+  console.log("Old Account:", originalTransaction.account);
+  console.log("New Account:", updatedData.account);
+
+  // Check if transaction has paid amount > 0
+  const hasPaidAmount = originalTransaction.paidAmount > 0;
+
+  if (hasPaidAmount) {
+    console.log("❌ Cannot change account - payment exists");
+    console.log("Paid Amount:", originalTransaction.paidAmount);
+
+    throw new Error(
+      `Cannot change customer/supplier when payment exists. Current paid amount: ₹${originalTransaction.paidAmount}. Please set paid amount to ₹0 first, then change the account.`
+    );
+  }
+
+  // Additionally check if linked receipt/payment exists
+  const transactionType = originalTransaction.transactionType;
+  const receiptType =
+    transactionType === "sale" || transactionType === "sales_return"
+      ? "receipt"
+      : "payment";
+
+  const ReceiptModel = getTransactionModel(receiptType);
+
+  const linkedReceipt = await ReceiptModel.findOne({
+    reference: originalTransaction._id,
+    referenceType: transactionType,
+    status: "active", // Only check active receipts
+  }).session(session);
+
+  if (linkedReceipt) {
+    console.log("❌ Cannot change account - linked receipt/payment exists");
+    console.log("Receipt Number:", linkedReceipt.transactionNumber);
+    console.log("Receipt Amount:", linkedReceipt.amount);
+
+    throw new Error(
+      `Cannot change customer/supplier - linked ${receiptType} exists (${linkedReceipt.transactionNumber}, ₹${linkedReceipt.amount}). Please cancel the ${receiptType} first by setting paid amount to ₹0.`
+    );
+  }
+
+  console.log("✅ Account change allowed - no payment exists");
   return true;
 };

@@ -18,7 +18,8 @@ const CashTransactionAccountSelector = ({
   branch,
   company,
   transactionType,
-  // resetCashTransactionData,
+  isEditMode = false,
+  onAmountFieldClick,
 }) => {
   // ============================================================================
   // CONSTANTS
@@ -33,7 +34,7 @@ const CashTransactionAccountSelector = ({
   // ============================================================================
   const [searchTerm, setSearchTerm] = useState(accountName || "");
   const [showDropdown, setShowDropdown] = useState(false);
-  console.log("transactionType", transactionType);
+
   // ============================================================================
   // REFS
   // ============================================================================
@@ -47,8 +48,7 @@ const CashTransactionAccountSelector = ({
   const isSearchEnabled = !!(
     company &&
     debouncedSearchTerm?.trim() &&
-    debouncedSearchTerm.trim().length >= MIN_SEARCH_LENGTH 
-    // !account
+    debouncedSearchTerm.trim().length >= MIN_SEARCH_LENGTH
   );
 
   // ============================================================================
@@ -90,17 +90,17 @@ const CashTransactionAccountSelector = ({
   useEffect(() => {
     const prevBalance = parseFloat(previousBalanceAmount) || 0;
     const amountValue = parseFloat(amount) || 0;
- //// if it is payment amountValue will be  considered as negative for calculating closing
-    let  closing;
-    if (transactionType==="payment"){
-           closing = prevBalance + amountValue;
-    }else{
-         closing = prevBalance - amountValue;
+    // If it is payment, amountValue will be considered as negative for calculating closing
+    let closing;
+    if (transactionType === "payment") {
+      closing = prevBalance + amountValue;
+    } else {
+      closing = prevBalance - amountValue;
     }
     if (closing !== closingBalanceAmount) {
       updateTransactionField("closingBalanceAmount", closing);
     }
-  }, [previousBalanceAmount, amount]);
+  }, [previousBalanceAmount, amount, transactionType, closingBalanceAmount, updateTransactionField]);
 
   /**
    * Handle clicks outside dropdown to close it
@@ -167,10 +167,6 @@ const CashTransactionAccountSelector = ({
     (account) => {
       const truncatedName = truncate(account.accountName, TRUNCATE_LENGTH);
       setSearchTerm(truncatedName);
-      console.log("Transaction Type:", transactionType); // Add this for debugging
-      console.log("Outstanding Dr:", account.outstandingDr);
-      console.log("Outstanding Cr:", account.outstandingCr);
-      console.log("Outstanding Cr:", transactionType);
 
       // Select previous balance based on transaction type
       const previousBalance =
@@ -226,6 +222,19 @@ const CashTransactionAccountSelector = ({
     }
     setSearchTerm("");
   }, [updateTransactionData, updateTransactionField]);
+
+  /**
+   * Handle amount input click in edit mode
+   */
+  const handleAmountClick = useCallback(
+    (e) => {
+      if (isEditMode && onAmountFieldClick) {
+        e.preventDefault();
+        onAmountFieldClick();
+      }
+    },
+    [isEditMode, onAmountFieldClick]
+  );
 
   // ============================================================================
   // RENDER HELPERS
@@ -322,7 +331,7 @@ const CashTransactionAccountSelector = ({
   // MAIN RENDER
   // ============================================================================
   return (
-    <div className="w-full bg-white  shadow-sm border border-gray-200">
+    <div className="w-full bg-white shadow-sm border border-gray-200">
       <div className="p-2 space-y-2">
         {/* From Account with Search */}
         <div className="flex items-center gap-2">
@@ -338,7 +347,7 @@ const CashTransactionAccountSelector = ({
               onChange={handleInputChange}
               onFocus={handleInputFocus}
               placeholder="Search account name"
-              className="w-full px-2 py-1.5 pr-7 border border-gray-300  text-[11px] bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-2 py-1.5 pr-7 border border-gray-300 text-[11px] bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
               autoComplete="off"
             />
             {renderInputIcon()}
@@ -347,7 +356,7 @@ const CashTransactionAccountSelector = ({
             {showDropdown && searchTerm.length >= MIN_SEARCH_LENGTH && (
               <div
                 ref={dropdownRef}
-                className="absolute z-50 w-full mt-1 bg-white border border-slate-300  shadow-lg max-h-48 overflow-y-auto"
+                className="absolute z-50 w-full mt-1 bg-white border border-slate-300 shadow-lg max-h-48 overflow-y-auto"
               >
                 {renderDropdownContent()}
               </div>
@@ -371,7 +380,7 @@ const CashTransactionAccountSelector = ({
             type="text"
             value={accountName}
             readOnly
-            className="flex-1 px-2 py-1.5 border border-gray-300  text-[11px] bg-slate-200 text-gray-900 focus:outline-none"
+            className="flex-1 px-2 py-1.5 border border-gray-300 text-[11px] bg-slate-200 text-gray-900 focus:outline-none"
           />
         </div>
 
@@ -388,7 +397,7 @@ const CashTransactionAccountSelector = ({
                 thousandSeparator=","
                 value={previousBalanceAmount}
                 disabled
-                className="w-full px-2 py-1.5 border border-gray-300  text-[11px] bg-slate-200 text-gray-900 focus:outline-none"
+                className="w-full px-2 py-1.5 border border-gray-300 text-[11px] bg-slate-200 text-gray-900 focus:outline-none"
               />
             </div>
             <div>
@@ -399,11 +408,20 @@ const CashTransactionAccountSelector = ({
                 prefix="₹"
                 thousandsGroupStyle="lakh"
                 thousandSeparator=","
-                value={amount}
+                value={amount || ""}
                 onValueChange={(values) => {
-                  updateTransactionField("amount", values.floatValue || 0);
+                  if (!isEditMode) {
+                    updateTransactionField("amount", values.floatValue);
+                  }
                 }}
-                className="w-full px-2 py-1.5 border border-gray-300  text-[11px] bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                onClick={handleAmountClick}
+                placeholder="0"
+                readOnly={isEditMode}
+                className={`w-full px-2 py-1.5 border border-gray-300 text-[11px] text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent ${
+                  isEditMode
+                    ? "bg-slate-50 cursor-pointer hover:bg-slate-100"
+                    : "bg-white"
+                }`}
               />
             </div>
 
@@ -417,7 +435,7 @@ const CashTransactionAccountSelector = ({
                 thousandSeparator=","
                 value={closingBalanceAmount}
                 disabled
-                className="w-full px-2 py-1.5 border border-gray-300  text-[11px] bg-slate-200 text-gray-900 focus:outline-none"
+                className="w-full px-2 py-1.5 border border-gray-300 text-[11px] bg-slate-200 text-gray-900 focus:outline-none"
               />
             </div>
           </div>
@@ -436,7 +454,7 @@ const CashTransactionAccountSelector = ({
             }
             rows="1"
             placeholder="Enter narration..."
-            className="flex-1 px-2 py-1.5 border border-gray-300  text-[11px] bg-white text-gray-900 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 px-2 py-1.5 border border-gray-300 text-[11px] bg-white text-gray-900 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
       </div>
