@@ -91,7 +91,8 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
       selectedCompanyFromStore._id,
       selectedBranchFromStore._id,
       editTransactionData._id,
-      currentTransactionType
+      currentTransactionType,
+      "true"// iSEdit
     ),
   });
 

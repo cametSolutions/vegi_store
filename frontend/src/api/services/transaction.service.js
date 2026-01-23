@@ -69,10 +69,10 @@ export const transactionServices = {
     }
   },
 
-  getById: async (companyId, branchId, transactionId, transactionType) => {
+  getById: async (companyId, branchId, transactionId, transactionType,isEdit) => {
     try {
       const response = await api.get(
-        `/transaction/${transactionType}/getTransactionDetails/${transactionId}?companyId=${companyId}&branchId=${branchId}&transactionId=${transactionId}&transactionType=${transactionType}`
+        `/transaction/${transactionType}/getTransactionDetails/${transactionId}?companyId=${companyId}&branchId=${branchId}&transactionId=${transactionId}&transactionType=${transactionType}&isEdit=${isEdit}`
       );
 
       return response.data;

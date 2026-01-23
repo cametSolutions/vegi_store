@@ -277,7 +277,7 @@ export const createTransaction = async (req, res) => {
 export const getTransactionDetail = async (req, res) => {
   try {
     const { transactionId } = req.params;
-    const { companyId, branchId, transactionType } = req.query;
+    const { companyId, branchId, transactionType, isEdit } = req.query;
     const TransactionModel = getTransactionModel(transactionType);
 
     const transaction = await TransactionModel.findOne({
@@ -286,14 +286,63 @@ export const getTransactionDetail = async (req, res) => {
       branch: branchId,
     }).lean();
 
-    /// if transaction type is sale ,find the settlements also;
+    if (!transaction) {
+      return res.status(404).json({
+        message: "Transaction not found",
+      });
+    }
+
+    // Handle isEdit logic
+    if (isEdit === "true") {
+      // Case 1: Receipt or Payment
+      if (transactionType === "receipt" || transactionType === "payment") {
+        // Fetch sum of closingBalanceAmount for pending outstandings
+        const outstandings = await OutstandingModel.find({
+          account: transaction.account,
+          company: companyId,
+          branch: branchId,
+          status: {$in: ["pending", "partial"]},
+        }).lean();
+
+        const sumOfClosingBalance = outstandings.reduce(
+          (sum, outstanding) => sum + (outstanding.closingBalanceAmount || 0),
+          0,
+        );
+        console.log("outstandings", outstandings);
+
+        // console.log("sumOfClosingBalance", sumOfClosingBalance);
+        console.log({
+          account: transaction.account,
+          company: companyId,
+          branch: branchId,
+          status: "pending",
+        });
+
+        // Tweak previousBalanceAmount
+        transaction.previousBalanceAmount =
+          sumOfClosingBalance + (transaction.amount || 0);
+      }
+
+      // Case 2: Sale
+      if (transactionType === "sale") {
+        // Find outstanding for this sale
+        const outstanding = await OutstandingModel.findOne({
+          sourceTransaction: transactionId,
+        }).lean();
+
+        if (outstanding) {
+          // Tweak paidAmount
+          transaction.paidAmount = outstanding.paidAmount || 0;
+        }
+      }
+    }
+
+    // Find settlement count for sale (original logic - runs always)
     if (transactionType === "sale") {
-      //find outstanding of this sale
       const outstanding = await OutstandingModel.findOne({
         sourceTransaction: transactionId,
       });
 
-      /// find settlement count
       let settlementCount = 0;
 
       if (outstanding) {
@@ -304,12 +353,6 @@ export const getTransactionDetail = async (req, res) => {
       }
 
       transaction.settlementCount = settlementCount || 0;
-    }
-
-    if (!transaction) {
-      return res.status(404).json({
-        message: "Transaction not found",
-      });
     }
 
     return res.status(200).json(transaction);

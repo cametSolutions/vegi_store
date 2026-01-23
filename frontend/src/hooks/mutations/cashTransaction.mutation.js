@@ -21,8 +21,12 @@ export const cashtransactionMutations = {
         queryKey: ["transactions", transactionType, "", company, branch],
       });
 
+      queryClient.invalidateQueries({
+        queryKey: ["reports"],
+      });
+
       toast.success(
-        `${capitalizeFirstLetter(transactionType)} created successfully!`
+        `${capitalizeFirstLetter(transactionType)} created successfully!`,
       );
 
       // Invalidate account balance if needed
@@ -48,13 +52,18 @@ export const cashtransactionMutations = {
       const transaction = data.data.transaction;
       const { company, branch, transactionType } = transaction;
       toast.success(
-        `${capitalizeFirstLetter(transactionType)}  updated successfully!`
+        `${capitalizeFirstLetter(transactionType)}  updated successfully!`,
       );
 
       // Invalidate the transaction list query
       queryClient.invalidateQueries({
         queryKey: ["transactions", transactionType, "", company, branch],
       });
+
+          queryClient.invalidateQueries({
+        queryKey: ["reports"],
+      });
+
       // Invalidate account balance if needed
       if (transaction?.account) {
         const accountId = transaction.account._id || transaction.account;
