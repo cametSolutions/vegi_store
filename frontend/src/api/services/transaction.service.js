@@ -41,7 +41,7 @@ export const transactionServices = {
     branchId,
     sortBy,
     sortOrder, 
-     startDate, // ✅ ADD
+    startDate, // ✅ ADD
     endDate 
   ) => {
     try {
@@ -69,7 +69,7 @@ export const transactionServices = {
     }
   },
 
-  getById: async (companyId, branchId, transactionId, transactionType,isEdit) => {
+  getById: async (companyId, branchId, transactionId, transactionType, isEdit) => {
     try {
       const response = await api.get(
         `/transaction/${transactionType}/getTransactionDetails/${transactionId}?companyId=${companyId}&branchId=${branchId}&transactionId=${transactionId}&transactionType=${transactionType}&isEdit=${isEdit}`
@@ -84,7 +84,7 @@ export const transactionServices = {
     }
   },
 
-    update: async (id, formData, transactionType ) => {
+  update: async (id, formData, transactionType) => {
     try {
       const response = await api.put(
         `/transaction/${transactionType}/edit/${id}`,
@@ -100,4 +100,25 @@ export const transactionServices = {
     }
   },
 
+  delete: async (id, transactionType, company, branch) => {
+    try {
+      const response = await api.delete(
+        `/transaction/${transactionType}/delete/${id}`,
+        {
+          params: {
+            companyId: company,
+            branchId: branch,
+            transactionType: transactionType
+          }
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
 };
