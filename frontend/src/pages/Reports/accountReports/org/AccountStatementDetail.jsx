@@ -297,12 +297,12 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                         <td className="px-4 py-3 text-right text-xs font-bold text-slate-800 font-mono tracking-tight border-r border-slate-300 bg-indigo-50/10">
                           {openingBalance > 0
                             ? formatINR(Math.abs(openingBalance))
-                            : ""}
+                            : "0"}
                         </td>
                         <td className="px-4 py-3 text-right text-xs font-bold text-slate-800 font-mono tracking-tight bg-indigo-50/10">
                           {openingBalance < 0
                             ? formatINR(Math.abs(openingBalance))
-                            : ""}
+                            : "0"}
                         </td>
                       </tr>
                     )}

@@ -1,5 +1,10 @@
 import { PaymentModel, ReceiptModel } from "../../model/FundTransactionMode.js";
-import { PurchaseModel, SalesModel, SalesReturnModel, PurchaseReturnModel } from "../../model/TransactionModel.js";
+import {
+  PurchaseModel,
+  SalesModel,
+  SalesReturnModel,
+  PurchaseReturnModel,
+} from "../../model/TransactionModel.js";
 
 export const transactionTypeToModelName = (transactionType) => {
   const mapping = {
@@ -11,7 +16,6 @@ export const transactionTypeToModelName = (transactionType) => {
     payment: "Payment",
   };
 
-  
   return mapping[transactionType] || transactionType;
 };
 
@@ -25,5 +29,6 @@ export const getTransactionModel = (transactionType) => {
     sales_return: SalesReturnModel, // You'll need to create these
     purchase_return: PurchaseReturnModel, // You'll need to create these
   };
+
   return mapping[transactionType];
 };

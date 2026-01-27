@@ -1,7 +1,7 @@
 // model/AdjustmentEntryModel.js
 
 import mongoose from "mongoose";
-import { nanoid } from 'nanoid';
+import { nanoid } from "nanoid";
 const { Schema } = mongoose;
 
 export const adjustmentEntrySchema = new Schema(
@@ -33,7 +33,15 @@ export const adjustmentEntrySchema = new Schema(
     originalTransactionModel: {
       type: String,
       required: true,
-      enum: ["Sale", "Purchase", "SalesReturn", "PurchaseReturn", "Receipt", "Payment","StockAdjustment"], // ✅ UPDATED
+      enum: [
+        "Sale",
+        "Purchase",
+        "SalesReturn",
+        "PurchaseReturn",
+        "Receipt",
+        "Payment",
+        "StockAdjustment",
+      ], // ✅ UPDATED
     },
     originalTransactionNumber: {
       type: String,
@@ -62,10 +70,11 @@ export const adjustmentEntrySchema = new Schema(
       type: String,
       required: true,
       enum: [
-        "amount_change",      // Net amount increased/decreased
-        "account_change",     // Party/account changed
-        "item_change",        // Items added/removed/quantity changed
-        "mixed",              // Multiple types in one edit
+        "amount_change",
+        "account_change",
+        "item_change",
+        "mixed",
+        "cancellation", // ✅ NEW - For soft delete
       ],
       index: true,
     },
@@ -114,7 +123,14 @@ export const adjustmentEntrySchema = new Schema(
         itemCode: String,
         adjustmentType: {
           type: String,
-          enum: ["added", "removed", "quantity_changed", "rate_changed", "quantity_and_rate_changed", "unchanged"],
+          enum: [
+            "added",
+            "removed",
+            "quantity_changed",
+            "rate_changed",
+            "quantity_and_rate_changed",
+            "unchanged",
+          ],
         },
         oldQuantity: {
           type: Number,
@@ -156,8 +172,8 @@ export const adjustmentEntrySchema = new Schema(
     settlementsSummary: {
       oldSettlementsCount: Number,
       newSettlementsCount: Number,
-      outstandingsReversed: [String],  // Array of outstanding numbers that were reversed
-      outstandingsSettled: [String],   // Array of outstanding numbers that were settled after edit
+      outstandingsReversed: [String], // Array of outstanding numbers that were reversed
+      outstandingsSettled: [String], // Array of outstanding numbers that were settled after edit
     },
 
     // ========================================
@@ -178,7 +194,7 @@ export const adjustmentEntrySchema = new Schema(
       default: "Transaction edited",
     },
     notes: String,
-    
+
     editedBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
@@ -212,11 +228,23 @@ export const adjustmentEntrySchema = new Schema(
       ref: "User",
     },
     reversalReason: String,
+    cancellationDetails: {
+      isCancellation: {
+        type: Boolean,
+        default: false,
+      },
+      cancellationReason: String,
+      cancelledBy: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+      cancelledAt: Date,
+    },
   },
   {
     timestamps: true,
     collection: "adjustment_entries",
-  }
+  },
 );
 
 // ========================================
@@ -226,9 +254,22 @@ adjustmentEntrySchema.index({ company: 1, branch: 1, adjustmentDate: -1 });
 adjustmentEntrySchema.index({ originalTransaction: 1, adjustmentDate: -1 });
 adjustmentEntrySchema.index({ affectedAccount: 1, adjustmentDate: -1 });
 adjustmentEntrySchema.index({ adjustmentNumber: 1 }, { unique: true });
-adjustmentEntrySchema.index({ oldAccount: 1, branch: 1, originalTransactionDate: 1 });
-adjustmentEntrySchema.index({ affectedAccount: 1, branch: 1, originalTransactionDate: 1 });
-adjustmentEntrySchema.index({ "itemAdjustments.item": 1, branch: 1, originalTransactionDate: 1, status: 1 });
+adjustmentEntrySchema.index({
+  oldAccount: 1,
+  branch: 1,
+  originalTransactionDate: 1,
+});
+adjustmentEntrySchema.index({
+  affectedAccount: 1,
+  branch: 1,
+  originalTransactionDate: 1,
+});
+adjustmentEntrySchema.index({
+  "itemAdjustments.item": 1,
+  branch: 1,
+  originalTransactionDate: 1,
+  status: 1,
+});
 adjustmentEntrySchema.index({ originalTransaction: 1 });
 
 // ========================================
@@ -239,21 +280,20 @@ adjustmentEntrySchema.index({ originalTransaction: 1 });
  * Generate adjustment number
  */
 
-
 adjustmentEntrySchema.statics.generateAdjustmentNumber = async function (
   company,
   branch,
-  session
+  session,
 ) {
   const today = new Date();
   const year = today.getFullYear();
   const month = String(today.getMonth() + 1).padStart(2, "0");
 
   const prefix = `ADJ-${year}${month}`;
-  
+
   // Generate unique ID using nanoid
   const uniqueId = nanoid(4);
-  
+
   return `${prefix}-${uniqueId}`;
 };
 
@@ -262,7 +302,7 @@ adjustmentEntrySchema.statics.generateAdjustmentNumber = async function (
  */
 adjustmentEntrySchema.statics.getAdjustmentsForTransaction = async function (
   transactionId,
-  session
+  session,
 ) {
   return this.find({
     originalTransaction: transactionId,
@@ -279,7 +319,7 @@ adjustmentEntrySchema.statics.getAccountAdjustments = async function (
   accountId,
   startDate,
   endDate,
-  session
+  session,
 ) {
   const query = {
     affectedAccount: accountId,
@@ -305,7 +345,7 @@ adjustmentEntrySchema.statics.getAccountAdjustments = async function (
 adjustmentEntrySchema.statics.getTotalAdjustmentAmount = async function (
   accountId,
   startDate,
-  endDate
+  endDate,
 ) {
   const matchStage = {
     affectedAccount: mongoose.Types.ObjectId(accountId),
@@ -348,7 +388,11 @@ adjustmentEntrySchema.statics.getTotalAdjustmentAmount = async function (
 /**
  * Reverse this adjustment
  */
-adjustmentEntrySchema.methods.reverse = async function (userId, reason, session) {
+adjustmentEntrySchema.methods.reverse = async function (
+  userId,
+  reason,
+  session,
+) {
   this.isReversed = true;
   this.reversedAt = new Date();
   this.reversedBy = userId;
@@ -358,6 +402,9 @@ adjustmentEntrySchema.methods.reverse = async function (userId, reason, session)
   return this.save({ session });
 };
 
-const AdjustmentEntry = mongoose.model("AdjustmentEntry", adjustmentEntrySchema);
+const AdjustmentEntry = mongoose.model(
+  "AdjustmentEntry",
+  adjustmentEntrySchema,
+);
 
 export default AdjustmentEntry;
