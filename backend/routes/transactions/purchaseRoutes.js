@@ -1,5 +1,5 @@
 import express from "express";
-import { createTransaction, editTransaction, getTransactionDetail, getTransactions } from "../../controller/transactionController/transactionController.js";
+import { createTransaction, deleteTransaction, editTransaction, getTransactionDetail, getTransactions } from "../../controller/transactionController/transactionController.js";
 const router = express.Router();
 
 
@@ -8,6 +8,7 @@ const router = express.Router();
   router.get("/getall", getTransactions);
   router.get("/getTransactionDetails/:transactionId", getTransactionDetail);
   router.put("/edit/:transactionId", editTransaction);
+  router.delete("/delete/:transactionId", deleteTransaction);
 
 
 export default router;

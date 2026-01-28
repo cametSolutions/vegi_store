@@ -9,10 +9,10 @@ import { removeTransactionDataFromStore } from "@/store/slices/transactionSlice"
 export const useTransactionActions = (transactionData, isEditMode = false) => {
   const queryClient = useQueryClient();
   const company = useSelector(
-    (state) => state.companyBranch?.selectedCompany?._id
+    (state) => state.companyBranch?.selectedCompany?._id,
   );
   const branch = useSelector(
-    (state) => state.companyBranch?.selectedBranch?._id
+    (state) => state.companyBranch?.selectedBranch?._id,
   );
 
   const dispatch = useDispatch();
@@ -28,6 +28,9 @@ export const useTransactionActions = (transactionData, isEditMode = false) => {
         toast.error("Having some issue with transaction type");
         return false;
       }
+      if (transactionData.priceLevel == "") {
+        transactionData.priceLevel = null;
+      }
 
       const convertedTransactionData =
         convertStringNumbersToNumbers(transactionData);
@@ -40,8 +43,8 @@ export const useTransactionActions = (transactionData, isEditMode = false) => {
           formData: transactionData,
           transactionType: transactionData.transactionType,
         });
-        queryClient.invalidateQueries({ queryKey: ['items'] });
-        
+        queryClient.invalidateQueries({ queryKey: ["items"] });
+
         dispatch(removeTransactionDataFromStore());
       } else {
         // Create new transaction
@@ -49,7 +52,7 @@ export const useTransactionActions = (transactionData, isEditMode = false) => {
           formData: { ...convertedTransactionData, company, branch },
           transactionType: transactionData.transactionType,
         });
-        queryClient.invalidateQueries({ queryKey: ['items'] });
+        queryClient.invalidateQueries({ queryKey: ["items"] });
       }
 
       return true;
@@ -57,7 +60,16 @@ export const useTransactionActions = (transactionData, isEditMode = false) => {
       console.error("Error saving transaction:", error);
       return false;
     }
-  }, [transactionData, isEditMode, createMutation, updateMutation, company, branch, dispatch, queryClient]);
+  }, [
+    transactionData,
+    isEditMode,
+    createMutation,
+    updateMutation,
+    company,
+    branch,
+    dispatch,
+    queryClient,
+  ]);
 
   const handleDelete = useCallback(async () => {
     try {
@@ -73,9 +85,11 @@ export const useTransactionActions = (transactionData, isEditMode = false) => {
       });
 
       // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['items'] });
-      queryClient.invalidateQueries({ queryKey: ['transaction', transactionData._id] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["items"] });
+      queryClient.invalidateQueries({
+        queryKey: ["transaction", transactionData._id],
+      });
 
       // Clear transaction data from store
       dispatch(removeTransactionDataFromStore());
