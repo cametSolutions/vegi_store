@@ -8,28 +8,28 @@ import { removeTransactionDataFromStore } from "@/store/slices/transactionSlice"
 
 export const useCashTransactionActions = (
   CashtransactionData,
-  isEditMode = false
+  isEditMode = false,
 ) => {
   const queryClient = useQueryClient();
   const dispatch = useDispatch();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const company = useSelector(
-    (state) => state.companyBranch?.selectedCompany?._id
+    (state) => state.companyBranch?.selectedCompany?._id,
   );
   const branch = useSelector(
-    (state) => state.companyBranch?.selectedBranch?._id
+    (state) => state.companyBranch?.selectedBranch?._id,
   );
 
   // Initialize mutations
   const createMutation = useMutation(
-    cashtransactionMutations.create(queryClient)
+    cashtransactionMutations.create(queryClient),
   );
   const updateMutation = useMutation(
-    cashtransactionMutations.update(queryClient)
+    cashtransactionMutations.update(queryClient),
   );
   const deleteMutation = useMutation(
-    cashtransactionMutations.delete(queryClient)
+    cashtransactionMutations.delete(queryClient),
   );
 
   const handleSave = useCallback(async () => {
@@ -60,13 +60,20 @@ export const useCashTransactionActions = (
     }
   }, [CashtransactionData, isEditMode, createMutation, updateMutation]);
 
-  const handleDelete = useCallback((reason) => {
-    return deleteMutation.mutateAsync({
-      id: CashtransactionData._id,
-      transactionType: CashtransactionData.transactionType,
-      reason
-    });
-  }, [CashtransactionData, deleteMutation]);
+  const handleDelete = useCallback(
+    async (reason) => {
+      await deleteMutation
+        .mutateAsync({
+          id: CashtransactionData._id,
+          transactionType: CashtransactionData.transactionType,
+          reason,
+        })
+        .finally(() => {
+          dispatch(removeTransactionDataFromStore());
+        });
+    },
+    [CashtransactionData, deleteMutation],
+  );
 
   return {
     handleSave,

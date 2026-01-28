@@ -18,7 +18,7 @@ export const cashtransactionMutations = {
 
       // Invalidate the transaction list query
       queryClient.invalidateQueries({
-        queryKey: ["transactions", transactionType, "", company, branch],
+        queryKey: ["transactions", transactionType],
       });
 
       queryClient.invalidateQueries({
@@ -57,10 +57,10 @@ export const cashtransactionMutations = {
 
       // Invalidate the transaction list query
       queryClient.invalidateQueries({
-        queryKey: ["transactions", transactionType, "", company, branch],
+        queryKey: ["transactions", transactionType],
       });
 
-          queryClient.invalidateQueries({
+      queryClient.invalidateQueries({
         queryKey: ["reports"],
       });
 
@@ -90,11 +90,11 @@ export const cashtransactionMutations = {
       const branch = transaction?.branch;
 
       // Invalidate transaction lists
+
       queryClient.invalidateQueries({
-        queryKey: ["transactions", transactionType, "", company, branch],
+        queryKey: ["transactions", transactionType],
       });
 
-      // Invalidate reports
       queryClient.invalidateQueries({
         queryKey: ["reports"],
       });
@@ -105,13 +105,15 @@ export const cashtransactionMutations = {
       });
 
       toast.success(
-        `${capitalizeFirstLetter(transactionType)} deleted successfully!`
+        `${capitalizeFirstLetter(transactionType)} deleted successfully!`,
       );
     },
 
     onError: (error) => {
       console.error("Transaction deletion failed:", error);
-      toast.error(error.message || "Error deleting transaction. Please try again.");
+      toast.error(
+        error.message || "Error deleting transaction. Please try again.",
+      );
     },
   }),
 };
