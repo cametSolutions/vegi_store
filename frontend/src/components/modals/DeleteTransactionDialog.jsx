@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 
 export function DeleteTransactionDialog({ 
@@ -20,19 +21,23 @@ export function DeleteTransactionDialog({
   isDeleting = false 
 }) {
   const [isAgreed, setIsAgreed] = useState(false);
+  const [reason, setReason] = useState("");
 
   const handleOpenChange = (newOpen) => {
     onOpenChange(newOpen);
     if (!newOpen) {
       setIsAgreed(false); // Reset checkbox when dialog closes
+      setReason(""); // Reset reason when dialog closes
     }
   };
 
   const handleConfirm = () => {
-    if (isAgreed && !isDeleting) {
-      onConfirm();
+    if (isAgreed && !isDeleting && reason.trim()) {
+      onConfirm(reason);
     }
   };
+
+  const isConfirmDisabled = !isAgreed || !reason.trim() || isDeleting;
 
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
@@ -45,7 +50,29 @@ export function DeleteTransactionDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="flex items-center space-x-2 py-4">
+        {/* Reason Input */}
+        <div className="space-y-2 py-2">
+          <Label htmlFor="deletion-reason" className="text-sm font-medium">
+            Reason for Deletion <span className="text-red-500">*</span>
+          </Label>
+          <Textarea
+            id="deletion-reason"
+            placeholder="Enter reason for deleting this transaction..."
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            disabled={isDeleting}
+            rows={3}
+            className="resize-none"
+          />
+          {reason.trim() === "" && (
+            <p className="text-xs text-muted-foreground">
+              Please provide a reason for audit purposes
+            </p>
+          )}
+        </div>
+
+        {/* Confirmation Checkbox */}
+        <div className="flex items-center space-x-2 py-2">
           <Checkbox
             id="agree-delete"
             checked={isAgreed}
@@ -64,7 +91,7 @@ export function DeleteTransactionDialog({
           <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
-            disabled={!isAgreed || isDeleting}
+            disabled={isConfirmDisabled}
             className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
           >
             {isDeleting ? (

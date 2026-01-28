@@ -78,4 +78,40 @@ export const cashtransactionMutations = {
       toast.error("Error updating transaction. Please try again.");
     },
   }),
+
+  delete: (queryClient) => ({
+    mutationFn: ({ id, transactionType, reason }) =>
+      cashTransactionServices.delete(id, transactionType, reason),
+
+    onSuccess: (response, variables) => {
+      const { transactionType } = variables;
+      const transaction = response?.data?.cancelledTransaction;
+      const company = transaction?.company;
+      const branch = transaction?.branch;
+
+      // Invalidate transaction lists
+      queryClient.invalidateQueries({
+        queryKey: ["transactions", transactionType, "", company, branch],
+      });
+
+      // Invalidate reports
+      queryClient.invalidateQueries({
+        queryKey: ["reports"],
+      });
+
+      // Invalidate account master
+      queryClient.invalidateQueries({
+        queryKey: ["accountMaster"],
+      });
+
+      toast.success(
+        `${capitalizeFirstLetter(transactionType)} deleted successfully!`
+      );
+    },
+
+    onError: (error) => {
+      console.error("Transaction deletion failed:", error);
+      toast.error(error.message || "Error deleting transaction. Please try again.");
+    },
+  }),
 };

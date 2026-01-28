@@ -49,9 +49,9 @@ const TransactionActions = ({
     setShowDeleteDialog(true);
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = async (reason) => {
     try {
-      await handleDelete();
+      await handleDelete(reason);
       setShowDeleteDialog(false);
       toast.success("Transaction deleted successfully");
       

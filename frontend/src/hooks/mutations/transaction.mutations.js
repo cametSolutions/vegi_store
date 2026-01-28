@@ -87,8 +87,8 @@ export const transactionMutations = {
   }),
 
   delete: (queryClient) => ({
-    mutationFn: ({ id, transactionType, company, branch }) =>
-      transactionServices.delete(id, transactionType, company, branch),
+    mutationFn: ({ id, transactionType, company, branch , reason}) =>
+      transactionServices.delete(id, transactionType, company, branch, reason),
 
     onSuccess: (response, variables) => {
       const { id, transactionType, company, branch } = variables;

@@ -71,7 +71,7 @@ export const useTransactionActions = (transactionData, isEditMode = false) => {
     queryClient,
   ]);
 
-  const handleDelete = useCallback(async () => {
+  const handleDelete = useCallback(async (reason) => {
     try {
       if (!transactionData?._id) {
         throw new Error("Transaction ID is missing");
@@ -82,6 +82,7 @@ export const useTransactionActions = (transactionData, isEditMode = false) => {
         transactionType: transactionData.transactionType,
         company,
         branch,
+        reason,
       });
 
       // Invalidate relevant queries

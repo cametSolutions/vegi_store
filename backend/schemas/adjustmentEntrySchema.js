@@ -231,7 +231,7 @@ export const adjustmentEntrySchema = new Schema(
     cancellationDetails: {
       isCancellation: {
         type: Boolean,
-        default: false,
+        // default: false,
       },
       cancellationReason: String,
       cancelledBy: {

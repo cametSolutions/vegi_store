@@ -491,7 +491,7 @@ export const editTransaction = async (req, res) => {
       originalTransaction,
       updatedData,
       session,
-      markItemWithOutCheck=true,/// NEW PARAM TO MARK ITEM WITH OUT CHECK IF IT IS CHANGED OR NOT
+      true,/// NEW PARAM TO MARK ITEM WITH OUT CHECK IF IT IS CHANGED OR NOT
     );
 
     // ========================================
@@ -608,7 +608,7 @@ export const deleteTransaction = async (req, res) => {
 
   try {
     const { transactionId } = req.params;
-    const reason  = "Transaction Cancelled";
+    const reason  = req.body.reason;
     const userId = req.user._id;
 
     console.log(`\n🛑 STARTING CANCELLATION: Transaction ${transactionId}`);
@@ -725,7 +725,7 @@ export const deleteTransaction = async (req, res) => {
         outstandingAffected: outstanding?._id,
         outstandingOldBalance: outstanding ? netAmount : 0,
         outstandingNewBalance: outstanding ? outstanding.closingBalanceAmount : 0,
-        reason: "Transaction Cancelled",
+        reason: reason || "Transaction Cancelled",
         editedBy: userId,
         cancellationDetails: {
             isCancellation: true,

@@ -1,6 +1,11 @@
 import mongoose from "mongoose";
 import { getTransactionModel } from "../../helpers/FundTransactionHelper/FundTransactionHelper.js";
-import { createFundTransaction, editFundTransaction } from "../../services/fundTransactionService.js";
+import {
+  cancelFundTransaction,
+  createFundTransaction,
+  editFundTransaction,
+} from "../../services/fundTransactionService.js";
+import { markMonthlyBalanceDirtyForFundTransaction } from "../../helpers/CommonTransactionHelper/monthlyBalanceService.js";
 
 /**
  * Create a new cash transaction (Receipt or Payment)
@@ -14,7 +19,6 @@ import { createFundTransaction, editFundTransaction } from "../../services/fundT
  */
 export const createFundTransactionController = async (req, res) => {
   try {
-
     const { transactionType } = req.params;
 
     if (!req.user?._id) {
@@ -141,8 +145,8 @@ export const getTransactions = async (req, res) => {
       ];
     }
     if (accountId) filter.account = accountId; // ✅ Fixed: was query.account
-    if (company) filter.company = company;     // ✅ Fixed: was query.company
-    if (branch) filter.branch = branch;        // ✅ Fixed: was query.branch
+    if (company) filter.company = company; // ✅ Fixed: was query.company
+    if (branch) filter.branch = branch; // ✅ Fixed: was query.branch
     if (paymentMode) filter.paymentMode = paymentMode; // ✅ Fixed: was query.paymentMode
 
     if (startDate || endDate) {
@@ -156,7 +160,7 @@ export const getTransactions = async (req, res) => {
       filter,
       page,
       limit,
-      sort
+      sort,
     );
 
     // Transform data for frontend table
@@ -169,15 +173,15 @@ export const getTransactions = async (req, res) => {
       amount: transaction.amount || 0,
       closingBalanceAmount: transaction.closingBalanceAmount || 0,
       status: (transaction.closingBalanceAmount || 0) === 0 ? "paid" : "unpaid",
+      isCancelled: transaction.isCancelled || false,
     }));
 
     res.status(200).json({
       success: true,
       data: formattedTransactions,
-        totalCount: result.pagination.total,
-      pagination: result.pagination
+      totalCount: result.pagination.total,
+      pagination: result.pagination,
     });
-
   } catch (error) {
     console.error("Error fetching transactions:", error);
     res.status(500).json({
@@ -187,92 +191,13 @@ export const getTransactions = async (req, res) => {
     });
   }
 };
-/**
- * Delete/Cancel transaction
- */
-export const deleteTransaction = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    const { id, transactionType } = req.params;
-
-    if (
-      !transactionType ||
-      !["receipt", "payment"].includes(transactionType.toLowerCase())
-    ) {
-      await session.abortTransaction();
-      return res.status(400).json({
-        success: false,
-        message: "Valid transaction type (receipt/payment) is required in URL",
-      });
-    }
-
-    const TransactionModel = getTransactionModel(transactionType);
-    const transaction = await TransactionModel.findById(id).session(session);
-
-    if (!transaction) {
-      await session.abortTransaction();
-      return res.status(404).json({
-        success: false,
-        message: "Transaction not found",
-      });
-    }
-
-    // Reverse outstanding settlements
-    const { reverseOutstandingSettlement } = await import(
-      "../../Helper/OutstandingSettlement.js"
-    );
-    await reverseOutstandingSettlement({
-      transactionId: id,
-      settlementDetails: transaction.settlementDetails,
-      accountId: transaction.account,
-      amount: transaction.amount,
-      transactionType: transactionType.toLowerCase(),
-      userId: req.user?._id,
-      session,
-    });
-
-    // Reverse cash/bank ledger entry
-    const { reverseCashBankLedgerEntry } = await import(
-      "../../Helper/CashBankLedgerHelper.js"
-    );
-    await reverseCashBankLedgerEntry({
-      transactionId: id,
-      userId: req.user?._id,
-      reason: "Transaction deleted",
-      session,
-    });
-
-    // Delete transaction
-    await TransactionModel.findByIdAndDelete(id).session(session);
-
-    await session.commitTransaction();
-
-    res.status(200).json({
-      success: true,
-      message: "Transaction deleted successfully",
-    });
-  } catch (error) {
-    await session.abortTransaction();
-    console.error("Error deleting transaction:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete transaction",
-      error: error.message,
-    });
-  } finally {
-    session.endSession();
-  }
-};
-
 
 /**
  * Edit an existing Receipt or Payment transaction
- * 
+ *
  * @route PUT /api/fund-transactions/:transactionType/:transactionId
  * @access Private
- * 
+ *
  * Workflow:
  * 1. Validate edit request and permissions
  * 2. Reverse outstanding settlements (mark as reversed)
@@ -285,7 +210,6 @@ export const deleteTransaction = async (req, res) => {
  */
 export const editFundTransactionController = async (req, res) => {
   try {
-    
     const { transactionType, transactionId } = req.params;
 
     console.log("Edit request params:", req.params);
@@ -315,7 +239,6 @@ export const editFundTransactionController = async (req, res) => {
     });
 
     // console.log("result",result);
-    
 
     res.status(200).json({
       success: true,
@@ -331,5 +254,184 @@ export const editFundTransactionController = async (req, res) => {
       message: "Failed to update transaction",
       error: error.message,
     });
+  }
+};
+
+/**
+ * Cancel Receipt or Payment Transaction
+ *
+ * @route DELETE /api/fund-transactions/:transactionType/:transactionId
+ * @access Private
+ *
+ * Workflow:
+ * 1. Validate transaction exists and not already cancelled
+ * 2. Reverse all settlements (bills go back to pending)
+ * 3. Reverse Cash/Bank Ledger entry
+ * 4. Create Adjustment Entry for audit trail
+ * 5. Mark transaction as cancelled
+ * 6. Mark Monthly Balances as dirty
+ *
+ * Note: Does NOT update source transaction's paidAmount (per your requirement)
+ */
+export const deleteFundTransactionController = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { transactionType, transactionId } = req.params;
+    const { reason } = req.body;
+    const userId = req.user._id;
+
+    console.log(`\n🛑 ===== CANCELLING ${transactionType.toUpperCase()} =====`);
+    console.log(`Transaction ID: ${transactionId}`);
+    console.log(`User: ${userId}`);
+    console.log(`Reason: ${reason || "No reason provided"}`);
+
+    // ==================== STEP 1: VALIDATE ====================
+    console.log("\n🔍 Step 1: Validating transaction...");
+
+    // Validate transaction type
+    if (!["receipt", "payment"].includes(transactionType)) {
+      throw new Error(
+        "Invalid transaction type. Must be 'receipt' or 'payment'",
+      );
+    }
+
+    // Get transaction model
+    const TransactionModel = getTransactionModel(transactionType);
+
+    // Fetch transaction
+    const transaction =
+      await TransactionModel.findById(transactionId).session(session);
+
+    if (!transaction) {
+      throw new Error(`${transactionType} not found`);
+    }
+
+    // Check if already cancelled
+    if (transaction.isCancelled || transaction.status === "cancelled") {
+      throw new Error(`${transactionType} is already cancelled`);
+    }
+
+    const {
+      company,
+      branch,
+      account,
+      accountName,
+      amount,
+      transactionNumber,
+      transactionDate,
+      reference,
+    } = transaction;
+
+    console.log(`✅ Found ${transactionType}: ${transactionNumber}`);
+    console.log(`   Amount: ₹${amount}`);
+    console.log(`   Account: ${accountName}`);
+    console.log(`   Reference: ${reference || "None"}`);
+
+    // ==================== STEP 2: CANCEL FUND TRANSACTION ====================
+    // This function handles:
+    // - Reversing settlements (bills go back to pending)
+    // - Reversing Cash/Bank ledger
+    // - Creating adjustment entry
+    console.log("\n🔄 Step 2: Executing cancellation service...");
+
+    const cancellationResult = await cancelFundTransaction({
+      transactionId,
+      transactionType,
+      userId,
+      reason: reason || `${transactionType} cancelled by user`,
+      session,
+    });
+
+    console.log("✅ Cancellation service completed:");
+    console.log(
+      `   Settlements reversed: ${cancellationResult.settlementsReversed?.count || 0}`,
+    );
+    console.log(
+      `   Bills affected: ${cancellationResult.settlementsReversed?.settlements?.length || 0}`,
+    );
+    console.log(
+      `   Cash/Bank reversed: ${cancellationResult.cashBankReversed ? "Yes" : "No"}`,
+    );
+
+    // ==================== STEP 3: MARK TRANSACTION AS CANCELLED ====================
+    console.log("\n🚫 Step 3: Marking transaction as cancelled...");
+
+    transaction.isCancelled = true;
+    transaction.cancelledAt = new Date();
+    transaction.cancelledBy = userId;
+    transaction.cancellationReason = reason || `${transactionType} cancelled`;
+    transaction.status = "cancelled";
+
+    await transaction.save({ session });
+
+    console.log(`✅ ${transactionType} marked as cancelled`);
+
+    // ==================== STEP 4: MARK MONTHLY BALANCES DIRTY ====================
+    console.log("\n📅 Step 4: Marking monthly balances for recalculation...");
+
+    // await markMonthlyBalancesForRecalculation(
+    //   transaction, // original
+    //   transaction, // updated (same object)
+    //   session,
+    //   true // forceRecalculate
+    // );
+
+    console.log("\n📅 STEP 11: Marking monthly balance as dirty...");
+    const dirtyTaggingResult = await markMonthlyBalanceDirtyForFundTransaction({
+      accountId: transaction.account,
+      transactionDate: transaction.transactionDate,
+      company: transaction.company,
+      branch: transaction.branch,
+      session,
+    });
+
+    console.log("✅ Monthly balances marked for recalculation");
+
+    // ==================== STEP 5: COMMIT ====================
+    await session.commitTransaction();
+
+    console.log("\n✅ ===== CANCELLATION COMPLETED SUCCESSFULLY =====\n");
+
+    // ==================== RESPONSE ====================
+    res.status(200).json({
+      success: true,
+      message: `${transactionType} cancelled successfully`,
+      data: {
+        cancelledTransaction: {
+          id: transaction._id,
+          number: transactionNumber,
+          type: transactionType,
+          amount: amount,
+          account: accountName,
+          date: transactionDate,
+        },
+        adjustmentEntry: {
+          number: cancellationResult.adjustmentNumber,
+          id: cancellationResult.adjustmentId,
+        },
+        settlementsReversed: cancellationResult.settlementsReversed?.count || 0,
+        billsAffected:
+          cancellationResult.settlementsReversed?.settlements?.map(
+            (s) => s.outstandingNumber,
+          ) || [],
+        cashBankReversed: cancellationResult.cashBankReversed,
+      },
+    });
+  } catch (error) {
+    await session.abortTransaction();
+
+    console.error("\n❌ ===== CANCELLATION FAILED =====");
+    console.error(`Error: ${error.message}`);
+    console.error(error.stack);
+
+    res.status(500).json({
+      success: false,
+      message: `Failed to cancel ${req.params.transactionType}`,
+      error: error.message,
+    });
+  } finally {
+    session.endSession();
   }
 };

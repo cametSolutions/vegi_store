@@ -20,7 +20,7 @@ export const transactionServices = {
     try {
       const response = await api.post(
         `/transaction/${transactionType}/create`,
-        formData
+        formData,
       );
 
       return response.data;
@@ -40,9 +40,9 @@ export const transactionServices = {
     companyId,
     branchId,
     sortBy,
-    sortOrder, 
+    sortOrder,
     startDate, // ✅ ADD
-    endDate 
+    endDate,
   ) => {
     try {
       const response = await api.get(`/transaction/${transactionType}/getall`, {
@@ -56,7 +56,7 @@ export const transactionServices = {
           sortBy,
           sortOrder,
           startDate: startDate?.toISOString(), // ✅ ADD
-          endDate: endDate?.toISOString(), 
+          endDate: endDate?.toISOString(),
         },
       });
 
@@ -69,10 +69,16 @@ export const transactionServices = {
     }
   },
 
-  getById: async (companyId, branchId, transactionId, transactionType, isEdit) => {
+  getById: async (
+    companyId,
+    branchId,
+    transactionId,
+    transactionType,
+    isEdit,
+  ) => {
     try {
       const response = await api.get(
-        `/transaction/${transactionType}/getTransactionDetails/${transactionId}?companyId=${companyId}&branchId=${branchId}&transactionId=${transactionId}&transactionType=${transactionType}&isEdit=${isEdit}`
+        `/transaction/${transactionType}/getTransactionDetails/${transactionId}?companyId=${companyId}&branchId=${branchId}&transactionId=${transactionId}&transactionType=${transactionType}&isEdit=${isEdit}`,
       );
 
       return response.data;
@@ -88,7 +94,7 @@ export const transactionServices = {
     try {
       const response = await api.put(
         `/transaction/${transactionType}/edit/${id}`,
-        formData
+        formData,
       );
 
       return response.data;
@@ -100,17 +106,19 @@ export const transactionServices = {
     }
   },
 
-  delete: async (id, transactionType, company, branch) => {
+  delete: async (id, transactionType, company, branch, reason) => {
     try {
       const response = await api.delete(
         `/transaction/${transactionType}/delete/${id}`,
+
         {
           params: {
             companyId: company,
             branchId: branch,
-            transactionType: transactionType
-          }
-        }
+            transactionType: transactionType,
+          },
+          data: { reason },
+        },
       );
 
       return response.data;

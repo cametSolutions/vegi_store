@@ -146,14 +146,14 @@ FundTransactionSchema.statics.getPaginatedTransactions = async function (
   page = 1,
   limit = 50,
   sort = { transactionDate: -1, _id: -1 }, // ✅ Fixed: was 'date'
-  includeStatus = ["active"] // ✅ NEW parameter
+  // includeStatus = ["active"] // ✅ NEW parameter
 ) {
   const skip = (page - 1) * limit;
 
   // ✅ Add status filter
   const queryFilter = {
     ...filter,
-    ...(includeStatus && includeStatus.length > 0 ? { status: { $in: includeStatus } } : {})
+    // ...(includeStatus && includeStatus.length > 0 ? { status: { $in: includeStatus } } : {})
   };
 
   const [total, transactions] = await Promise.all([
