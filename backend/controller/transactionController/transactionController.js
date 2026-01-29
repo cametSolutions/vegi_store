@@ -459,6 +459,7 @@ export const editTransaction = async (req, res) => {
         deltas.stockDelta,
         originalTransaction.branch,
         session,
+        originalTransaction.transactionType
       );
     }
 
@@ -708,7 +709,7 @@ export const deleteTransaction = async (req, res) => {
 
     if (items && items.length > 0) {
       const reverseDir = behavior.stockDirection === "out" ? "in" : "out";
-      await updateStock(items, reverseDir, branch, session);
+      await updateStock(items, reverseDir, branch, session, transactionType);
       console.log(
         `✅ Stock reversed (${reverseDir}) for ${items.length} items`,
       );
