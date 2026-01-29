@@ -1,6 +1,6 @@
 import { formatDate } from "../../../../../../shared/utils/date";
 import { formatINR } from "../../../../../../shared/utils/currency";
-import { LoaderCircle, Printer } from "lucide-react";
+import { LoaderCircle, Printer, Ban } from "lucide-react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -15,10 +15,10 @@ const ListTable = ({
   isFetchingNextPage,
   onEditTransaction,
   editTransactionId,
-  currentTransactionType, // Add this prop to know the transaction type
+  currentTransactionType,
 }) => {
   const navigate = useNavigate();
-  
+
   const selectedCompanyFromStore = useSelector(
     (state) => state.companyBranch?.selectedCompany
   );
@@ -26,61 +26,61 @@ const ListTable = ({
     (state) => state.companyBranch?.selectedBranch
   );
 
+  // Helper to safely get tailwind text alignment class
+  const getTextAlign = (align) => {
+    switch (align) {
+      case "right": return "text-right justify-end";
+      case "center": return "text-center justify-center";
+      case "left": return "text-left justify-start";
+      default: return "text-center justify-center";
+    }
+  };
+
   const columns = [
-    { key: "id", label: "Bill No", width: "w-[12%]" },
-    { key: "date", label: "Date", align: "center", width: "w-[12%]" },
-    { key: "party", label: "Party", align: "left", width: "w-[20%]" },
-    { key: "total", label: "Total", align: "center", width: "w-[14%]" },
-    { key: "discount", label: "Disc", align: "center", width: "w-[14%]" },
-    { key: "paid", label: "Paid", align: "center", width: "w-[14%]" },
-    { key: "balance", label: "Balance", align: "right", width: "w-[14%]" },
-    { key: "Print", label: "Print", align: "right", width: "w-[12%]" },
+    { key: "id", label: "Bill No", width: "w-[12%]", align: "left" },
+    { key: "date", label: "Date", width: "w-[12%]", align: "center" },
+    { key: "party", label: "Party", width: "w-[20%]", align: "left" }, // Changed to left for better readability
+    { key: "total", label: "Total", width: "w-[14%]", align: "center" },
+    { key: "discount", label: "Disc", width: "w-[14%]", align: "center" },
+    { key: "balance", label: "Net", width: "w-[14%]", align: "right" },
+    { key: "paid", label: "Paid", width: "w-[14%]", align: "center" },
+    { key: "print", label: "Print", width: "w-[12%]", align: "right" }, // Print is the 8th column (index 7)
   ];
 
-  // Navigate to print preview
- const handlePrintClick = (transaction) => {
-  const transactionType = currentTransactionType || transaction?.transactionType || "sale";
-  
-  // Get Redux state
-  // Pass state with navigation
-  navigate(`/transactions/Print/${transaction._id}?type=${transactionType}`, {
-    state: {
-      companyId: selectedCompanyFromStore?._id,
-      branchId: selectedBranchFromStore?._id,
-    }
-  });
-};
+  const handlePrintClick = (transaction) => {
+    const transactionType =
+      currentTransactionType || transaction?.transactionType || "sale";
+    navigate(`/transactions/Print/${transaction._id}?type=${transactionType}`, {
+      state: {
+        companyId: selectedCompanyFromStore?._id,
+        branchId: selectedBranchFromStore?._id,
+      },
+    });
+  };
 
-  // Double click handler
   const handleDoubleClick = (transaction) => {
-    
+    if (transaction.isCancelled) return;
     onEditTransaction(transaction);
   };
 
   return (
     <div className="w-full border shadow bg-white overflow-hidden">
+      {/* Header */}
       <div className="bg-slate-500 pr-3">
+        {/* pr-3 adds padding for scrollbar alignment if scrollbar is visible in body */}
         <table className="w-full border-collapse table-fixed">
           <thead>
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`${column.width} text-white border-b px-3 py-2 text-${
-                    column.align || "center"
-                  } text-[11px] font-medium uppercase ${
-                    column.sortable !== false ? "cursor-pointer hover:bg-gray-400" : ""
+                  className={`${column.width} text-white border-b px-3 py-2 text-[11px] font-medium uppercase ${
+                    column.sortable !== false
+                      ? "cursor-pointer hover:bg-gray-400"
+                      : ""
                   }`}
                 >
-                  <div
-                    className={`flex items-center ${
-                      column.align === "right"
-                        ? "justify-end"
-                        : column.align === "center"
-                        ? "justify-center"
-                        : ""
-                    } space-x-1`}
-                  >
+                  <div className={`flex items-center ${getTextAlign(column.align)} space-x-1`}>
                     <span>{column.label}</span>
                   </div>
                 </th>
@@ -104,118 +104,138 @@ const ListTable = ({
               <p className="mt-2 text-xs">Loading more...</p>
             </div>
           }
-          endMessage={
-            data.length > 10 && (
-              <div className="text-center py-4 font-semibold text-gray-400 text-[11px]">
-                No more transactions to load
-              </div>
-            )
-          }
           scrollableTarget="scrollableDiv"
         >
           <table className="w-full border-collapse table-fixed">
             <tbody className="divide-y divide-gray-200">
-              {isFetching ? (
-                <tr>
-                  <td colSpan={columns.length} className="text-center py-20">
-                    <div className="flex items-center justify-center h-[calc(100vh-460px)]">
-                      <LoaderCircle className="animate-spin w-8 h-8 text-slate-500" />
-                    </div>
-                  </td>
-                </tr>
-              ) : status === "error" ? (
-                <tr>
-                  <td
-                    colSpan={columns.length}
-                    className="text-center py-20 h-[calc(100vh-260px)]"
-                  >
-                    <p className="text-gray-500 text-xs font-semibold">
-                      !Oops..Error loading transactions
-                    </p>
-                    <button
-                      onClick={refetch}
-                      className="text-[10px] cursor-pointer font-semibold bg-blue-400 p-1 px-2 text-white rounded mt-2"
+              {data &&
+                data.map((transaction) => {
+                  const isCancelled = transaction.isCancelled;
+                  const isSelected = editTransactionId === transaction._id;
+
+                  let rowClass = "transition-colors cursor-pointer ";
+                  if (isCancelled) {
+                    rowClass += "bg-red-50 hover:bg-red-100 opacity-75 ";
+                  } else if (isSelected) {
+                    rowClass += "bg-[#add4f3] ";
+                  } else {
+                    rowClass += "bg-slate-200 hover:bg-slate-300 ";
+                  }
+
+                  return (
+                    <tr
+                      key={transaction._id}
+                      className={rowClass}
+                      onDoubleClick={() => handleDoubleClick(transaction)}
                     >
-                      Retry
-                    </button>
-                  </td>
-                </tr>
-              ) : !data || data.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={columns.length}
-                    className="text-center py-20 h-[calc(100vh-260px)]"
-                  >
-                    <p className="text-gray-500 text-sm">No transactions found</p>
-                  </td>
-                </tr>
-              ) : (
-                data.map((transaction) => (
-                  <tr
-                    key={transaction._id}
-                    className={`${
-                      editTransactionId === transaction._id
-                        ? "bg-[#add4f3]  "
-                        : " bg-slate-200 hover:bg-slate-300 "
-                    }  transition-colors cursor-pointer`}
-                    onDoubleClick={() => handleDoubleClick(transaction)}
-                  >
-                    <td
-                      className={`${columns[0].width} px-3 py-2 text-[9.5px] font-medium text-gray-600`}
-                    >
-                      {transaction?.transactionNumber}
-                    </td>
-                    <td
-                      className={`${columns[1].width} px-3 py-2 text-[9.5px] text-gray-600 text-center`}
-                    >
-                      {formatDate(transaction?.transactionDate)}
-                    </td>
-                    <td
-                      className={`${columns[2].width} px-3 py-2 text-[9.5px] font-medium text-gray-900 truncate`}
-                    >
-                      {transaction?.account?.accountName}
-                    </td>
-                    <td
-                      className={`${columns[3].width} px-3 py-2 text-[9.5px] text-gray-900 text-center font-mono`}
-                    >
-                      ₹{formatINR(transaction?.totalAmountAfterTax)}
-                    </td>
-                    <td
-                      className={`${columns[4].width} px-3 py-2 text-[9.5px] text-gray-900 text-center font-mono`}
-                    >
-                      ₹{formatINR(transaction?.discountAmount)}
-                    </td>
-                    <td
-                      className={`${columns[5].width} px-3 py-2 text-[9.5px] text-gray-900 text-center font-mono`}
-                    >
-                      ₹{formatINR(transaction?.paidAmount)}
-                    </td>
-                    <td
-                      className={`${columns[6].width} px-3 py-2 text-right text-[9.5px] font-mono`}
-                    >
-                      <span
-                        className={`${
-                          transaction?.balanceAmount > 0 ? "text-red-600" : "text-green-600"
-                        }`}
+                      {/* 1. Bill No */}
+                      <td
+                        className={`${columns[0].width} px-3 py-2 text-[9.5px] font-medium text-gray-600 relative text-left`}
                       >
-                        ₹{formatINR(transaction?.netAmount)}
-                      </span>
-                    </td>
-                    <td
-                      className={`${columns[7].width} px-3 py-2 text-center text-[9.5px] font-mono`}
-                    >
-                      <button
-                        onClick={(e) => {
-                          handlePrintClick(transaction);
-                        }}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-[10px] font-semibold cursor-pointer"
+                        <span
+                          className={
+                            isCancelled
+                              ? "line-through decoration-red-400 decoration-2"
+                              : ""
+                          }
+                        >
+                          {transaction?.transactionNumber}
+                        </span>
+                      </td>
+
+                      {/* 2. Date */}
+                      <td
+                        className={`${columns[1].width} px-3 py-2 text-[9.5px] text-gray-600 text-center`}
                       >
-                        <Printer size={12} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
+                        <span
+                          className={
+                            isCancelled ? "line-through text-gray-400" : ""
+                          }
+                        >
+                          {formatDate(transaction?.transactionDate)}
+                        </span>
+                      </td>
+
+                      {/* 3. Party */}
+                      <td
+                        className={`${columns[2].width} px-3 py-2 text-[9.5px] font-medium text-gray-900 truncate text-left`}
+                      >
+                        <span
+                          className={
+                            isCancelled ? "line-through text-gray-500" : ""
+                          }
+                        >
+                          {transaction?.account?.accountName}
+                        </span>
+                      </td>
+
+                      {/* 4. Total */}
+                      <td
+                        className={`${columns[3].width} px-3 py-2 text-[9.5px] text-gray-900 text-center font-mono`}
+                      >
+                        <span
+                          className={
+                            isCancelled ? "line-through text-gray-400" : ""
+                          }
+                        >
+                          ₹{formatINR(transaction?.totalAmountAfterTax)}
+                        </span>
+                      </td>
+
+                      {/* 5. Disc */}
+                      <td
+                        className={`${columns[4].width} px-3 py-2 text-[9.5px] text-gray-900 text-center font-mono`}
+                      >
+                        <span
+                          className={
+                            isCancelled ? "line-through text-gray-400" : ""
+                          }
+                        >
+                          ₹{formatINR(transaction?.discountAmount)}
+                        </span>
+                      </td>
+
+                      {/* 6. Balance (Fixed Index: was columns[6], now columns[5]) */}
+                      <td
+                        className={`${columns[5].width} px-3 py-2 text-right text-[9.5px] font-mono`}
+                      >
+                        {isCancelled ? (
+                          <span className="text-gray-400 font-bold">₹0.00</span>
+                        ) : (
+                          <span className="text-gray-900">
+                            ₹{formatINR(transaction?.netAmount)}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* 7. Paid (Fixed Index: was columns[5], now columns[6]) */}
+                      <td
+                        className={`${columns[6].width} px-3 py-2 text-[9.5px] text-gray-900 text-center font-mono`}
+                      >
+                        <span
+                          className={
+                            isCancelled ? "line-through text-gray-400" : ""
+                          }
+                        >
+                          ₹{formatINR(transaction?.paidAmount)}
+                        </span>
+                      </td>
+
+                      {/* 8. Print (Fixed Index: was columns[7], removed duplicate Paid column) */}
+                      <td
+                        className={`${columns[7].width} px-3 py-2 text-center text-[9.5px] font-mono`}
+                      >
+                        <button
+                          disabled={isCancelled}
+                          onClick={(e) => handlePrintClick(transaction)}
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-[10px] font-semibold cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        >
+                          <Printer size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
         </InfiniteScroll>

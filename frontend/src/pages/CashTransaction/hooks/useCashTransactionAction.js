@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cashtransactionMutations } from "../../../hooks/mutations/cashTransaction.mutation";
 import { useDispatch, useSelector } from "react-redux";
@@ -8,32 +8,35 @@ import { removeTransactionDataFromStore } from "@/store/slices/transactionSlice"
 
 export const useCashTransactionActions = (
   CashtransactionData,
-  isEditMode = false
+  isEditMode = false,
 ) => {
   const queryClient = useQueryClient();
   const dispatch = useDispatch();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const company = useSelector(
-    (state) => state.companyBranch?.selectedCompany?._id
+    (state) => state.companyBranch?.selectedCompany?._id,
   );
   const branch = useSelector(
-    (state) => state.companyBranch?.selectedBranch?._id
+    (state) => state.companyBranch?.selectedBranch?._id,
   );
-  // Initialize both mutations
+
+  // Initialize mutations
   const createMutation = useMutation(
-    cashtransactionMutations.create(queryClient)
+    cashtransactionMutations.create(queryClient),
   );
   const updateMutation = useMutation(
-    cashtransactionMutations.update(queryClient)
+    cashtransactionMutations.update(queryClient),
+  );
+  const deleteMutation = useMutation(
+    cashtransactionMutations.delete(queryClient),
   );
 
   const handleSave = useCallback(async () => {
     try {
       const convertedData = convertStringNumbersToNumbers(CashtransactionData);
 
-      // Choose mutation based on mode
       if (isEditMode) {
-        // Update existing transaction
         await updateMutation
           .mutateAsync({
             id: CashtransactionData._id,
@@ -42,12 +45,10 @@ export const useCashTransactionActions = (
           })
           .finally(() => {
             dispatch(removeTransactionDataFromStore());
-          })
+          });
       } else {
-        // Create new transaction
         await createMutation.mutateAsync({
           formData: { ...convertedData, company, branch },
-
           transactionType: CashtransactionData?.transactionType,
         });
       }
@@ -59,9 +60,28 @@ export const useCashTransactionActions = (
     }
   }, [CashtransactionData, isEditMode, createMutation, updateMutation]);
 
+  const handleDelete = useCallback(
+    async (reason) => {
+      await deleteMutation
+        .mutateAsync({
+          id: CashtransactionData._id,
+          transactionType: CashtransactionData.transactionType,
+          reason,
+        })
+        .finally(() => {
+          dispatch(removeTransactionDataFromStore());
+        });
+    },
+    [CashtransactionData, deleteMutation],
+  );
+
   return {
     handleSave,
+    handleDelete,
+    showDeleteDialog,
+    setShowDeleteDialog,
     isLoading: createMutation.isPending || updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
     isSuccess: createMutation.isSuccess || updateMutation.isSuccess,
     isError: createMutation.isError || updateMutation.isError,
     error: createMutation.error || updateMutation.error,

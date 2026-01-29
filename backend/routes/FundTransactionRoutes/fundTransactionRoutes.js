@@ -1,6 +1,6 @@
 import express from "express";
 import {
-  createFundTransactionController,editFundTransactionController,getTransactions
+  createFundTransactionController,deleteFundTransactionController,editFundTransactionController,getTransactions
 
 } from "../../controller/FundTransactionController/FundTransactionController.js";
 import {  getTransactionDetail } from "../../controller/transactionController/transactionController.js";
@@ -13,6 +13,8 @@ router.post("/:transactionType/createFundTransaction", createFundTransactionCont
 router.get("/:transactionType/getall", getTransactions);
 router.get("/:transactionType/getTransactionDetails/:transactionId", getTransactionDetail);
 router.put("/:transactionType/edit/:transactionId", editFundTransactionController);
+router.delete("/:transactionType/delete/:transactionId", deleteFundTransactionController);
+
 
 
 

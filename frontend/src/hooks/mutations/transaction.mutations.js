@@ -17,10 +17,10 @@ export const transactionMutations = {
       });
  
       queryClient.invalidateQueries({
-        queryKey: ["reports" ]
+        queryKey: ["reports"]
       });
 
-queryClient.invalidateQueries({
+      queryClient.invalidateQueries({
         queryKey: ["items"], refetchType: 'all'
       });
 
@@ -60,7 +60,7 @@ queryClient.invalidateQueries({
         queryKey: ["transactions", transactionType, "", company, branch],
       });
 
-       queryClient.invalidateQueries({
+      queryClient.invalidateQueries({
         queryKey: ["reports"]
       });
 
@@ -71,8 +71,9 @@ queryClient.invalidateQueries({
       toast.success(
         `${capitalizeFirstLetter(
           response?.data?.transaction?.transactionType || "Transaction"
-        )} created successfully!`
+        )} updated successfully!`
       );
+      
       // Also invalidate the specific transaction query
       queryClient.invalidateQueries({
         queryKey: ["transaction", variables.id],
@@ -82,6 +83,55 @@ queryClient.invalidateQueries({
     onError: (error) => {
       console.error("Transaction update failed:", error);
       toast.error("Error updating transaction. Please try again.");
+    },
+  }),
+
+  delete: (queryClient) => ({
+    mutationFn: ({ id, transactionType, company, branch , reason}) =>
+      transactionServices.delete(id, transactionType, company, branch, reason),
+
+    onSuccess: (response, variables) => {
+      const { id, transactionType, company, branch } = variables;
+
+      // Invalidate the specific transaction query
+      queryClient.invalidateQueries({
+        queryKey: [
+          "transactions",
+          "getById",
+          company,
+          branch,
+          id,
+          transactionType,
+        ],
+      });
+
+      // Invalidate the transactions list
+      queryClient.invalidateQueries({
+        queryKey: ["transactions", transactionType, "", company, branch],
+      });
+
+      // Invalidate all transaction lists for this company/branch
+      queryClient.invalidateQueries({
+        queryKey: ["transactions"],
+      });
+
+      // Invalidate reports
+      queryClient.invalidateQueries({
+        queryKey: ["reports"]
+      });
+
+      // Invalidate items with full refetch
+      queryClient.invalidateQueries({
+        queryKey: ["items"], refetchType: 'all'
+      });
+
+      // Don't show toast here - let the component handle it for better UX control
+    },
+
+    onError: (error) => {
+      console.error("Transaction deletion failed:", error);
+      // Don't show toast here - let the component handle it
+      throw error; // Re-throw to be caught by component
     },
   }),
 };

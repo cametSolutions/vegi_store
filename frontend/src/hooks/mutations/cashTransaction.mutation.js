@@ -18,7 +18,7 @@ export const cashtransactionMutations = {
 
       // Invalidate the transaction list query
       queryClient.invalidateQueries({
-        queryKey: ["transactions", transactionType, "", company, branch],
+        queryKey: ["transactions", transactionType],
       });
 
       queryClient.invalidateQueries({
@@ -57,10 +57,10 @@ export const cashtransactionMutations = {
 
       // Invalidate the transaction list query
       queryClient.invalidateQueries({
-        queryKey: ["transactions", transactionType, "", company, branch],
+        queryKey: ["transactions", transactionType],
       });
 
-          queryClient.invalidateQueries({
+      queryClient.invalidateQueries({
         queryKey: ["reports"],
       });
 
@@ -76,6 +76,44 @@ export const cashtransactionMutations = {
     onError: (error) => {
       console.error("Transaction update failed:", error);
       toast.error("Error updating transaction. Please try again.");
+    },
+  }),
+
+  delete: (queryClient) => ({
+    mutationFn: ({ id, transactionType, reason }) =>
+      cashTransactionServices.delete(id, transactionType, reason),
+
+    onSuccess: (response, variables) => {
+      const { transactionType } = variables;
+      const transaction = response?.data?.cancelledTransaction;
+      const company = transaction?.company;
+      const branch = transaction?.branch;
+
+      // Invalidate transaction lists
+
+      queryClient.invalidateQueries({
+        queryKey: ["transactions", transactionType],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["reports"],
+      });
+
+      // Invalidate account master
+      queryClient.invalidateQueries({
+        queryKey: ["accountMaster"],
+      });
+
+      toast.success(
+        `${capitalizeFirstLetter(transactionType)} deleted successfully!`,
+      );
+    },
+
+    onError: (error) => {
+      console.error("Transaction deletion failed:", error);
+      toast.error(
+        error.message || "Error deleting transaction. Please try again.",
+      );
     },
   }),
 };

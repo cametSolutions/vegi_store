@@ -395,7 +395,7 @@ const CashTransactionAccountSelector = ({
                 prefix="₹"
                 thousandsGroupStyle="lakh"
                 thousandSeparator=","
-                value={previousBalanceAmount}
+                value={Math.abs(previousBalanceAmount) || previousBalanceAmount}
                 disabled
                 className="w-full px-2 py-1.5 border border-gray-300 text-[11px] bg-slate-200 text-gray-900 focus:outline-none"
               />
@@ -417,6 +417,7 @@ const CashTransactionAccountSelector = ({
                 onClick={handleAmountClick}
                 placeholder="0"
                 readOnly={isEditMode}
+                allowNegative={false}
                 className={`w-full px-2 py-1.5 border border-gray-300 text-[11px] text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent ${
                   isEditMode
                     ? "bg-slate-50 cursor-pointer hover:bg-slate-100"
@@ -433,7 +434,7 @@ const CashTransactionAccountSelector = ({
                 prefix="₹"
                 thousandsGroupStyle="lakh"
                 thousandSeparator=","
-                value={closingBalanceAmount}
+                value={Math.abs(closingBalanceAmount) || closingBalanceAmount}
                 disabled
                 className="w-full px-2 py-1.5 border border-gray-300 text-[11px] bg-slate-200 text-gray-900 focus:outline-none"
               />
