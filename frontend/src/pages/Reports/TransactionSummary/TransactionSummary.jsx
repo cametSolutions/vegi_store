@@ -32,7 +32,8 @@ import { useDebounce } from "@/hooks/useDebounce";
 
 import DownloadButton from "@/components/DownloadButton/DownloadButton";
 import { useTransactionSummaryDownload } from "@/hooks/downloadHooks/transactions/useTransactionSummaryDownload";
-
+import { useNavigate } from "react-router-dom";
+import { addTransactionDataToStore } from "@/store/slices/transactionSlice";
 
 // Transaction type configuration
 const TRANSACTION_CONFIG = {
@@ -64,12 +65,13 @@ const TRANSACTION_CONFIG = {
 
 const TransactionSummary = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const selectedCompany = useSelector(
-    (state) => state?.companyBranch?.selectedCompany
+    (state) => state?.companyBranch?.selectedCompany,
   );
   const selectedBranch = useSelector(
-    (state) => state?.companyBranch?.selectedBranch
+    (state) => state?.companyBranch?.selectedBranch,
   );
   const filters = useSelector((state) => state.filters);
 
@@ -84,16 +86,26 @@ const TransactionSummary = () => {
 
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
-  
   // --- Download Hook Initialization ---
-  const { initiateDownload, isDownloading, progress, status } = useTransactionSummaryDownload();
-
+  const { initiateDownload, isDownloading, progress, status } =
+    useTransactionSummaryDownload();
 
   useEffect(() => {
+    if (filters.startDate && filters.endDate) {
+      const { start, end } = getDateRange(dateFilter);
+      // Option 1: Compare as strings (simplest)
+      if (start === filters.startDate && end === filters.endDate) {
+        return;
+      }
+      setDateFilter(DATE_FILTERS.CUSTOM);
+    }
+
     if (!filters.transactionType) {
       dispatch(setFilter({ key: "transactionType", value: "sale" }));
     }
     if (!filters.startDate || !filters.endDate) {
+      console.log("hai");
+
       const range = getDateRange(DATE_FILTERS.THIS_MONTH);
       dispatch(setFilter({ key: "startDate", value: range.start }));
       dispatch(setFilter({ key: "endDate", value: range.end }));
@@ -110,7 +122,7 @@ const TransactionSummary = () => {
       startDate: filters.startDate,
       endDate: filters.endDate,
       search: debouncedSearchTerm,
-    })
+    }),
   );
 
   const transactions = data?.data?.transactions || [];
@@ -151,7 +163,7 @@ const TransactionSummary = () => {
           companyId,
           branchId,
           transactionType,
-          params
+          params,
         );
         toast.success("Excel downloaded");
       } else if (type === "pdf") {
@@ -159,7 +171,7 @@ const TransactionSummary = () => {
           companyId,
           branchId,
           transactionType,
-          params
+          params,
         );
         toast.success("PDF downloaded");
       }
@@ -169,8 +181,6 @@ const TransactionSummary = () => {
       setIsExporting(false);
     }
   };
-
-
 
   // --- Download Handler ---
   const handleDownload = (format) => {
@@ -185,14 +195,23 @@ const TransactionSummary = () => {
     initiateDownload(downloadFilters, format, "transaction-summary");
   };
 
-  if (!companyId || !branchId) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen text-slate-400">
-        <FileBarChart className="w-12 h-12 mb-3 opacity-20" />
-        <p>Please select a company and branch</p>
-      </div>
-    );
-  }
+  /// --handle edit navigation--
+  const handleDoubleClick = (transaction) => {
+    const reduxDataToPass = {
+      isEditMode: true,
+      editTransactionId: transaction._id,
+      transactionType: transactionType,
+    };
+    dispatch(addTransactionDataToStore(reduxDataToPass));
+
+    navigate(`/transactions/${transactionType}/create`, {
+      state: {
+        from: "transactionSummary",
+        transactionId: transaction._id,
+        fromPath: location.pathname,
+      },
+    });
+  };
 
   // Define column widths for strict alignment
   const TableColGroup = () => (
@@ -229,8 +248,7 @@ const TransactionSummary = () => {
 
           {/* Controls Area */}
           <div className="flex items-center gap-3">
-
-             <DownloadButton 
+            <DownloadButton
               onDownload={handleDownload}
               isDownloading={isDownloading}
               progress={progress}
@@ -342,12 +360,21 @@ const TransactionSummary = () => {
                       <tr
                         key={transaction._id}
                         className="hover:bg-slate-50 transition-colors group"
+                        onDoubleClick={() => handleDoubleClick(transaction)}
                       >
                         <td className="px-4 py-3 text-xs text-slate-400 text-center border-r border-slate-200">
                           {(currentPage - 1) * pageSize + index + 1}
                         </td>
-                        <td className="px-4 py-3 text-xs font-medium text-slate-700 truncate border-r border-slate-200">
-                          {transaction.transactionNumber || "-"}
+                        <td className="px-4 py-3 text-xs font-medium text-slate-700 truncate border-r border-slate-200 ">
+                          {transaction.isCancelled ? (
+                            <span className="line-through text-red-400">
+                              {transaction.transactionNumber || "-"}
+                            </span>
+                          ) : (
+                            <span>
+                              {transaction.transactionNumber || "-"}
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-600 border-r border-slate-200">
                           {transaction.transactionDate
@@ -365,7 +392,10 @@ const TransactionSummary = () => {
                         </td>
                         <td className="px-6 py-3 text-right">
                           <span className="text-xs font-bold text-slate-700 font-mono tracking-tight group-hover:text-slate-900">
-                            {formatINR(transaction.netAmount)}
+                            {/* {formatINR(transaction.netAmount)} */}
+                            {transaction.isCancelled
+                              ? <span className="text-red-500">Cancelled</span>
+                              : formatINR(transaction.netAmount)}
                           </span>
                         </td>
                       </tr>
