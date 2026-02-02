@@ -289,6 +289,9 @@ const TransactionSummary = () => {
                 "purchase",
                 "sales_return",
                 "purchase_return",
+                "receipt",
+                "payment",
+
               ]}
               dateFilter={dateFilter}
               onDateFilterChange={setDateFilter}

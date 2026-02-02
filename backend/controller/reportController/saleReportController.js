@@ -4,15 +4,21 @@ import {
   SalesReturnModel,
   PurchaseReturnModel,
 } from "../../model/TransactionModel.js";
+import {
+  ReceiptModel,
+  PaymentModel
+} from "../../model/FundTransactionMode.js";
+
 import mongoose from "mongoose";
 
 // Map transaction types to their respective models
-
 const TRANSACTION_MODELS = {
   sale: SalesModel,
   purchase: PurchaseModel,
   sales_return: SalesReturnModel,
   purchase_return: PurchaseReturnModel,
+  receipt: ReceiptModel,
+  payment: PaymentModel,
 };
 
 const TRANSACTION_DISPLAY_NAMES = {
@@ -20,7 +26,13 @@ const TRANSACTION_DISPLAY_NAMES = {
   purchase: "Purchase",
   sales_return: "Sales Return",
   purchase_return: "Purchase Return",
+  receipt: "Receipt",
+  payment: "Payment",
 };
+
+// Define which transactions use 'amount' instead of 'netAmount'
+const FUND_TRANSACTION_TYPES = ['receipt', 'payment'];
+
 /**
  * Common controller for all transaction summaries
  */
@@ -51,6 +63,10 @@ export const getTransactionSummary = async (req, res) => {
 
     // Get the appropriate model
     const Model = TRANSACTION_MODELS[transactionType];
+    
+    // Determine if this is a fund transaction (receipt/payment)
+    const isFundTransaction = FUND_TRANSACTION_TYPES.includes(transactionType);
+    const amountField = isFundTransaction ? 'amount' : 'netAmount';
 
     // Build query with ObjectId conversion
     const query = {
@@ -85,15 +101,28 @@ export const getTransactionSummary = async (req, res) => {
     // Pagination
     const skip = (Number(page) - 1) * Number(limit);
 
+    // Build select fields dynamically
+    const selectFields = `transactionNumber transactionDate accountName phone email ${amountField} status paymentStatus isCancelled`;
+
     // Fetch transactions with pagination
-    const transactions = await Model.find(query)
-      .select(
-        "transactionNumber transactionDate accountName phone email netAmount totalAmountAfterTax status paymentStatus isCancelled ",
-      )
+    const rawTransactions = await Model.find(query)
+      .select(selectFields)
       .sort({ transactionDate: -1, createdAt: -1 })
       .skip(skip)
       .limit(Number(limit))
       .lean();
+
+    // Normalize transactions to always have 'netAmount' field
+    const transactions = rawTransactions.map(txn => {
+      if (isFundTransaction) {
+        return {
+          ...txn,
+          netAmount: txn.amount,
+          amount: undefined, // Remove the original 'amount' field
+        };
+      }
+      return txn;
+    });
 
     // Get total count
     const totalRecords = await Model.countDocuments(query);
@@ -109,8 +138,7 @@ export const getTransactionSummary = async (req, res) => {
       {
         $group: {
           _id: null,
-
-          totalAmount: { $sum: "$netAmount" },
+          totalAmount: { $sum: `$${amountField}` },
         },
       },
     ]);
@@ -123,6 +151,7 @@ export const getTransactionSummary = async (req, res) => {
         transactions,
         totalRecords,
         totalPages: Math.ceil(totalRecords / Number(limit)),
+        currentPage: Number(page),
         currentPage: Number(page),
         pageSize: Number(limit),
         totalAmount,
