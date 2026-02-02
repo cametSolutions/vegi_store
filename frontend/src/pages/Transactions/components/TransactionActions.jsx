@@ -14,10 +14,12 @@ const TransactionActions = ({
   transactionType,
   requireAccount = true,
   onDeleteSuccess, // Callback after successful deletion
+  fromPath
 }) => {
   const { handleSave, handleDelete, isLoading, isDeleting } = useTransactionActions(
     transactionData,
-    isEditMode
+    isEditMode,
+    fromPath
   );
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);

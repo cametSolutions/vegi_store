@@ -1,4 +1,9 @@
-import { SalesModel, PurchaseModel, SalesReturnModel, PurchaseReturnModel } from "../../model/TransactionModel.js";
+import {
+  SalesModel,
+  PurchaseModel,
+  SalesReturnModel,
+  PurchaseReturnModel,
+} from "../../model/TransactionModel.js";
 import mongoose from "mongoose";
 
 // Map transaction types to their respective models
@@ -22,14 +27,8 @@ const TRANSACTION_DISPLAY_NAMES = {
 export const getTransactionSummary = async (req, res) => {
   try {
     const { companyId, branchId, transactionType } = req.params;
-    console.log("params",req.params)
-    const {
-      page = 1,
-      limit = 50,
-      startDate,
-      endDate,
-      search = "",
-    } = req.query;
+    console.log("params", req.params);
+    const { page = 1, limit = 50, startDate, endDate, search = "" } = req.query;
 
     // Validate transaction type
     if (!TRANSACTION_MODELS[transactionType]) {
@@ -40,8 +39,10 @@ export const getTransactionSummary = async (req, res) => {
     }
 
     // Validate ObjectIds
-    if (!mongoose.Types.ObjectId.isValid(companyId) || 
-        !mongoose.Types.ObjectId.isValid(branchId)) {
+    if (
+      !mongoose.Types.ObjectId.isValid(companyId) ||
+      !mongoose.Types.ObjectId.isValid(branchId)
+    ) {
       return res.status(400).json({
         success: false,
         message: "Invalid company or branch ID",
@@ -56,6 +57,7 @@ export const getTransactionSummary = async (req, res) => {
       company: new mongoose.Types.ObjectId(companyId),
       branch: new mongoose.Types.ObjectId(branchId),
       transactionType: transactionType,
+      // isCancelled: false,
     };
 
     // Date filter
@@ -86,7 +88,7 @@ export const getTransactionSummary = async (req, res) => {
     // Fetch transactions with pagination
     const transactions = await Model.find(query)
       .select(
-        "transactionNumber transactionDate accountName phone email netAmount totalAmountAfterTax status paymentStatus"
+        "transactionNumber transactionDate accountName phone email netAmount totalAmountAfterTax status paymentStatus isCancelled ",
       )
       .sort({ transactionDate: -1, createdAt: -1 })
       .skip(skip)
@@ -98,10 +100,16 @@ export const getTransactionSummary = async (req, res) => {
 
     // Calculate total amount using aggregation
     const totalAmountResult = await Model.aggregate([
-      { $match: query },
+      {
+        $match: {
+          ...query,
+          isCancelled: false,
+        },
+      },
       {
         $group: {
           _id: null,
+
           totalAmount: { $sum: "$netAmount" },
         },
       },

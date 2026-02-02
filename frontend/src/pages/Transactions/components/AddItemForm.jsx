@@ -112,10 +112,10 @@ const AddItemForm = ({
           priceLevel &&
           (transactionType === "sale" || transactionType === "sales_return")
         ) {
-          const priceLevelData = foundProduct.priceLevels.find(
+          const priceLevelData = foundProduct?.priceLevels?.find(
             (pl) =>
-              pl.priceLevel._id === priceLevel ||
-              pl.priceLevel.priceLevelName === priceLevel,
+              pl?.priceLevel?._id === priceLevel ||
+              pl?.priceLevel?.priceLevelName === priceLevel,
           );
           rate = priceLevelData?.rate || "";
         }
@@ -184,10 +184,10 @@ const AddItemForm = ({
       priceLevel &&
       (transactionType === "sale" || transactionType === "sales_return")
     ) {
-      const priceLevelData = foundProduct.priceLevels.find(
+      const priceLevelData = foundProduct?.priceLevels?.find(
         (pl) =>
-          pl.priceLevel._id === priceLevel ||
-          pl.priceLevel.priceLevelName === priceLevel,
+          pl?.priceLevel?._id === priceLevel ||
+          pl?.priceLevel?.priceLevelName === priceLevel,
       );
       newRate = priceLevelData?.rate || "";
     }

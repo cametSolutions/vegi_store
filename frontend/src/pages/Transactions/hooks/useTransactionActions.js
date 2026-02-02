@@ -1,13 +1,15 @@
-import { useCallback } from "react";
+import { use, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { transactionMutations } from "../../../hooks/mutations/transaction.mutations";
 import { useDispatch, useSelector } from "react-redux";
 import { convertStringNumbersToNumbers } from "../utils/transactionUtils";
 import { toast } from "sonner";
 import { removeTransactionDataFromStore } from "@/store/slices/transactionSlice";
+import { useNavigate } from "react-router-dom";
 
-export const useTransactionActions = (transactionData, isEditMode = false) => {
+export const useTransactionActions = (transactionData, isEditMode = false, fromPath = null) => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const company = useSelector(
     (state) => state.companyBranch?.selectedCompany?._id,
   );
@@ -22,85 +24,105 @@ export const useTransactionActions = (transactionData, isEditMode = false) => {
   const updateMutation = useMutation(transactionMutations.update(queryClient));
   const deleteMutation = useMutation(transactionMutations.delete(queryClient));
 
-  const handleSave = useCallback(async () => {
-    try {
-      if (transactionData.transactionType == "") {
-        toast.error("Having some issue with transaction type");
+  const handleSave = useCallback(
+    async () => {
+      try {
+        if (transactionData.transactionType == "") {
+          toast.error("Having some issue with transaction type");
+          return false;
+        }
+        if (transactionData.priceLevel == "") {
+          transactionData.priceLevel = null;
+        }
+
+        const convertedTransactionData =
+          convertStringNumbersToNumbers(transactionData);
+
+        // Choose mutation based on mode
+        if (isEditMode) {
+          // Update existing transaction
+          await updateMutation.mutateAsync({
+            id: transactionData?._id,
+            formData: transactionData,
+            transactionType: transactionData.transactionType,
+          });
+          queryClient.invalidateQueries({ queryKey: ["items"] });
+
+          dispatch(removeTransactionDataFromStore());
+        } else {
+          // Create new transaction
+          await createMutation.mutateAsync({
+            formData: { ...convertedTransactionData, company, branch },
+            transactionType: transactionData.transactionType,
+          });
+          queryClient.invalidateQueries({ queryKey: ["items"] });
+        }
+
+        return true;
+      } catch (error) {
+        console.error("Error saving transaction:", error);
         return false;
-      }
-      if (transactionData.priceLevel == "") {
-        transactionData.priceLevel = null;
-      }
+      } finally {
 
-      const convertedTransactionData =
-        convertStringNumbersToNumbers(transactionData);
+     
+        
+        
+        if (fromPath) {
+          navigate(fromPath);
+        }
+      }
+    },
+    [
+      transactionData,
+      isEditMode,
+      createMutation,
+      updateMutation,
+      company,
+      branch,
+      dispatch,
+      queryClient,
+      fromPath,
+    ],
+  );
 
-      // Choose mutation based on mode
-      if (isEditMode) {
-        // Update existing transaction
-        await updateMutation.mutateAsync({
-          id: transactionData?._id,
-          formData: transactionData,
+  const handleDelete = useCallback(
+    async (reason) => {
+      try {
+        if (!transactionData?._id) {
+          throw new Error("Transaction ID is missing");
+        }
+
+        await deleteMutation.mutateAsync({
+          id: transactionData._id,
           transactionType: transactionData.transactionType,
+          company,
+          branch,
+          reason,
         });
-        queryClient.invalidateQueries({ queryKey: ["items"] });
 
+        // Invalidate relevant queries
+        queryClient.invalidateQueries({ queryKey: ["transactions"] });
+        queryClient.invalidateQueries({ queryKey: ["items"] });
+        queryClient.invalidateQueries({
+          queryKey: ["transaction", transactionData._id],
+        });
+
+        // Clear transaction data from store
         dispatch(removeTransactionDataFromStore());
-      } else {
-        // Create new transaction
-        await createMutation.mutateAsync({
-          formData: { ...convertedTransactionData, company, branch },
-          transactionType: transactionData.transactionType,
-        });
-        queryClient.invalidateQueries({ queryKey: ["items"] });
+
+        return true;
+      } catch (error) {
+        console.error("Error deleting transaction:", error);
+        throw error; // Re-throw to be caught by the component
       }
-
-      return true;
-    } catch (error) {
-      console.error("Error saving transaction:", error);
-      return false;
-    }
-  }, [
-    transactionData,
-    isEditMode,
-    createMutation,
-    updateMutation,
-    company,
-    branch,
-    dispatch,
-    queryClient,
-  ]);
-
-  const handleDelete = useCallback(async (reason) => {
-    try {
-      if (!transactionData?._id) {
-        throw new Error("Transaction ID is missing");
+      finally{
+        if (fromPath) {
+          navigate(fromPath);
+        }
       }
-
-      await deleteMutation.mutateAsync({
-        id: transactionData._id,
-        transactionType: transactionData.transactionType,
-        company,
-        branch,
-        reason,
-      });
-
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["items"] });
-      queryClient.invalidateQueries({
-        queryKey: ["transaction", transactionData._id],
-      });
-
-      // Clear transaction data from store
-      dispatch(removeTransactionDataFromStore());
-
-      return true;
-    } catch (error) {
-      console.error("Error deleting transaction:", error);
-      throw error; // Re-throw to be caught by the component
-    }
-  }, [transactionData, deleteMutation, company, branch, dispatch, queryClient]);
+    },
+    [transactionData, deleteMutation, company, branch, dispatch, queryClient],
+  );
 
   return {
     handleSave,
