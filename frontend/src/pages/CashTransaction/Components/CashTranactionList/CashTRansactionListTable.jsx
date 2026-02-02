@@ -79,7 +79,7 @@ const CashTransactionListTable = ({
   // Double click handler
   const handleDoubleClick = (transaction) => {
     // Prevent editing if cancelled
-    if (transaction.isCancelled) return;
+    // if (transaction.isCancelled) return;
     console.log("trd", transaction);
     onEditTransaction(transaction);
   };

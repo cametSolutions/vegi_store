@@ -61,6 +61,24 @@ const TRANSACTION_CONFIG = {
     icon: <CornerUpLeft className="w-4 h-4 text-purple-500" />,
     theme: "purple",
   },
+  receipt: {
+    label: "Receipt Summary",
+    accountLabel: "Payer Name",
+    icon: <FileText className="w-4 h-4 text-sky-500" />,
+    theme: "sky",
+  },
+  payment: {
+    label: "Payment Summary",
+    accountLabel: "Payee Name",
+    icon: <FileText className="w-4 h-4 text-red-500" />,
+    theme: "red",
+  },
+  stock_adjustment: {
+    label: "Stock Adjustment Summary",
+    accountLabel: "N/A",
+    icon: <FileSpreadsheet className="w-4 h-4 text-yellow-500" />,
+    theme: "yellow",
+  },
 };
 
 const TransactionSummary = () => {

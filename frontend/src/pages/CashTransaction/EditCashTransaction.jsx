@@ -10,7 +10,7 @@ import { useCashTransaction } from "./hooks/useCashTransaction";
 import { useCashTransactionActions } from "./hooks/useCashTransactionAction";
 import CustomMoonLoader from "../../components/loaders/CustomMoonLoader";
 import { transactionQueries } from "@/hooks/queries/transaction.queries";
-import { addTransactionDataToStore } from "@/store/slices/transactionSlice";
+import { addTransactionDataToStore, removeTransactionDataFromStore } from "@/store/slices/transactionSlice";
 import { useQuery } from "@tanstack/react-query";
 import AmountEditWarningDialog from "@/components/modals/AmountEditWarningDialog";
 
@@ -42,17 +42,16 @@ const EditCashTransaction = ({
   const dispatch = useDispatch();
 
   console.log(editTransactionData);
-  
 
   const selectedCompanyFromStore = useSelector(
-    (state) => state.companyBranch?.selectedCompany
+    (state) => state.companyBranch?.selectedCompany,
   );
   const selectedBranchFromStore = useSelector(
-    (state) => state.companyBranch?.selectedBranch
+    (state) => state.companyBranch?.selectedBranch,
   );
   const currentTransactionType = useMemo(
     () => getTransactionType(location, CashtransactionData.transactionType),
-    [location, CashtransactionData.transactionType]
+    [location, CashtransactionData.transactionType],
   );
 
   useEffect(() => {
@@ -82,14 +81,14 @@ const EditCashTransaction = ({
       selectedBranchFromStore._id,
       editTransactionData?._id,
       currentTransactionType,
-      fetchWithLatest ? "true" : undefined
+      fetchWithLatest ? "true" : undefined,
     ),
     // Ensure query key includes the fetchWithLatest parameter for proper cache distinction
     queryKey: [
       "transaction",
       selectedCompanyFromStore._id,
       selectedBranchFromStore._id,
-     editTransactionData?._id,
+      editTransactionData?._id,
       currentTransactionType,
       fetchWithLatest ? "latest" : "original",
     ],
@@ -110,15 +109,26 @@ const EditCashTransaction = ({
           isEditMode: true,
           editTransactionId: editTransactionData?._id,
           transactionType: currentTransactionType,
-        })
+        }),
       );
 
       // Enable amount field after fetching with latest data
       if (fetchWithLatest) {
         setIsAmountEditable(true);
       }
+
+      return () => {
+        dispatch(removeTransactionDataFromStore());
+      };
     }
-  }, [transactionResponse, updateCashtransactionData, dispatch, editTransactionData?._id, currentTransactionType, fetchWithLatest]);
+  }, [
+    transactionResponse,
+    updateCashtransactionData,
+    dispatch,
+    editTransactionData?._id,
+    currentTransactionType,
+    fetchWithLatest,
+  ]);
 
   // Handle amount field click - show warning dialog only once
   const handleAmountFieldClick = useCallback(() => {
@@ -217,7 +227,6 @@ const EditCashTransaction = ({
               isEditMode={true}
               handleCancel={handleCancel}
               fromPath={fromPath}
-
             />
           </div>
         </div>
