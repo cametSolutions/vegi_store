@@ -81,6 +81,10 @@ const AddItemForm = ({
     refetchOnReconnect: false,
   });
 
+  console.log(isSearchEnabled);
+  console.log(transactionType);
+  
+
   useEffect(() => {
     if (isError && error) {
       toast.error("Search Error", {
@@ -236,10 +240,14 @@ const AddItemForm = ({
   }, [clickedItemInTable]);
 
   const handleCodeKeyDown = (e) => {
+
+    
     if (e.key === "Enter" && searchTerm.trim() !== "") {
       e.preventDefault();
       setShowDropdown(false);
       setShouldSearch(true);
+
+
     }
   };
 
@@ -299,6 +307,9 @@ const AddItemForm = ({
       taxAmount: taxAmount.toFixed(2),
       amountAfterTax: amountAfterTax.toFixed(2),
     };
+
+    // console.log(itemToAdd);
+    
 
     const newItems = addItem(items, itemToAdd);
     updateTransactionField("items", newItems);

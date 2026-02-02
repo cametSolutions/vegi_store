@@ -112,6 +112,12 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit ,fromPath}) => 
         })
       );
     }
+
+    return () => {
+      dispatch(
+        removeTransactionDataFromStore()
+      );
+    }
   }, [transactionResponse, updateTransactionData]);
 
   // Handle error state with useEffect

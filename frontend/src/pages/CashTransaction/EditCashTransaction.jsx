@@ -23,6 +23,7 @@ const EditCashTransaction = ({
   editTransactionData,
   handleCancelEdit,
   onSuccess,
+  fromPath,
 }) => {
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +41,9 @@ const EditCashTransaction = ({
   } = useCashTransaction();
   const dispatch = useDispatch();
 
+  console.log(editTransactionData);
+  
+
   const selectedCompanyFromStore = useSelector(
     (state) => state.companyBranch?.selectedCompany
   );
@@ -55,7 +59,7 @@ const EditCashTransaction = ({
     resetCashTransactionData(currentTransactionType);
     updateCashtransactionData({
       isEditMode: true,
-      editTransactionId: editTransactionData._id,
+      editTransactionId: editTransactionData?._id,
       transactionType: currentTransactionType,
     });
   }, [currentTransactionType, updateTransactionField]);
@@ -76,7 +80,7 @@ const EditCashTransaction = ({
     ...transactionQueries.getTransactionById(
       selectedCompanyFromStore._id,
       selectedBranchFromStore._id,
-      editTransactionData._id,
+      editTransactionData?._id,
       currentTransactionType,
       fetchWithLatest ? "true" : undefined
     ),
@@ -85,7 +89,7 @@ const EditCashTransaction = ({
       "transaction",
       selectedCompanyFromStore._id,
       selectedBranchFromStore._id,
-      editTransactionData._id,
+     editTransactionData?._id,
       currentTransactionType,
       fetchWithLatest ? "latest" : "original",
     ],
@@ -104,7 +108,7 @@ const EditCashTransaction = ({
       dispatch(
         addTransactionDataToStore({
           isEditMode: true,
-          editTransactionId: editTransactionData._id,
+          editTransactionId: editTransactionData?._id,
           transactionType: currentTransactionType,
         })
       );
@@ -114,7 +118,7 @@ const EditCashTransaction = ({
         setIsAmountEditable(true);
       }
     }
-  }, [transactionResponse, updateCashtransactionData, dispatch, editTransactionData._id, currentTransactionType, fetchWithLatest]);
+  }, [transactionResponse, updateCashtransactionData, dispatch, editTransactionData?._id, currentTransactionType, fetchWithLatest]);
 
   // Handle amount field click - show warning dialog only once
   const handleAmountFieldClick = useCallback(() => {
@@ -162,7 +166,7 @@ const EditCashTransaction = ({
           date={CashtransactionData.transactionDate}
           updateTransactionField={updateTransactionField}
           isEditMode={true}
-          transactionNumber={editTransactionData.transactionNumber}
+          transactionNumber={CashtransactionData.transactionNumber}
         />
 
         <div className="flex flex-col h-[calc(100%-40px)] p-1 gap-2">
@@ -212,6 +216,8 @@ const EditCashTransaction = ({
               onPrint={useCashTransactionActions?.handlePrint}
               isEditMode={true}
               handleCancel={handleCancel}
+              fromPath={fromPath}
+
             />
           </div>
         </div>

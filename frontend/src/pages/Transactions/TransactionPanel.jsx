@@ -4,7 +4,6 @@ import EditTransaction from "./EditTransaction"; // Import your edit component
 import TransactionList from "./components/TransactionList/TransactionList";
 import { useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LogIn } from "lucide-react";
 
 const TransactionPanel = () => {
   const isEditMode = useSelector((state) => state.transaction.isEditMode);

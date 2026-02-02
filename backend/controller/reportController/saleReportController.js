@@ -8,7 +8,7 @@ import {
   ReceiptModel,
   PaymentModel
 } from "../../model/FundTransactionMode.js";
-
+import StockAdjustment from "../../model/StockAdjustmentModel.js";
 import mongoose from "mongoose";
 
 // Map transaction types to their respective models
@@ -19,6 +19,7 @@ const TRANSACTION_MODELS = {
   purchase_return: PurchaseReturnModel,
   receipt: ReceiptModel,
   payment: PaymentModel,
+  stock_adjustment: StockAdjustment,
 };
 
 const TRANSACTION_DISPLAY_NAMES = {
@@ -28,10 +29,12 @@ const TRANSACTION_DISPLAY_NAMES = {
   purchase_return: "Purchase Return",
   receipt: "Receipt",
   payment: "Payment",
+  stock_adjustment: "Stock Adjustment",
 };
 
-// Define which transactions use 'amount' instead of 'netAmount'
+// Define which transactions use specific amount fields
 const FUND_TRANSACTION_TYPES = ['receipt', 'payment'];
+const STOCK_ADJUSTMENT_TYPE = 'stock_adjustment';
 
 /**
  * Common controller for all transaction summaries
@@ -64,16 +67,19 @@ export const getTransactionSummary = async (req, res) => {
     // Get the appropriate model
     const Model = TRANSACTION_MODELS[transactionType];
     
-    // Determine if this is a fund transaction (receipt/payment)
-    const isFundTransaction = FUND_TRANSACTION_TYPES.includes(transactionType);
-    const amountField = isFundTransaction ? 'amount' : 'netAmount';
+    // Determine the field name for the amount
+    let amountField = 'netAmount'; // Default for sales/purchase
+    if (FUND_TRANSACTION_TYPES.includes(transactionType)) {
+      amountField = 'amount';
+    } else if (transactionType === STOCK_ADJUSTMENT_TYPE) {
+      amountField = 'totalAmount';
+    }
 
     // Build query with ObjectId conversion
     const query = {
       company: new mongoose.Types.ObjectId(companyId),
       branch: new mongoose.Types.ObjectId(branchId),
       transactionType: transactionType,
-      // isCancelled: false,
     };
 
     // Date filter
@@ -91,18 +97,31 @@ export const getTransactionSummary = async (req, res) => {
 
     // Search filter
     if (search) {
-      query.$or = [
+      const searchConditions = [
         { transactionNumber: { $regex: search, $options: "i" } },
-        { accountName: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
       ];
+      
+      // Stock adjustment doesn't have accountName/email usually, so conditionally add those
+      if (transactionType !== STOCK_ADJUSTMENT_TYPE) {
+        searchConditions.push(
+          { accountName: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } }
+        );
+      }
+      
+      query.$or = searchConditions;
     }
 
     // Pagination
     const skip = (Number(page) - 1) * Number(limit);
 
     // Build select fields dynamically
-    const selectFields = `transactionNumber transactionDate accountName phone email ${amountField} status paymentStatus isCancelled`;
+    let selectFields = `transactionNumber transactionDate ${amountField} status isCancelled`;
+    
+    // Add extra fields only if NOT stock adjustment
+    if (transactionType !== STOCK_ADJUSTMENT_TYPE) {
+      selectFields += ' accountName phone email paymentStatus';
+    }
 
     // Fetch transactions with pagination
     const rawTransactions = await Model.find(query)
@@ -112,16 +131,24 @@ export const getTransactionSummary = async (req, res) => {
       .limit(Number(limit))
       .lean();
 
-    // Normalize transactions to always have 'netAmount' field
+    // Normalize transactions
     const transactions = rawTransactions.map(txn => {
-      if (isFundTransaction) {
-        return {
-          ...txn,
-          netAmount: txn.amount,
-          amount: undefined, // Remove the original 'amount' field
-        };
+      const normalizedTxn = { ...txn };
+
+      // 1. Normalize Amount Field -> 'netAmount'
+      if (transactionType === STOCK_ADJUSTMENT_TYPE) {
+        normalizedTxn.netAmount = txn.totalAmount;
+        delete normalizedTxn.totalAmount;
+        
+        // 2. Set Account Name for Stock Adjustment
+        normalizedTxn.accountName = "Stock Adjustment";
+        
+      } else if (FUND_TRANSACTION_TYPES.includes(transactionType)) {
+        normalizedTxn.netAmount = txn.amount;
+        delete normalizedTxn.amount;
       }
-      return txn;
+      
+      return normalizedTxn;
     });
 
     // Get total count
@@ -151,7 +178,6 @@ export const getTransactionSummary = async (req, res) => {
         transactions,
         totalRecords,
         totalPages: Math.ceil(totalRecords / Number(limit)),
-        currentPage: Number(page),
         currentPage: Number(page),
         pageSize: Number(limit),
         totalAmount,

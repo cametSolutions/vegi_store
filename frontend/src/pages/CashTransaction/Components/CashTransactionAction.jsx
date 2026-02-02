@@ -10,6 +10,8 @@ const CashTransactionAction = ({
   onLoadingChange,
   handleCancel,
   isEditMode = false,
+  fromPath,
+
 }) => {
   const { 
     handleSave, 
@@ -20,7 +22,8 @@ const CashTransactionAction = ({
     isDeleting
   } = useCashTransactionActions(
     CashtransactionData,
-    isEditMode
+    isEditMode,
+    fromPath
   );
 
   // Notify parent whenever loading changes

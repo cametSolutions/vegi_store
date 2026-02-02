@@ -16,6 +16,8 @@ import {
   addStockAdjustmentDataToStore,
   removeStockAdjustmentDataFromStore,
 } from "@/store/slices/stockAdjustmentSlice ";
+import { transactionTypes } from "../CashTransaction/Utils/CashTransactionUtils";
+import { addTransactionDataToStore, removeTransactionDataFromStore } from "@/store/slices/transactionSlice";
 
 // Memoized components
 const TransactionHeader = React.memo(TransactionHeaderComponent);
@@ -30,6 +32,7 @@ const EditStockAdjustment = ({
   editAdjustmentData,
   handleCancelEdit,
   onSuccess,
+  fromPath,
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const dispatch = useDispatch();
@@ -49,28 +52,28 @@ const EditStockAdjustment = ({
   } = useStockAdjustment();
 
   const selectedCompanyFromStore = useSelector(
-    (state) => state.companyBranch?.selectedCompany
+    (state) => state.companyBranch?.selectedCompany,
   );
   const selectedBranchFromStore = useSelector(
-    (state) => state.companyBranch?.selectedBranch
+    (state) => state.companyBranch?.selectedBranch,
   );
 
   // ✅ Set initial edit mode state with _id
   useEffect(() => {
     updateStockAdjustmentData({
-      _id: editAdjustmentData._id, // ✅ Add this
+      _id: editAdjustmentData?._id, // ✅ Add this
       isEditMode: true,
-      editAdjustmentId: editAdjustmentData._id,
+      editAdjustmentId: editAdjustmentData?._id,
     });
 
     dispatch(
       addStockAdjustmentDataToStore({
-        _id: editAdjustmentData._id, // ✅ Add this
+        _id: editAdjustmentData?._id, // ✅ Add this
         isEditMode: true,
-        editAdjustmentId: editAdjustmentData._id,
-      })
+        editAdjustmentId: editAdjustmentData?._id,
+      }),
     );
-  }, [editAdjustmentData._id, updateStockAdjustmentData, dispatch]);
+  }, [editAdjustmentData?._id, updateStockAdjustmentData, dispatch]);
 
   // Fetch stock adjustment details
   const {
@@ -81,23 +84,37 @@ const EditStockAdjustment = ({
     ...stockAdjustmentQueries.getStockAdjustmentById(
       selectedCompanyFromStore._id,
       selectedBranchFromStore._id,
-      editAdjustmentData._id
+      editAdjustmentData?._id,
     ),
   });
 
   // ✅ Update data when response changes - preserve _id
   useEffect(() => {
     if (adjustmentResponse) {
-      console.log("🟢 Adjustment response:", adjustmentResponse);
-
       updateStockAdjustmentData({
         ...adjustmentResponse,
         _id: adjustmentResponse._id, // ✅ Explicitly set _id
         isEditMode: true,
-        editAdjustmentId: editAdjustmentData._id,
+        editAdjustmentId: editAdjustmentData?._id,
+        transactionType: "stock_adjustment",
       });
+
+      //// this is to  prevent the navigation in the nav bar when we are in edit mode
+      dispatch(
+        addTransactionDataToStore({
+          isEditMode: true,
+          editTransactionId: editAdjustmentData?._id,
+          transactionType: "stock_adjustment",
+        }),
+      );
+
+      return () => {
+        dispatch(removeTransactionDataFromStore());
+      };
     }
-  }, [adjustmentResponse, updateStockAdjustmentData, editAdjustmentData._id]);
+  }, [adjustmentResponse, updateStockAdjustmentData, editAdjustmentData?._id, dispatch]);
+
+  console.log(stockAdjustmentData);
 
   // Handle error
   useEffect(() => {
@@ -120,13 +137,17 @@ const EditStockAdjustment = ({
     dispatch(removeStockAdjustmentDataFromStore());
   };
 
-  const { handleSave } = useStockAdjustmentActions(stockAdjustmentData, true);
+  const { handleSave } = useStockAdjustmentActions(
+    stockAdjustmentData,
+    true,
+    fromPath,
+  );
 
   const onSave = async () => {
     console.log("💾 onSave - stockAdjustmentData:", stockAdjustmentData);
     console.log(
       "💾 onSave - stockAdjustmentData._id:",
-      stockAdjustmentData._id
+      stockAdjustmentData._id,
     );
 
     setIsLoading(true);
@@ -154,7 +175,7 @@ const EditStockAdjustment = ({
         date={stockAdjustmentData.transactionDate}
         updateTransactionField={updateStockAdjustmentField}
         isEditMode={stockAdjustmentData.isEditMode}
-        transactionNumber={editAdjustmentData.transactionNumber}
+        transactionNumber={stockAdjustmentData.transactionNumber}
       />
 
       {/* Main Content */}
@@ -177,7 +198,7 @@ const EditStockAdjustment = ({
                     onChange={(e) =>
                       updateStockAdjustmentField(
                         "adjustmentType",
-                        e.target.value
+                        e.target.value,
                       )
                     }
                     className="w-3 h-3 text-green-600 focus:ring-green-500"
@@ -197,7 +218,7 @@ const EditStockAdjustment = ({
                     onChange={(e) =>
                       updateStockAdjustmentField(
                         "adjustmentType",
-                        e.target.value
+                        e.target.value,
                       )
                     }
                     className="w-3 h-3 text-red-600 focus:ring-red-500"
@@ -216,7 +237,7 @@ const EditStockAdjustment = ({
               updateTransactionField={updateStockAdjustmentField}
               addItem={addItem}
               clickedItemInTable={clickedItemInTable}
-              transactionType={null}
+              transactionType={stockAdjustmentData.transactionType}
               account={null}
             />
           </div>

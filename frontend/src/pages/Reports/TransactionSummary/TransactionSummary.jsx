@@ -291,6 +291,7 @@ const TransactionSummary = () => {
                 "purchase_return",
                 "receipt",
                 "payment",
+                "stock_adjustment"
 
               ]}
               dateFilter={dateFilter}

@@ -107,7 +107,7 @@ const Navbar = () => {
            items: [
             {
               label: "Stock Adjustment",
-              path: "/stock-adjustment",
+              path: "transactions/stock_adjustment/create",
               icon: ArrowLeftRight,
             },
             {
