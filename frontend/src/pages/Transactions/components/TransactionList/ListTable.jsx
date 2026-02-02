@@ -59,7 +59,7 @@ const ListTable = ({
   };
 
   const handleDoubleClick = (transaction) => {
-    if (transaction.isCancelled) return;
+    // if (transaction.isCancelled) return;
     onEditTransaction(transaction);
   };
 

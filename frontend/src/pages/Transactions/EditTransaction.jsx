@@ -213,6 +213,7 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit ,fromPath}) => 
               isEditMode={true}
               onCancel={handleCancel}
               fromPath={fromPath}
+              // isCancelled={}
             />
           </div>
         </div>
