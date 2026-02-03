@@ -10,6 +10,7 @@ import BranchModel from "../../model/masters/BranchModel.js";
 import UserModel from "../../model/userModel.js"; // Import the UserModel
 import AccountLedger from "../../model/AccountLedgerModel.js";
 import ItemLedger from "../../model/ItemsLedgerModel.js";
+import StockAdjustment from "../../model/StockAdjustmentModel.js";
 
 // ✅ Your existing createCompany function
 export const createCompany = async (req, res) => {
@@ -138,30 +139,32 @@ export const getCompanyById = async (req, res) => {
 };
 
 // Helper function to check if company has transactions
-const hasTransactions = async (companyId) => {
-  try {
-    // Check AccountLedger for any entries with amount > 0
-    const accountLedgerCount = await AccountLedger.countDocuments({
-      company: companyId,
-      amount: { $gt: 0 }
-    });
-
-    if (accountLedgerCount > 0) {
-      return true;
-    }
-
-    // Check ItemLedger for any entries with amountAfterTax > 0
-    const itemLedgerCount = await ItemLedger.countDocuments({
-      company: companyId,
-      amountAfterTax: { $gt: 0 }
-    });
-
-    return itemLedgerCount > 0;
-  } catch (error) {
-    console.error("Error checking transactions:", error);
-    throw error;
+const hasTransactions = async (companyId, transactionId = null) => {
+  const query = { company: companyId, isCancelled: false };
+  if (transactionId) {
+    query._id = { $ne: transactionId };
   }
+  
+  const collections = [
+    SalesModel,
+    PurchaseModel,
+    SalesReturnModel,
+    PurchaseReturnModel,
+    ReceiptModel,
+    PaymentModel,
+    StockAdjustment,
+  ];
+
+  for (const Model of collections) {
+    const count = await Model.countDocuments(query).limit(1);
+    if (count > 0) {
+      return true; // Exit immediately
+    }
+  }
+
+  return false;
 };
+
 
 //✅ Update company (FIXED - preserves FY data)
 export const updateCompany = async (req, res) => {
@@ -277,6 +280,34 @@ export const lockFinancialYearFormat = async (companyId,session) => {
     throw error;
   }
 };
+
+
+/// 🆕 Unlock Financial Year FORMAT if no transactions exist
+
+export const unlockFinancialYearFormatIfNoTransactions = async (companyId,session,transactionId) => {
+  const company = await CompanyModel.findById(companyId);
+  
+  if (!company.financialYear?.formatLocked) {
+    return company; // Already unlocked
+  }
+
+  // Check if any transactions still exist
+  const hasTransactionsFlag = await hasTransactions(companyId,transactionId);
+
+  console.log("hasTransactionsFlag:", hasTransactionsFlag);
+  
+
+  // If no transactions, unlock the format
+  if (!hasTransactionsFlag) {
+    company.financialYear.formatLocked = false;
+    company.financialYear.formatLockedAt = null;
+    company.financialYear.formatLockedReason = null;
+    await company.save({ session });
+  }
+
+  return company;
+};
+
 
 
 // 🆕 Update Financial Year (year only, format remains locked if transactions exist)

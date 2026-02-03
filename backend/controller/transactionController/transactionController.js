@@ -41,7 +41,7 @@ import { validateAccountChangeOnEdit } from "../../helpers/FundTransactionHelper
 import { reverseOutstandingSettlements } from "../../helpers/FundTransactionHelper/OutstandingSettlementHelper.js";
 import CashBankLedgerModel from "../../model/CashBankLedgerModel.js";
 import AdjustmentEntryModel from "../../model/AdjustmentEntryModel.js";
-import { lockFinancialYearFormat } from "../companyController/companyController.js";
+import { lockFinancialYearFormat, unlockFinancialYearFormatIfNoTransactions } from "../companyController/companyController.js";
 
 /**
  * get transactions (handles sales, purchase, sales_return, purchase_return)
@@ -790,6 +790,9 @@ export const deleteTransaction = async (req, res) => {
       session,
       true, // forceRecalculate = true
     );
+
+    // 🔓 Auto-unlock if last transaction
+    await unlockFinancialYearFormatIfNoTransactions(company,session,transactionId);
 
     await session.commitTransaction();
     console.log("✅ CANCELLATION COMPLETED SUCCESSFULLY");
