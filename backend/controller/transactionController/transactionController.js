@@ -41,6 +41,7 @@ import { validateAccountChangeOnEdit } from "../../helpers/FundTransactionHelper
 import { reverseOutstandingSettlements } from "../../helpers/FundTransactionHelper/OutstandingSettlementHelper.js";
 import CashBankLedgerModel from "../../model/CashBankLedgerModel.js";
 import AdjustmentEntryModel from "../../model/AdjustmentEntryModel.js";
+import { lockFinancialYearFormat } from "../companyController/companyController.js";
 
 /**
  * get transactions (handles sales, purchase, sales_return, purchase_return)
@@ -68,9 +69,6 @@ export const getTransactions = async (req, res) => {
     const branchId = req.query.branchId;
     const sortBy = req.query.sortBy || "transactionDate";
     const sortOrder = req.query.sortOrder || "desc";
-
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
 
     // Convert 'desc' to -1, 'asc' to 1
     const sortDirection = sortOrder === "desc" ? -1 : 1;
@@ -220,6 +218,11 @@ export const createTransaction = async (req, res) => {
         },
         session,
       );
+    }
+
+    /// in the initial update lock the fy format if company is being updated
+    if (req.body.company) {
+      await lockFinancialYearFormat(transactionData.company, session);
     }
 
     // Commit transaction
@@ -459,7 +462,7 @@ export const editTransaction = async (req, res) => {
         deltas.stockDelta,
         originalTransaction.branch,
         session,
-        originalTransaction.transactionType
+        originalTransaction.transactionType,
       );
     }
 

@@ -8,6 +8,9 @@ import {PurchaseModel,SalesModel} from "../../model/TransactionModel.js";
 import {SalesReturnModel,PurchaseReturnModel} from "../../model/TransactionModel.js";
 import BranchModel from "../../model/masters/BranchModel.js";
 import UserModel from "../../model/userModel.js"; // Import the UserModel
+import AccountLedger from "../../model/AccountLedgerModel.js";
+import ItemLedger from "../../model/ItemsLedgerModel.js";
+
 // ✅ Your existing createCompany function
 export const createCompany = async (req, res) => {
   try {
@@ -28,21 +31,46 @@ export const createCompany = async (req, res) => {
       website,
       industry,
       status,
+      financialYear,
     } = req.body;
 
-    // 1️⃣ Validate required fields
+
+    // Validate required fields
     if (!companyName || !email) {
-      console.log("noteset");
-      return res.status(400).json({ message: "Company name and email are required" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Company name and email are required" 
+      });
     }
 
-    // 2️⃣ Check if company already exists
+    // Validate financialYear format if provided
+    if (financialYear?.format) {
+      const validFormats = [
+        "april-march", "january-december", "february-january",
+        "march-february", "may-april", "june-may",
+        "july-june", "august-july", "september-august"
+      ];
+
+      if (!validFormats.includes(financialYear.format)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid financial year format"
+        });
+      }
+    }
+
+
+    // Check if company already exists
     const existingCompany = await CompanyModel.findOne({ companyName: companyName });
     if (existingCompany) {
-      return res.status(409).json({ message: "Company already exists" });
+      return res.status(409).json({ 
+        success: false,
+        message: "Company already exists" 
+      });
     }
 
-    // 3️⃣ Prepare the new company object
+
+    // Prepare the new company object
     const newCompany = new CompanyModel({
       companyName,
       companyType,
@@ -60,22 +88,276 @@ export const createCompany = async (req, res) => {
       industry,
       numEmployees,
       status: status || "Active",
+      financialYear: financialYear || { format: "april-march" },
     });
 
-    // 4️⃣ Save to database
+
+    // Save to database (pre-save hook will calculate FY dates)
     const savedCompany = await newCompany.save();
 
-    // 5️⃣ Return success response
+
     res.status(201).json({
       success: true,
       message: "Company created successfully",
       data: savedCompany,
     });
   } catch (error) {
-    console.log("error", error.message);
+    console.error("Error creating company:", error);
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to create company",
+    });
+  }
+};
+
+// Get company by ID
+export const getCompanyById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const company = await CompanyModel.findById(id).lean();
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: company,
+    });
+  } catch (error) {
+    console.error("Error fetching company:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch company",
+    });
+  }
+};
+
+// Helper function to check if company has transactions
+const hasTransactions = async (companyId) => {
+  try {
+    // Check AccountLedger for any entries with amount > 0
+    const accountLedgerCount = await AccountLedger.countDocuments({
+      company: companyId,
+      amount: { $gt: 0 }
+    });
+
+    if (accountLedgerCount > 0) {
+      return true;
+    }
+
+    // Check ItemLedger for any entries with amountAfterTax > 0
+    const itemLedgerCount = await ItemLedger.countDocuments({
+      company: companyId,
+      amountAfterTax: { $gt: 0 }
+    });
+
+    return itemLedgerCount > 0;
+  } catch (error) {
+    console.error("Error checking transactions:", error);
+    throw error;
+  }
+};
+
+//✅ Update company (FIXED - preserves FY data)
+export const updateCompany = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Check if company exists
+    const company = await CompanyModel.findById(id);
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      });
+    }
+
+    // 🔒 Check if trying to update Financial Year FORMAT (months)
+    if (updateData.financialYear?.format && 
+        updateData.financialYear.format !== company.financialYear?.format) {
+
+      // Check if FY FORMAT is already locked
+      if (company.financialYear?.formatLocked) {
+        return res.status(403).json({
+          success: false,
+          message: "Financial year format (months) is locked and cannot be changed after transactions exist. You can still change the year.",
+          formatLockedAt: company.financialYear.formatLockedAt,
+          formatLockedReason: company.financialYear.formatLockedReason
+        });
+      }
+
+      // Check if company has any transactions
+      const hasTransactionsFlag = await hasTransactions(id);
+
+      if (hasTransactionsFlag) {
+        // Lock the FY FORMAT before rejecting
+        company.financialYear.formatLocked = true;
+        company.financialYear.formatLockedAt = new Date();
+        company.financialYear.formatLockedReason = "Transactions exist in AccountLedger or ItemLedger";
+        await company.save();
+
+        return res.status(403).json({
+          success: false,
+          message: "Cannot change financial year format (months). Transactions already exist. You can still change the year.",
+          hasTransactions: true
+        });
+      }
+    }
+
+    // 🔧 FIX: Preserve existing FY data when updating other fields
+    if (updateData.financialYear) {
+      // Merge with existing financialYear data instead of replacing
+      updateData.financialYear = {
+        ...company.financialYear.toObject(), // Preserve existing FY data
+        ...updateData.financialYear,         // Apply updates
+      };
+    }
+
+    // Check if updating to a name that already exists (excluding current company)
+    if (updateData.companyName && updateData.companyName !== company.companyName) {
+      const existingCompany = await CompanyModel.findOne({
+        companyName: updateData.companyName,
+        _id: { $ne: id },
+      });
+
+      if (existingCompany) {
+        return res.status(409).json({
+          success: false,
+          message: "Company with this name already exists",
+        });
+      }
+    }
+
+    // Apply updates to company document
+    Object.assign(company, updateData);
+
+    // Save (pre-save hook will recalculate dates if format changed)
+    const updatedCompany = await company.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Company updated successfully",
+      data: updatedCompany,
+    });
+  } catch (error) {
+    console.error("Error updating company:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to update company",
+    });
+  }
+};
+
+
+// 🔒 Lock Financial Year FORMAT (call this when first transaction is created)
+export const lockFinancialYearFormat = async (companyId,session) => {
+  try {
+    const company = await CompanyModel.findById(companyId);
+
+    if (!company) {
+      throw new Error("Company not found");
+    }
+
+    if (!company.financialYear?.formatLocked) {
+      company.financialYear.formatLocked = true;
+      company.financialYear.formatLockedAt = new Date();
+      company.financialYear.formatLockedReason = "First transaction created";
+      await company.save({ session });
+    }
+
+    return company;
+  } catch (error) {
+    console.error("Error locking financial year format:", error);
+    throw error;
+  }
+};
+
+
+// 🆕 Update Financial Year (year only, format remains locked if transactions exist)
+export const updateFinancialYear = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { currentFY } = req.body; // e.g., "2026-27"
+
+    if (!currentFY || !/^\d{4}-\d{2}$/.test(currentFY)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid FY format. Expected format: YYYY-YY (e.g., 2026-27)"
+      });
+    }
+
+    const company = await CompanyModel.findById(id);
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found"
+      });
+    }
+
+    // Update year using the method
+    company.updateFYYear(currentFY);
+    await company.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Financial year updated successfully",
+      data: {
+        currentFY: company.financialYear.currentFY,
+        fyStartDate: company.financialYear.fyStartDate,
+        fyEndDate: company.financialYear.fyEndDate,
+        formatLocked: company.financialYear.formatLocked
+      }
+    });
+  } catch (error) {
+    console.error("Error updating financial year:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to update financial year"
+    });
+  }
+};
+
+
+// Check FY lock status
+export const checkFYLockStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const company = await CompanyModel.findById(id).select('financialYear').lean();
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found"
+      });
+    }
+
+    const hasTransactionsFlag = await hasTransactions(id);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        formatLocked: company.financialYear?.formatLocked || false,
+        formatLockedAt: company.financialYear?.formatLockedAt || null,
+        formatLockedReason: company.financialYear?.formatLockedReason || null,
+        hasTransactions: hasTransactionsFlag,
+        canModifyFormat: !company.financialYear?.formatLocked && !hasTransactionsFlag,
+        canModifyYear: true, // ✅ Year can always be modified
+        currentFY: company.financialYear?.currentFY,
+        format: company.financialYear?.format
+      }
+    });
+  } catch (error) {
+    console.error("Error checking FY lock status:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to check FY lock status"
     });
   }
 };
@@ -172,82 +454,7 @@ export const searchCompanies = async (req, res) => {
   }
 };
 
-// ✅ NEW: Get company by ID
-export const getCompanyById = async (req, res) => {
-  try {
-    const { id } = req.params;
 
-    const company = await CompanyModel.findById(id).lean();
-
-    if (!company) {
-      return res.status(404).json({
-        success: false,
-        message: "Company not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: company,
-    });
-  } catch (error) {
-    console.error("Error fetching company:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Failed to fetch company",
-    });
-  }
-};
-
-// ✅ NEW: Update company
-export const updateCompany = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
-
-    // Check if company exists
-    const company = await CompanyModel.findById(id);
-    if (!company) {
-      return res.status(404).json({
-        success: false,
-        message: "Company not found",
-      });
-    }
-
-    // Check if updating to a name that already exists (excluding current company)
-    if (updateData.companyName && updateData.companyName !== company.companyName) {
-      const existingCompany = await CompanyModel.findOne({
-        companyName: updateData.companyName,
-        _id: { $ne: id },
-      });
-
-      if (existingCompany) {
-        return res.status(409).json({
-          success: false,
-          message: "Company with this name already exists",
-        });
-      }
-    }
-
-    // Update company
-    const updatedCompany = await CompanyModel.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Company updated successfully",
-      data: updatedCompany,
-    });
-  } catch (error) {
-    console.error("Error updating company:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Failed to update company",
-    });
-  }
-};
 
 // ✅ NEW: Delete company
 const isCompanyReferenced = async (referencesToCheck, companyId) => {
