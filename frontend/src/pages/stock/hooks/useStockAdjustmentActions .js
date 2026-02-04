@@ -7,27 +7,30 @@ import { toast } from "sonner";
 import { stockAdjustmentMutations } from "@/hooks/mutations/stockAdjustmentMutations";
 import { removeStockAdjustmentDataFromStore } from "@/store/slices/stockAdjustmentSlice ";
 import { convertStringNumbersToNumbers } from "@/pages/Transactions/utils/stockadjustmentUtils";
+import { useNavigate } from "react-router-dom";
 
 export const useStockAdjustmentActions = (
   stockAdjustmentData,
-  isEditMode = false
+  isEditMode = false,
+  fromPath = null,
 ) => {
   const queryClient = useQueryClient();
   const company = useSelector(
-    (state) => state.companyBranch?.selectedCompany?._id
+    (state) => state.companyBranch?.selectedCompany?._id,
   );
   const branch = useSelector(
-    (state) => state.companyBranch?.selectedBranch?._id
+    (state) => state.companyBranch?.selectedBranch?._id,
   );
 
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   // Initialize both mutations
   const createMutation = useMutation(
-    stockAdjustmentMutations.create(queryClient)
+    stockAdjustmentMutations.create(queryClient),
   );
   const updateMutation = useMutation(
-    stockAdjustmentMutations.update(queryClient)
+    stockAdjustmentMutations.update(queryClient),
   );
 
   const handleSave = useCallback(async () => {
@@ -52,22 +55,28 @@ export const useStockAdjustmentActions = (
         return false;
       }
 
-      if (!stockAdjustmentData.items || stockAdjustmentData.items.length === 0) {
+      if (
+        !stockAdjustmentData.items ||
+        stockAdjustmentData.items.length === 0
+      ) {
         toast.error("Please add at least one item to adjust");
         return false;
       }
 
-      const convertedStockAdjustmentData = convertStringNumbersToNumbers(
-        stockAdjustmentData
-      );
+      const convertedStockAdjustmentData =
+        convertStringNumbersToNumbers(stockAdjustmentData);
 
-      console.log("💾 Converted data:", JSON.stringify(convertedStockAdjustmentData, null, 2));
+      console.log(
+        "💾 Converted data:",
+        JSON.stringify(convertedStockAdjustmentData, null, 2),
+      );
 
       // Choose mutation based on mode
       if (isEditMode) {
         // Get ID
-        const adjustmentId = stockAdjustmentData._id || stockAdjustmentData.editAdjustmentId;
-        
+        const adjustmentId =
+          stockAdjustmentData._id || stockAdjustmentData.editAdjustmentId;
+
         // console.log("🔵 ================================");
         // console.log("🔵 EDIT MODE");
         // console.log("🔵 stockAdjustmentData._id:", stockAdjustmentData._id);
@@ -75,7 +84,7 @@ export const useStockAdjustmentActions = (
         // console.log("🔵 Final adjustmentId:", adjustmentId);
         // console.log("🔵 adjustmentId type:", typeof adjustmentId);
         // console.log("🔵 ================================");
-        
+
         if (!adjustmentId || adjustmentId === "undefined") {
           toast.error("Adjustment ID is missing");
           console.error("❌ NO VALID ID!");
@@ -90,24 +99,30 @@ export const useStockAdjustmentActions = (
           id: adjustmentId,
           formData: convertedStockAdjustmentData,
         });
-        
+
         // console.log("✅ updateMutation completed successfully");
-        
+
         dispatch(removeStockAdjustmentDataFromStore());
+        if (fromPath) {
+          navigate(fromPath);
+        }
         return true;
       } else {
         console.log("🔵 CREATE MODE");
-        
+
         // Create new adjustment
         await createMutation.mutateAsync({
-          formData: { 
-            ...convertedStockAdjustmentData, 
-            company, 
-            branch 
+          formData: {
+            ...convertedStockAdjustmentData,
+            company,
+            branch,
           },
         });
-        
+
         console.log("✅ createMutation completed successfully");
+        if (fromPath) {
+          navigate(fromPath);
+        }
         return true;
       }
     } catch (error) {
@@ -121,13 +136,13 @@ export const useStockAdjustmentActions = (
       return false;
     }
   }, [
-    stockAdjustmentData, 
-    isEditMode, 
-    createMutation, 
-    updateMutation, 
-    company, 
-    branch, 
-    dispatch
+    stockAdjustmentData,
+    isEditMode,
+    createMutation,
+    updateMutation,
+    company,
+    branch,
+    dispatch,
   ]);
 
   return {

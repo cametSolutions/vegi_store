@@ -48,23 +48,7 @@ const AddItemForm = ({
   const addButtonRef = useRef(null);
 
   useEffect(() => {
-    setLocalItem({
-      item: null,
-      itemCode: "",
-      itemName: "",
-      unit: units[0]?.value || "",
-      priceLevels: [],
-      quantity: "",
-      rate: "",
-      baseAmount: "0",
-      amountAfterTax: "0",
-      taxable: false,
-      taxRate: "0",
-      taxAmount: "0",
-    });
-    setSearchTerm("");
-    setShowDropdown(false);
-    setShouldSearch(false);
+    clearLocalItemData();
   }, [transactionType]);
 
   const isSearchEnabled =
@@ -97,6 +81,10 @@ const AddItemForm = ({
     refetchOnReconnect: false,
   });
 
+  console.log(isSearchEnabled);
+  console.log(transactionType);
+  
+
   useEffect(() => {
     if (isError && error) {
       toast.error("Search Error", {
@@ -116,7 +104,7 @@ const AddItemForm = ({
       //   return;
       // }
 
-      if (searchResponse?.data && searchResponse.data.length > 0) { 
+      if (searchResponse?.data && searchResponse.data.length > 0) {
         const foundProduct = searchResponse.data[0];
 
         let rate = "";
@@ -128,10 +116,10 @@ const AddItemForm = ({
           priceLevel &&
           (transactionType === "sale" || transactionType === "sales_return")
         ) {
-          const priceLevelData = foundProduct.priceLevels.find(
+          const priceLevelData = foundProduct?.priceLevels?.find(
             (pl) =>
-              pl.priceLevel._id === priceLevel ||
-              pl.priceLevel.priceLevelName === priceLevel,
+              pl?.priceLevel?._id === priceLevel ||
+              pl?.priceLevel?.priceLevelName === priceLevel,
           );
           rate = priceLevelData?.rate || "";
         }
@@ -140,6 +128,12 @@ const AddItemForm = ({
         if (!rate && foundProduct.lastRate) {
           rate = foundProduct.lastRate;
         }
+
+        const currentStock = foundProduct.stock?.find(
+          (st) => st.branch._id === branch,
+        );
+
+        const availableQty = currentStock ? currentStock.currentStock : 0;
 
         setLocalItem((prev) => ({
           ...prev,
@@ -152,6 +146,7 @@ const AddItemForm = ({
           taxable: false,
           taxRate: "0",
           taxAmount: "0",
+          availableQuantity: availableQty.toString(),
         }));
 
         setShowDropdown(false);
@@ -193,10 +188,10 @@ const AddItemForm = ({
       priceLevel &&
       (transactionType === "sale" || transactionType === "sales_return")
     ) {
-      const priceLevelData = foundProduct.priceLevels.find(
+      const priceLevelData = foundProduct?.priceLevels?.find(
         (pl) =>
-          pl.priceLevel._id === priceLevel ||
-          pl.priceLevel.priceLevelName === priceLevel,
+          pl?.priceLevel?._id === priceLevel ||
+          pl?.priceLevel?.priceLevelName === priceLevel,
       );
       newRate = priceLevelData?.rate || "";
     }
@@ -245,10 +240,14 @@ const AddItemForm = ({
   }, [clickedItemInTable]);
 
   const handleCodeKeyDown = (e) => {
+
+    
     if (e.key === "Enter" && searchTerm.trim() !== "") {
       e.preventDefault();
       setShowDropdown(false);
       setShouldSearch(true);
+
+
     }
   };
 
@@ -309,6 +308,9 @@ const AddItemForm = ({
       amountAfterTax: amountAfterTax.toFixed(2),
     };
 
+    // console.log(itemToAdd);
+    
+
     const newItems = addItem(items, itemToAdd);
     updateTransactionField("items", newItems);
 
@@ -336,6 +338,26 @@ const AddItemForm = ({
       e.preventDefault();
       handleAddClick();
     }
+  };
+
+  const clearLocalItemData = () => {
+    setLocalItem({
+      item: null,
+      itemCode: "",
+      itemName: "",
+      unit: units[0]?.value || "",
+      priceLevels: [],
+      quantity: "",
+      rate: "",
+      baseAmount: "0",
+      amountAfterTax: "0",
+      taxable: false,
+      taxRate: "0",
+      taxAmount: "0",
+    });
+    setSearchTerm("");
+    setShowDropdown(false);
+    setShouldSearch(false);
   };
 
   return (
@@ -402,6 +424,30 @@ const AddItemForm = ({
             allowNegative={false}
             decimalScale={3}
             onKeyDown={handleQuantityKeyDown}
+            isAllowed={(values) => {
+              const { floatValue } = values;
+
+              // For sale or purchase_return, check against available quantity
+              if (
+                transactionType === "sale" ||
+                transactionType === "purchase_return"
+              ) {
+                if (localItem.availableQuantity !== "") {
+                  const maxQty = parseFloat(localItem.availableQuantity);
+
+                  console.log(localItem.availableQuantity);
+
+                  if (floatValue > maxQty) {
+                    toast.error("Insufficient Stock", {
+                      description: `Only ${localItem.availableQuantity} units available in stock.`,
+                    });
+                    return false; // This prevents the value from being set
+                  }
+                }
+              }
+
+              return true; // Allow the value
+            }}
             onValueChange={(values) => {
               const { value } = values;
               setLocalItem({ ...localItem, quantity: value });

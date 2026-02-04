@@ -610,7 +610,8 @@ export const editStockAdjustment = async (req, res) => {
       await applyStockDeltas(
         itemDeltas,
         originalAdjustment.branch,
-        session
+        session,
+        
       );
       console.log("✅ Stock deltas applied");
     } else {

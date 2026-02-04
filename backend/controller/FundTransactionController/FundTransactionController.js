@@ -6,6 +6,7 @@ import {
   editFundTransaction,
 } from "../../services/fundTransactionService.js";
 import { markMonthlyBalanceDirtyForFundTransaction } from "../../helpers/CommonTransactionHelper/monthlyBalanceService.js";
+import { unlockFinancialYearFormatIfNoTransactions } from "../companyController/companyController.js";
 
 /**
  * Create a new cash transaction (Receipt or Payment)
@@ -388,6 +389,9 @@ export const deleteFundTransactionController = async (req, res) => {
     });
 
     console.log("✅ Monthly balances marked for recalculation");
+
+    // 🔓 Auto-unlock if last transaction
+    await unlockFinancialYearFormatIfNoTransactions(transaction.company,session,transactionId);
 
     // ==================== STEP 5: COMMIT ====================
     await session.commitTransaction();

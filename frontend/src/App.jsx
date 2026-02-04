@@ -40,14 +40,7 @@ function App() {
               </ProtectedRoute>
             }
           />
- <Route
-          path="/stock-adjustment"
-          element={
-            <ProtectedRoute>
-              <StockAdjustmentPanel />
-            </ProtectedRoute>
-          }
-        />
+
           {/* Master & Transaction Routes */}
           {MastersRoutes()}
           {TransactionRoutes()}

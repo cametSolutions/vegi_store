@@ -33,7 +33,7 @@ export const transactionMutations = {
 
     onError: (error) => {
       console.error("Transaction creation failed:", error);
-      toast.error("Error creating transaction. Please try again.");
+      toast.error(error.message || "Error creating transaction. Please try again.");
     },
   }),
 
@@ -82,7 +82,7 @@ export const transactionMutations = {
 
     onError: (error) => {
       console.error("Transaction update failed:", error);
-      toast.error("Error updating transaction. Please try again.");
+      toast.error(error.message || "Error updating transaction. Please try again.");
     },
   }),
 

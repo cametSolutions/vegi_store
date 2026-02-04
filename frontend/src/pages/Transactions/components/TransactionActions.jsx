@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Save, Trash2, X, Loader2 } from "lucide-react";
+import { Save, Trash2, X, Loader2, XCircle } from "lucide-react";
 import { useTransactionActions } from "../hooks/useTransactionActions";
 import { toast } from "sonner";
 import { DeleteTransactionDialog } from "@/components/modals/DeleteTransactionDialog";
-
 
 const TransactionActions = ({
   transactionData,
@@ -14,11 +13,10 @@ const TransactionActions = ({
   transactionType,
   requireAccount = true,
   onDeleteSuccess, // Callback after successful deletion
+  fromPath,
 }) => {
-  const { handleSave, handleDelete, isLoading, isDeleting } = useTransactionActions(
-    transactionData,
-    isEditMode
-  );
+  const { handleSave, handleDelete, isLoading, isDeleting } =
+    useTransactionActions(transactionData, isEditMode, fromPath);
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -40,9 +38,10 @@ const TransactionActions = ({
       toast.error("Items Missing");
       return false;
     }
-    
-    await handleSave(); 
-    if (resetTransactionData) resetTransactionData(transactionData?.transactionType);
+
+    await handleSave();
+    if (resetTransactionData)
+      resetTransactionData(transactionData?.transactionType);
   };
 
   const handleDeleteClick = () => {
@@ -54,7 +53,7 @@ const TransactionActions = ({
       await handleDelete(reason);
       setShowDeleteDialog(false);
       toast.success("Transaction deleted successfully");
-      
+
       // Call success callback (e.g., navigate away or refresh list)
       if (onDeleteSuccess) {
         onDeleteSuccess();
@@ -68,7 +67,6 @@ const TransactionActions = ({
     <>
       <div className="pt-2 border-t border-slate-100">
         <div className="flex items-center gap-2">
-          
           {/* Cancel (Secondary) */}
           <button
             onClick={onCancel}
@@ -83,7 +81,7 @@ const TransactionActions = ({
           {isEditMode && (
             <button
               onClick={handleDeleteClick}
-              disabled={isLoading || isDeleting}
+              disabled={isLoading || isDeleting || transactionData.isCancelled}
               className="h-10 px-3 rounded border border-red-100 bg-white text-red-500 hover:bg-red-50 hover:border-red-200 font-semibold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
             >
               <Trash2 className="w-3 h-3" />
@@ -94,28 +92,33 @@ const TransactionActions = ({
           {/* Save (Primary - Fill remaining) */}
           <button
             onClick={handleSaveClick}
-            disabled={isLoading || isDeleting}
-            className={`flex-1 h-10 px-4 rounded font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm text-white
-              ${isLoading 
-                ? "bg-blue-400 cursor-wait" 
-                : "bg-blue-600 hover:bg-blue-700 hover:shadow active:scale-[0.98]"
-              }`}
+            disabled={isLoading || isDeleting || transactionData.isCancelled}
+            className={`flex-1 h-10 px-4 rounded font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm
+    ${
+      transactionData.isCancelled
+        ? "bg-red-500 text-white cursor-not-allowed opacity-75"
+        : isLoading
+          ? "bg-blue-400 cursor-wait text-white"
+          : "bg-blue-600 hover:bg-blue-700 hover:shadow active:scale-[0.98] text-white"
+    }`}
           >
-            {isLoading ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
+            {transactionData.isCancelled ? (
+              <>
+                <XCircle className="w-3 h-3" />
+                <span>Cancelled</span>
+              </>
+            ) : isLoading ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>Saving...</span>
+              </>
             ) : (
-              <Save className="w-3 h-3" />
+              <>
+                <Save className="w-3 h-3" />
+                <span>{isEditMode ? "Update" : "Save Transaction"}</span>
+              </>
             )}
-            <span>
-              {isLoading 
-                ? "Saving..." 
-                : isEditMode 
-                  ? "Update" 
-                  : "Save Transaction"
-              }
-            </span>
           </button>
-
         </div>
       </div>
 

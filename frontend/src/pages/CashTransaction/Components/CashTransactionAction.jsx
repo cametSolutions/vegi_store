@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Save, Trash2, X, Loader2 } from "lucide-react";
+import { Save, Trash2, X, Loader2, XCircle } from "lucide-react";
 import { useCashTransactionActions } from "../hooks/useCashTransactionAction";
 import { toast } from "sonner";
 import DeleteCashTransactionDialog from "@/components/modals/DeleteCashTransactionDialog";
@@ -10,18 +10,16 @@ const CashTransactionAction = ({
   onLoadingChange,
   handleCancel,
   isEditMode = false,
+  fromPath,
 }) => {
-  const { 
-    handleSave, 
+  const {
+    handleSave,
     handleDelete,
     showDeleteDialog,
     setShowDeleteDialog,
     isLoading,
-    isDeleting
-  } = useCashTransactionActions(
-    CashtransactionData,
-    isEditMode
-  );
+    isDeleting,
+  } = useCashTransactionActions(CashtransactionData, isEditMode, fromPath);
 
   // Notify parent whenever loading changes
   useEffect(() => {
@@ -31,7 +29,8 @@ const CashTransactionAction = ({
   }, [isLoading, isDeleting, onLoadingChange]);
 
   const handleSaveClick = async () => {
-    const { paymentMode, chequeNumber, accountName, account } = CashtransactionData;
+    const { paymentMode, chequeNumber, accountName, account } =
+      CashtransactionData;
 
     if (paymentMode === "cheque" && chequeNumber.trim() === "") {
       toast.error("Enter cheque number");
@@ -57,7 +56,7 @@ const CashTransactionAction = ({
     try {
       await handleDelete(reason);
       setShowDeleteDialog(false);
-      
+
       // Reset and navigate away
       if (resetCashTransactionData) {
         resetCashTransactionData(CashtransactionData.transactionType);
@@ -67,28 +66,26 @@ const CashTransactionAction = ({
       }
     } catch (error) {
       // Error is already handled by mutation
-      console.error('Delete failed:', error);
+      console.error("Delete failed:", error);
     }
   };
 
   return (
     <>
       {/* Delete Confirmation Dialog */}
-<DeleteCashTransactionDialog
-  open={showDeleteDialog}
-  onOpenChange={setShowDeleteDialog}
-  onConfirm={(reason) => handleDelete(reason)}
-  transactionNumber={CashtransactionData.transactionNumber}
-  transactionType={CashtransactionData.transactionType}
-  amount={CashtransactionData.amount}
-  accountName={CashtransactionData.accountName}
-  isLoading={isDeleting}
-/>
-
+      <DeleteCashTransactionDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={(reason) => handleDelete(reason)}
+        transactionNumber={CashtransactionData.transactionNumber}
+        transactionType={CashtransactionData.transactionType}
+        amount={CashtransactionData.amount}
+        accountName={CashtransactionData.accountName}
+        isLoading={isDeleting}
+      />
 
       <div className="pt-2 border-t border-slate-100">
         <div className="flex items-center gap-2">
-          
           {/* Cancel (Secondary) */}
           <button
             onClick={handleCancel}
@@ -103,7 +100,7 @@ const CashTransactionAction = ({
           {isEditMode && (
             <button
               onClick={handleDeleteClick}
-              disabled={isLoading || isDeleting}
+              disabled={isLoading || isDeleting || CashtransactionData.isCancelled}
               className="h-10 px-3 rounded border border-red-100 bg-white text-red-500 hover:bg-red-50 hover:border-red-200 font-semibold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
             >
               <Trash2 className="w-3 h-3" />
@@ -114,28 +111,35 @@ const CashTransactionAction = ({
           {/* Save (Primary - Fill remaining) */}
           <button
             onClick={handleSaveClick}
-            disabled={isLoading || isDeleting}
-            className={`flex-1 h-10 px-4 rounded font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm text-white
-              ${isLoading 
-                ? "bg-blue-400 cursor-wait" 
-                : "bg-blue-600 hover:bg-blue-700 hover:shadow active:scale-[0.98]"
-              }`}
+            disabled={
+              isLoading || isDeleting || CashtransactionData.isCancelled
+            }
+            className={`flex-1 h-10 px-4 rounded font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm
+    ${
+      CashtransactionData.isCancelled
+        ? "bg-red-500 text-white cursor-not-allowed opacity-75"
+        : isLoading
+          ? "bg-blue-400 cursor-wait text-white"
+          : "bg-blue-600 hover:bg-blue-700 hover:shadow active:scale-[0.98] text-white"
+    }`}
           >
-            {isLoading ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
+            {CashtransactionData.isCancelled ? (
+              <>
+                <XCircle className="w-3 h-3" />
+                <span>Cancelled</span>
+              </>
+            ) : isLoading ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>Saving...</span>
+              </>
             ) : (
-              <Save className="w-3 h-3" />
+              <>
+                <Save className="w-3 h-3" />
+                <span>{isEditMode ? "Update" : "Save Transaction"}</span>
+              </>
             )}
-            <span>
-              {isLoading 
-                ? "Saving..." 
-                : isEditMode 
-                  ? "Update" 
-                  : "Save Transaction"
-              }
-            </span>
           </button>
-
         </div>
       </div>
     </>

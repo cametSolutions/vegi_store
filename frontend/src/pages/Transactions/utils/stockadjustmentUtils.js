@@ -31,6 +31,7 @@ export const createEmptyStockAdjustment = () => ({
   // Edit mode details
   isEditMode: false,
   editAdjustmentId: null,
+  isCancelled: false,
 });
 
 export const calculateStockAdjustmentTotals = (adjustment) => {
