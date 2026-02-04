@@ -2,7 +2,7 @@
 // const ItemMonthlyBalance = require('../models/ItemMonthlyBalance');
 // const { generatePeriodKey, getMonthYear } = require('./dateHelper');
 
-import { generatePeriodKey, getMonthYear } from "../../../shared/utils/date.js";
+import {  generatePeriodKey, getMonthYear } from "../../../shared/utils/date.js";
 import AccountMonthlyBalance from "../../model/AccountMonthlyBalanceModel.js";
 import ItemMonthlyBalance from "../../model/ItemMonthlyBalanceModel.js";
 import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
