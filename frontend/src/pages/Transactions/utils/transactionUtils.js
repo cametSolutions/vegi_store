@@ -1,3 +1,5 @@
+import { is } from "date-fns/locale";
+
 // ==================== CONSTANTS ====================
 export const transactionTypes = [
   { value: "sale", label: "Sale Invoice", icon: "ShoppingCart", color: "blue" },
@@ -92,6 +94,8 @@ export const createEmptyTransaction = () => ({
   /// details for edit
   isEditMode: false,
   editTransactionId: null,
+
+  isCancelled: false,
 });
 
 // ==================== TRANSACTION CALCULATIONS ====================

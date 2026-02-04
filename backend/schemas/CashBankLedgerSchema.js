@@ -1,18 +1,18 @@
 import mongoose from "mongoose";
 
- export const cashBankLedgerSchema = new mongoose.Schema(
+export const cashBankLedgerSchema = new mongoose.Schema(
   {
     company: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
       required: true,
-      index: true
+      index: true,
     },
     branch: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Branch",
       required: true,
-      index: true
+      index: true,
     },
 
     // Reference to Fund transaction (Receipt/Payment)
@@ -20,48 +20,62 @@ import mongoose from "mongoose";
       type: mongoose.Schema.Types.ObjectId,
       required: true,
       refPath: "FundTransaction",
-      index: true
+      index: true,
     },
     transactionModel: {
       type: String,
       required: true,
-      enum:  ["SalesReturn", "PurchaseReturn", "Sale","Purchase","Payment", "Receipt"] 
+      enum: [
+        "SalesReturn",
+        "PurchaseReturn",
+        "Sale",
+        "Purchase",
+        "Payment",
+        "Receipt",
+      ],
     },
     transactionNumber: {
       type: String,
       required: true,
-      index: true
+      index: true,
     },
     transactionDate: {
       type: Date,
       required: true,
-      index: true
+      index: true,
     },
     transactionType: {
       type: String,
       required: true,
-      enum: ["receipt", "payment", "sale", "purchase", "sales_return", "purchase_return"] // ✅ lowercase only
+      enum: [
+        "receipt",
+        "payment",
+        "sale",
+        "purchase",
+        "sales_return",
+        "purchase_return",
+      ], // ✅ lowercase only
     },
 
     account: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AccountMaster",
       required: true,
-      index: true
+      index: true,
     },
     accountName: { type: String, required: true },
 
     cashAccount: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AccountMaster",
-      index: true
+      index: true,
     },
     cashAccountName: { type: String },
 
     bankAccount: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AccountMaster",
-      index: true
+      index: true,
     },
     bankAccountName: { type: String },
 
@@ -70,7 +84,7 @@ import mongoose from "mongoose";
       type: String,
       required: true,
       enum: ["debit", "credit"],
-      index: true
+      index: true,
     },
 
     paymentMode: {
@@ -78,7 +92,7 @@ import mongoose from "mongoose";
       required: true,
       enum: ["cash", "bankTransfer", "cheque", "upi", "card", "online", "dd"],
       default: "cash",
-      index: true
+      index: true,
     },
     chequeNumber: String,
     chequeDate: Date,
@@ -88,25 +102,42 @@ import mongoose from "mongoose";
       type: String,
       enum: ["active", "reversed"],
       default: "active",
-      index: true
+      index: true,
     },
     reversedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     reversedAt: Date,
     reversalReason: String,
 
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    // ==================== CANCELLATION INFO ====================
+    isCancelled: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    cancelledAt: {
+      type: Date,
+    },
+    cancelledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    cancellationReason: {
+      type: String,
+    },
   },
   {
     timestamps: true,
-    versionKey: false
+    versionKey: false,
   }
 );
 
 // --- Validation Logic ---
 cashBankLedgerSchema.pre("save", function (next) {
   if (this.isNew) {
-    const expectedEntryType = this.transactionType === "receipt" ? "debit" : "credit";
+    const expectedEntryType =
+      this.transactionType === "receipt" ? "debit" : "credit";
 
     if (this.entryType !== expectedEntryType) {
       return next(
@@ -120,13 +151,15 @@ cashBankLedgerSchema.pre("save", function (next) {
     const hasBank = !!this.bankAccount;
 
     if (!hasCash && !hasBank) {
-      return next(new Error("Either cashAccount or bankAccount must be specified"));
+      return next(
+        new Error("Either cashAccount or bankAccount must be specified")
+      );
     }
     if (hasCash && hasBank) {
-      return next(new Error("Cannot have both cashAccount and bankAccount set"));
+      return next(
+        new Error("Cannot have both cashAccount and bankAccount set")
+      );
     }
   }
   next();
 });
-
-

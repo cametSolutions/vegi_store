@@ -31,7 +31,9 @@ const ItemsTable = React.memo(ItemsTableComponent);
 const TransactionSummary = React.memo(TransactionSummaryComponent);
 const TransactionActions = React.memo(TransactionActionsComponent);
 
-const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
+const EditTransaction = ({ editTransactionData, handleCancelEdit ,fromPath}) => {
+
+  
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
 
@@ -62,7 +64,7 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
     //// add to global state that edit mode is true and the transaction id
     updateTransactionData({
       isEditMode: true,
-      editTransactionId: editTransactionData._id,
+      editTransactionId: editTransactionData?._id,
       transactionType: currentTransactionType,
     });
   }, [currentTransactionType, updateTransactionField]);
@@ -90,8 +92,9 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
     ...transactionQueries.getTransactionById(
       selectedCompanyFromStore._id,
       selectedBranchFromStore._id,
-      editTransactionData._id,
-      currentTransactionType
+      editTransactionData?._id,
+      currentTransactionType,
+      "true"// iSEdit
     ),
   });
 
@@ -104,9 +107,15 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
       dispatch(
         addTransactionDataToStore({
           isEditMode: true,
-          editTransactionId: editTransactionData._id,
+          editTransactionId: editTransactionData?._id,
           transactionType: currentTransactionType,
         })
+      );
+    }
+
+    return () => {
+      dispatch(
+        removeTransactionDataFromStore()
       );
     }
   }, [transactionResponse, updateTransactionData]);
@@ -143,7 +152,7 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
         date={transactionData.transactionDate}
         updateTransactionField={updateTransactionField}
         isEditMode={transactionData.isEditMode}
-        transactionNumber={editTransactionData.transactionNumber}
+        transactionNumber={transactionData.transactionNumber}
       />
 
       {/* Main Content */}
@@ -163,6 +172,7 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
               updateTransactionData={updateTransactionData}
               branch={selectedBranchFromStore?._id}
               company={selectedCompanyFromStore?._id}
+              settlementCount={transactionData?.settlementCount || 0}
             />
 
             <AddItemForm
@@ -197,6 +207,8 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
               onDiscountChange={handleDiscountChange}
               onPaidAmountChange={handlePaidAmountChange}
               transactionType={transactionData.transactionType}
+              accountType={transactionData.accountType}
+
             />
 
             <TransactionActions
@@ -206,6 +218,8 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit }) => {
               resetTransactionData={resetTransactionData}
               isEditMode={true}
               onCancel={handleCancel}
+              fromPath={fromPath}
+              // isCancelled={}
             />
           </div>
         </div>

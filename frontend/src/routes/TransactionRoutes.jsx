@@ -4,6 +4,7 @@ import ProtectedRoute from "../components/Layout/ProtectedRoute";
 import TransactionPanel from "@/pages/Transactions/TransactionPanel";
 import CashTransactionPanel from "@/pages/CashTransaction/CashTransactionPanel";
 import TransactionPrintPreview from "@/pages/Transactions/components/TransactionList/TransactionPrintPreview";
+import StockAdjustmentPanel from "@/pages/StockAdjustment/StockAdjustmentPanel";
 
 
 export default function TransactionRoutes() {
@@ -22,6 +23,8 @@ export default function TransactionRoutes() {
       <Route path="sales_return/create" element={<TransactionPanel />} />
       <Route path="receipt/create" element={<CashTransactionPanel />} />
       <Route path="payment/create" element={<CashTransactionPanel />} />
+      <Route path="stock_adjustment/create" element={<StockAdjustmentPanel />} />
+
        <Route path="Print/:transactionId" element={<TransactionPrintPreview />} />
       
 

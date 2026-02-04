@@ -9,8 +9,14 @@ import { useQuery } from "@tanstack/react-query";
 import { transactionQueries } from "@/hooks/queries/transaction.queries";
 import { useSelector } from "react-redux";
 import { formatDate } from "../../../../../../shared/utils/date";
-import { formatINR } from "../../../../../../shared/utils/currency";
-import { LoaderCircle, ArrowLeft, Printer } from "lucide-react";
+import { 
+  Loader2, 
+  ArrowLeft, 
+  Printer, 
+  Download, 
+  FileText, 
+  ChevronDown 
+} from "lucide-react";
 import jsPDF from "jspdf";
 
 const TransactionPrintPreview = () => {
@@ -40,7 +46,6 @@ const TransactionPrintPreview = () => {
     data: transactionResponse,
     isLoading,
     isError,
-    error,
     refetch,
   } = useQuery({
     ...transactionQueries.getTransactionById(
@@ -70,22 +75,22 @@ const TransactionPrintPreview = () => {
   const printSizes = {
     "80mm": {
       width: "80mm",
-      label: "3 Inch (80mm) - Thermal",
+      label: "3 Inch (80mm) Thermal",
       pdfFormat: [80, 297],
     },
     "127mm": {
       width: "127mm",
-      label: "5 Inch (127mm) - Thermal",
+      label: "5 Inch (127mm) Thermal",
       pdfFormat: [127, 297],
     },
     a4: {
       width: "210mm",
-      label: "A4 (210mm × 297mm) - Thermal Layout",
+      label: "A4 Standard",
       pdfFormat: "a4",
     },
     letter: {
       width: "216mm",
-      label: 'Letter (8.5" × 11") - Thermal Layout',
+      label: 'US Letter',
       pdfFormat: "letter",
     },
   };
@@ -103,13 +108,10 @@ const TransactionPrintPreview = () => {
   const handleDownloadPDF = () => {
     if (!transaction || !printRef.current) return;
 
-    const sizeConfig = printSizes[printSize];
     const element = printRef.current;
-
     // Calculate actual content height
     const contentHeightMM = (element.scrollHeight * 0.264583); // Convert px to mm
 
-    let pdfFormat;
     let pdfWidth;
     let pdfHeight;
 
@@ -134,11 +136,11 @@ const TransactionPrintPreview = () => {
     });
 
     generateThermalPDF(doc, transaction, printSize, pdfHeight);
-
     doc.save(`${transaction?.transactionNumber || "receipt"}.pdf`);
   };
 
   const generateThermalPDF = (doc, transaction, size, pageHeight) => {
+    // ... [Logic remains mostly same, keeping it standard for PDF generation]
     let yPos = 10;
     const leftMargin = 5;
 
@@ -175,16 +177,10 @@ const TransactionPrintPreview = () => {
     // Date and Account
     doc.setFontSize(fontSize.header);
     doc.setFont("courier", "normal");
-    doc.text(
-      `DATE: ${formatDate(transaction?.transactionDate)}`,
-      leftMargin,
-      yPos
-    );
+    doc.text(`DATE: ${formatDate(transaction?.transactionDate)}`, leftMargin, yPos);
     yPos += size === "80mm" ? 5 : size === "127mm" ? 6 : 8;
     doc.text(
-      `To: ${
-        transaction?.account?.accountName || transaction?.accountName || "N/A"
-      }`,
+      `To: ${transaction?.account?.accountName || transaction?.accountName || "N/A"}`,
       leftMargin,
       yPos
     );
@@ -269,7 +265,8 @@ const TransactionPrintPreview = () => {
     });
     yPos += 5;
 
-    doc.text("Discount", leftMargin, yPos);
+    // ... [Rest of totals logic same]
+     doc.text("Discount", leftMargin, yPos);
     doc.text(":", leftMargin + 30, yPos);
     doc.text(String(discount.toFixed(2)), pageWidth - leftMargin, yPos, {
       align: "right",
@@ -322,84 +319,65 @@ const TransactionPrintPreview = () => {
   };
 
   const renderThermalPreview = () => {
-    const sizeConfig = printSizes[printSize];
     const itemFontSize =
       printSize === "80mm"
-        ? "text-xs"
+        ? "text-[10px] leading-tight"
         : printSize === "127mm"
-        ? "text-sm"
-        : "text-base";
+        ? "text-xs"
+        : "text-sm";
+    
+    const headerSize = printSize === "80mm" ? "text-sm" : "text-base";
+    const smallText = printSize === "80mm" ? "text-[10px]" : "text-xs";
 
     return (
-      <div className="p-4">
-        <div className="text-center mb-4">
-          <h1
-            className={`font-bold ${
-              printSize === "80mm"
-                ? "text-lg"
-                : printSize === "127mm"
-                ? "text-xl"
-                : "text-2xl"
-            }`}
-          >
-            {`ESTIMATE OF ${
-              transaction?.transactionType?.toUpperCase() || "TRANSACTION"
-            }`}
+      <div className="p-4 text-black">
+        {/* Header */}
+        <div className="text-center mb-3">
+          <h1 className={`font-bold uppercase tracking-wide ${headerSize}`}>
+            Estimate of {transaction?.transactionType || "Transaction"}
           </h1>
         </div>
 
-        <div
-          className={`mb-4 ${
-            printSize === "80mm"
-              ? "text-xs"
-              : printSize === "127mm"
-              ? "text-sm"
-              : "text-base"
-          }`}
-        >
-          <p>DATE: {formatDate(transaction?.transactionDate)}</p>
-          <p>
-            To:{" "}
-            {transaction?.account?.accountName ||
-              transaction?.accountName ||
-              "N/A"}
-          </p>
+        {/* Meta Data */}
+        <div className={`mb-3 space-y-1 ${smallText} font-medium`}>
+          <div className="flex justify-between">
+            <span>DATE:</span>
+            <span>{formatDate(transaction?.transactionDate)}</span>
+          </div>
+          <div className="flex gap-1">
+            <span className="shrink-0">TO:</span>
+            <span className="uppercase break-words">
+              {transaction?.account?.accountName || transaction?.accountName || "N/A"}
+            </span>
+          </div>
         </div>
 
-        <hr className="border-t-2 border-black my-2" />
+        {/* Separator - Dashed for thermal look */}
+        <div className="border-b border-dashed border-black my-2" />
 
-        <div className="mb-4">
+        {/* Items Table */}
+        <div className="mb-3">
           <table className={`w-full ${itemFontSize}`}>
             <thead>
-              <tr className="border-b border-black">
-                <th className="text-left py-1">SNO</th>
-                <th className="text-left py-1">PRICE</th>
-                <th className="text-left py-1">NAME</th>
-                <th className="text-right py-1">QTY</th>
-                <th className="text-right py-1">AMOUNT</th>
+              <tr className="border-b border-dashed border-black">
+                <th className="text-left py-1 w-[8%]">#</th>
+                <th className="text-left py-1 w-[20%]">Rate</th>
+                <th className="text-left py-1 w-[40%]">Item</th>
+                <th className="text-right py-1 w-[12%]">Qty</th>
+                <th className="text-right py-1 w-[20%]">Amt</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="font-medium">
               {transaction?.items?.map((item, index) => (
-                <tr key={index} className="border-b">
-                  <td className="py-1">{index + 1}</td>
-                  <td className="py-1">{(item?.rate || 0).toFixed(2)}</td>
-                  <td
-                    className={`py-1 ${
-                      printSize === "80mm"
-                        ? "truncate max-w-[100px]"
-                        : "truncate"
-                    }`}
-                  >
+                <tr key={index}>
+                  <td className="py-1 align-top">{index + 1}</td>
+                  <td className="py-1 align-top">{(item?.rate || 0).toFixed(2)}</td>
+                  <td className={`py-1 align-top ${printSize === "80mm" ? "truncate max-w-[80px]" : ""}`}>
                     {item?.itemName || "Item"}
                   </td>
-                  <td className="py-1 text-right">
-                    {(item?.quantity || 0).toFixed(2)}
-                  </td>
-                  <td className="py-1 text-right">
-                    {(item?.amountAfterTax || item?.baseAmount || 0).toFixed(
-                      2
-                    )}
+                  <td className="py-1 align-top text-right">{(item?.quantity || 0).toFixed(2)}</td>
+                  <td className="py-1 align-top text-right">
+                    {(item?.amountAfterTax || item?.baseAmount || 0).toFixed(2)}
                   </td>
                 </tr>
               ))}
@@ -407,53 +385,29 @@ const TransactionPrintPreview = () => {
           </table>
         </div>
 
-        <hr className="border-t-2 border-black my-2" />
+        <div className="border-b border-dashed border-black my-2" />
 
-        <div
-          className={`space-y-1 font-bold ${
-            printSize === "80mm"
-              ? "text-xs"
-              : printSize === "127mm"
-              ? "text-sm"
-              : "text-base"
-          }`}
-        >
-          <div className="flex justify-between">
-            <span>Total:</span>
-            <span>{(transaction?.totalAmountAfterTax || 0).toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Discount:</span>
-            <span>{(transaction?.discountAmount || 0).toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Net Amount:</span>
-            <span>{(transaction?.netAmount || 0).toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Balance (Opening):</span>
-            <span>{formatWithCrDr(transaction?.openingBalance || 0)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Cash:</span>
-            <span>{(transaction?.paidAmount || 0).toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Closing Balance:</span>
-            <span>{formatWithCrDr(transaction?.balanceAmount || 0)}</span>
-          </div>
+        {/* Totals Section */}
+        <div className={`space-y-1 font-bold ${smallText}`}>
+          {[
+            { label: "Total", value: (transaction?.totalAmountAfterTax || 0).toFixed(2) },
+            { label: "Discount", value: (transaction?.discountAmount || 0).toFixed(2) },
+            { label: "Net Amount", value: (transaction?.netAmount || 0).toFixed(2), isMain: true },
+            { label: "Bal (Opening)", value: formatWithCrDr(transaction?.openingBalance || 0) },
+            { label: "Cash Paid", value: (transaction?.paidAmount || 0).toFixed(2) },
+            { label: "Closing Bal", value: formatWithCrDr(transaction?.balanceAmount || 0) },
+          ].map((row, i) => (
+            <div key={i} className={`flex justify-between ${row.isMain ? 'text-[1.1em] mt-1 mb-1' : ''}`}>
+              <span>{row.label}:</span>
+              <span>{row.value}</span>
+            </div>
+          ))}
         </div>
 
-        <div
-          className={`text-center mt-4 ${
-            printSize === "80mm"
-              ? "text-xs"
-              : printSize === "127mm"
-              ? "text-sm"
-              : "text-base"
-          }`}
-        >
-          <p>...Thank You Visit Again...</p>
+        {/* Footer */}
+        <div className={`text-center mt-6 ${smallText}`}>
+          <p className="uppercase tracking-widest font-medium">*** Thank You ***</p>
+          <p className="text-[9px] mt-1">Visit Again</p>
         </div>
       </div>
     );
@@ -461,94 +415,46 @@ const TransactionPrintPreview = () => {
 
   if (!companyId || !branchId) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-101px)]">
-        <p className="text-red-500 mb-4">
-          Company or Branch not selected. Please select and try again.
-        </p>
-        <button
-          onClick={() => navigate(-1)}
-          className="bg-blue-500 text-white px-4 py-2 rounded"
-        >
-          Go Back
-        </button>
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
+        <div className="text-center p-8 bg-white rounded-lg shadow-sm border">
+          <p className="text-red-500 mb-4 font-medium">Company or Branch not selected.</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="text-sm bg-slate-900 text-white px-5 py-2.5 rounded-md hover:bg-slate-800 transition-colors"
+          >
+            Go Back
+          </button>
+        </div>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-101px)] bg-white">
-        <LoaderCircle className="animate-spin w-8 h-8 text-slate-500" />
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="animate-spin w-8 h-8 text-slate-600" />
+          <span className="text-sm text-slate-500 font-medium">Loading preview...</span>
+        </div>
       </div>
     );
   }
 
   if (isError || !transaction) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-101px)] bg-gradient-to-br from-gray-50 to-gray-100 px-4">
-        <div className="relative mb-8">
-          <div className="absolute inset-0 bg-red-100 rounded-full blur-2xl opacity-50 animate-pulse"></div>
-          <div className="relative bg-white rounded-full p-6 shadow-xl border-4 border-red-50">
-            <svg
-              className="w-10 h-10 text-red-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-        </div>
-
-        <div className="text-center max-w-md">
-          <h1 className="text-xl font-bold text-gray-800 mb-3">
-            Oops! Something Went Wrong
-          </h1>
-          <p className="text-gray-600 mb-2 text-lg">
-            We couldn't load the transaction details
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
-            <button
-              onClick={() => navigate(-1)}
-              className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              Go Back
-            </button>
-            <button
-              onClick={() => {
-                refetch();
-              }}
-              className="inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 font-medium px-6 py-3 rounded-lg border-2 border-gray-300 shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              Try Again
-            </button>
-          </div>
-
-          <p className="text-sm text-gray-500 mt-8">
-            If the problem persists, please contact support or check your
-            connection.
-          </p>
-        </div>
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
+         <div className="text-center p-8 bg-white rounded-xl shadow-sm border max-w-md">
+           <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+             <ArrowLeft className="text-red-600 w-6 h-6" />
+           </div>
+           <h3 className="text-lg font-bold text-gray-900 mb-2">Details Unavailable</h3>
+           <p className="text-gray-500 text-sm mb-6">We couldn't retrieve the transaction details. It might have been deleted or you're offline.</p>
+           
+           <div className="flex gap-3 justify-center">
+             <button onClick={() => navigate(-1)} className="px-4 py-2 border rounded-md text-sm hover:bg-gray-50">Cancel</button>
+             <button onClick={() => refetch()} className="px-4 py-2 bg-slate-900 text-white rounded-md text-sm hover:bg-slate-800">Retry</button>
+           </div>
+         </div>
       </div>
     );
   }
@@ -556,82 +462,102 @@ const TransactionPrintPreview = () => {
   const currentSize = printSizes[printSize];
 
   return (
-    <div className="h-[calc(100vh-101px)] bg-gray-500 flex flex-col">
-      {/* Header with actions */}
-      <div className="bg-white shadow-sm border-b z-10 print:hidden flex-shrink-0">
-        <div className="mx-auto px-4 py-4 shadow-lg">
-          <div className="flex items-center justify-between text-sm">
-            <div></div>
-            <div className="flex gap-2">
-              <label
-                htmlFor="printSize"
-                className="text-sm px-4 py-2 font-medium text-gray-700"
-              >
-                Print Size:
-              </label>
+    <div className="h-[calc(100vh-110px)] bg-gray-100/80 flex flex-col font-sans">
+      
+      {/* PROFESSIONAL HEADER / TOOLBAR */}
+      <div className="bg-white border-b border-gray-200 shadow-sm z-20 print:hidden shrink-0 sticky top-0">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          
+          {/* Left: Branding & Back */}
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)} 
+              className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors"
+              title="Go Back"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex flex-col">
+              <span className="font-semibold text-gray-900">Print Preview</span>
+              <span className="text-xs text-gray-500 font-medium">
+                #{transaction?.transactionNumber} • {transactionType.toUpperCase()}
+              </span>
+            </div>
+          </div>
+
+          {/* Right: Controls */}
+          <div className="flex items-center gap-3">
+            {/* Size Selector */}
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <FileText className="w-4 h-4 text-gray-400" />
+              </div>
               <select
-                id="printSize"
                 value={printSize}
                 onChange={(e) => setPrintSize(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                className="pl-9 pr-8 py-2 bg-gray-50 border border-gray-300 text-gray-700 text-sm rounded-md focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none appearance-none hover:bg-white transition-colors cursor-pointer min-w-[160px]"
               >
                 {Object.entries(printSizes).map(([key, config]) => (
-                  <option key={key} value={key}>
-                    {config.label}
-                  </option>
+                  <option key={key} value={key}>{config.label}</option>
                 ))}
               </select>
-              <button
-                onClick={handleDownloadPDF}
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                Download PDF
-              </button>
-              <button
-                onClick={handlePrint}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2"
-              >
-                <Printer className="w-5 h-5" />
-                Print
-              </button>
+              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                <ChevronDown className="w-3 h-3 text-gray-400" />
+              </div>
             </div>
+
+            <div className="h-6 w-px bg-gray-200 mx-1"></div>
+
+            {/* Actions */}
+            <button
+              onClick={handleDownloadPDF}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-slate-900 transition-all shadow-sm active:scale-[0.98]"
+            >
+              <Download className="w-4 h-4" />
+              <span>PDF</span>
+            </button>
+            
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 transition-all shadow-md active:scale-[0.98] hover:shadow-lg"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Print</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* SCROLLABLE CONTENT AREA */}
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-4xl mx-auto py-8 px-4 print:p-0 print:max-w-full">
+      {/* MAIN PREVIEW AREA */}
+      <div className="flex-1 overflow-auto py-8 px-4 flex justify-center bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
+        <div className="w-full max-w-fit animate-in fade-in zoom-in-95 duration-300">
+          
+          {/* The "Paper" */}
           <div
             ref={printRef}
             id="print-content"
-            className="bg-white shadow-lg mx-auto print:shadow-none transition-all duration-300"
+            className="bg-white mx-auto print:shadow-none transition-all duration-300 relative"
             style={{
               width: currentSize.width,
               minHeight: "fit-content",
-              fontFamily: "Courier, monospace",
+              fontFamily: "'Courier Prime', 'Courier New', monospace", // Thermal font
+              boxShadow: "rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.05) 0px 4px 6px -2px",
             }}
           >
+            {/* Preview Content */}
             {renderThermalPreview()}
           </div>
+
+          <p className="text-center text-xs text-gray-400 mt-6 print:hidden">
+            Previewing {currentSize.width} layout
+          </p>
         </div>
       </div>
 
-      {/* Print Styles */}
+      {/* Global Print Styles */}
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+
         @media print {
           @page {
             size: ${currentSize.width} auto;
@@ -641,38 +567,33 @@ const TransactionPrintPreview = () => {
           html, body {
             margin: 0 !important;
             padding: 0 !important;
-            height: auto !important;
+            width: 100% !important;
+            height: 100% !important;
             overflow: visible !important;
           }
 
-          body {
-            width: ${currentSize.width} !important;
-          }
-
-          #print-content {
-            width: ${currentSize.width} !important;
-            height: auto !important;
-            min-height: auto !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            page-break-after: auto !important;
-          }
-
-          .print\\:hidden {
+          /* Hide UI elements */
+          .print\\:hidden, header, nav, button {
             display: none !important;
           }
 
-          * {
-            box-sizing: border-box;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-        }
-
-        @media screen {
+          /* Ensure content prints correctly */
           #print-content {
-            min-height: fit-content;
-            height: auto;
+            width: ${currentSize.width} !important;
+            box-shadow: none !important;
+            border: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+          }
+
+          /* Force black text for thermal printers */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color: #000 !important;
           }
         }
       `}</style>

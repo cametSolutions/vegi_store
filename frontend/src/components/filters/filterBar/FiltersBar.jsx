@@ -34,6 +34,9 @@ const FiltersBar = ({
     "purchase",
     "sales_return",
     "purchase_return",
+    "receipt",
+    "payment",
+    "stock_adjustment",
   ],
   allowedOutstandingTypes = ["receivables", "payables"],
   dateFilter,
@@ -83,6 +86,9 @@ const FiltersBar = ({
       purchase: "Purchases",
       sales_return: "Sales Return",
       purchase_return: "Purchase Return",
+      receipt: "Receipts",
+      payment: "Payments",
+      stock_adjustment: "Stock Adjustments",
     };
     return labels[type] || type;
   };

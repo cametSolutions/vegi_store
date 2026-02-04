@@ -26,7 +26,7 @@ export const getPartyOutstandingDetails = async (req, res) => {
       company: companyObjectId,
       branch: branchObjectId,
       account: customerObjectId,
-      status: { $nin: ['paid', 'cancelled', 'written_off'] }
+      status: { $nin: ['paid','written_off'] }
     };
 
     // Add outstanding type filter if provided

@@ -1,7 +1,8 @@
 import React, { useEffect } from "react";
-import { Save, Trash2, X, Loader2 } from "lucide-react";
+import { Save, Trash2, X, Loader2, XCircle } from "lucide-react";
 import { useCashTransactionActions } from "../hooks/useCashTransactionAction";
 import { toast } from "sonner";
+import DeleteCashTransactionDialog from "@/components/modals/DeleteCashTransactionDialog";
 
 const CashTransactionAction = ({
   CashtransactionData,
@@ -9,93 +10,139 @@ const CashTransactionAction = ({
   onLoadingChange,
   handleCancel,
   isEditMode = false,
-  // onView,
-  // onDelete,
-  // onPrint,
+  fromPath,
 }) => {
-  const { handleSave, isLoading } = useCashTransactionActions(
-    CashtransactionData,
-    isEditMode
-  );
+  const {
+    handleSave,
+    handleDelete,
+    showDeleteDialog,
+    setShowDeleteDialog,
+    isLoading,
+    isDeleting,
+  } = useCashTransactionActions(CashtransactionData, isEditMode, fromPath);
 
   // Notify parent whenever loading changes
   useEffect(() => {
     if (onLoadingChange) {
-      onLoadingChange(isLoading);
+      onLoadingChange(isLoading || isDeleting);
     }
-  }, [isLoading, onLoadingChange]);
+  }, [isLoading, isDeleting, onLoadingChange]);
 
   const handleSaveClick = async () => {
-    const { paymentMode, chequeNumber, accountName, account } = CashtransactionData;
+    const { paymentMode, chequeNumber, accountName, account } =
+      CashtransactionData;
 
     if (paymentMode === "cheque" && chequeNumber.trim() === "") {
       toast.error("Enter cheque number");
       return;
     }
 
-    // Validation
     if (!accountName?.trim() && !account) {
       toast.error("Add a customer");
       return false;
     }
 
-    await handleSave(); // save using your hook
-    if (resetCashTransactionData) {
+    const success = await handleSave();
+    if (success && resetCashTransactionData) {
       resetCashTransactionData(CashtransactionData.transactionType);
     }
   };
 
+  const handleDeleteClick = () => {
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async (reason) => {
+    try {
+      await handleDelete(reason);
+      setShowDeleteDialog(false);
+
+      // Reset and navigate away
+      if (resetCashTransactionData) {
+        resetCashTransactionData(CashtransactionData.transactionType);
+      }
+      if (handleCancel) {
+        handleCancel();
+      }
+    } catch (error) {
+      // Error is already handled by mutation
+      console.error("Delete failed:", error);
+    }
+  };
+
   return (
-    <div className="pt-2 border-t border-slate-100">
-      <div className="flex items-center gap-2">
-        
-        {/* Cancel (Secondary) */}
-        <button
-          onClick={handleCancel}
-          disabled={isLoading}
-          className="h-10 px-3 rounded border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:border-slate-300 font-semibold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
-        >
-          <X className="w-3 h-3" />
-          Cancel
-        </button>
+    <>
+      {/* Delete Confirmation Dialog */}
+      <DeleteCashTransactionDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={(reason) => handleDelete(reason)}
+        transactionNumber={CashtransactionData.transactionNumber}
+        transactionType={CashtransactionData.transactionType}
+        amount={CashtransactionData.amount}
+        accountName={CashtransactionData.accountName}
+        isLoading={isDeleting}
+      />
 
-        {/* Delete (Destructive) - Keep it even if unused for layout consistency */}
-        <button
-          // onClick={onDelete}
-          disabled={isLoading}
-          className="h-10 px-3 rounded border border-red-100 bg-white text-red-500 hover:bg-red-50 hover:border-red-200 font-semibold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
-        >
-          <Trash2 className="w-3 h-3" />
-          Delete
-        </button>
+      <div className="pt-2 border-t border-slate-100">
+        <div className="flex items-center gap-2">
+          {/* Cancel (Secondary) */}
+          <button
+            onClick={handleCancel}
+            disabled={isLoading || isDeleting}
+            className="h-10 px-3 rounded border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:border-slate-300 font-semibold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
+          >
+            <X className="w-3 h-3" />
+            Cancel
+          </button>
 
-        {/* Save (Primary - Fill remaining) */}
-        <button
-          onClick={handleSaveClick}
-          disabled={isLoading}
-          className={`flex-1 h-10 px-4 rounded font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm text-white
-            ${isLoading 
-              ? "bg-blue-400 cursor-wait" 
-              : "bg-blue-600 hover:bg-blue-700 hover:shadow active:scale-[0.98]"
-            }`}
-        >
-          {isLoading ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          ) : (
-            <Save className="w-3 h-3" />
+          {/* Delete (Destructive) */}
+          {isEditMode && (
+            <button
+              onClick={handleDeleteClick}
+              disabled={isLoading || isDeleting || CashtransactionData.isCancelled}
+              className="h-10 px-3 rounded border border-red-100 bg-white text-red-500 hover:bg-red-50 hover:border-red-200 font-semibold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
+            >
+              <Trash2 className="w-3 h-3" />
+              Delete
+            </button>
           )}
-          <span>
-            {isLoading 
-              ? "Saving..." 
-              : isEditMode 
-                ? "Update" 
-                : "Save Transaction"
-            }
-          </span>
-        </button>
 
+          {/* Save (Primary - Fill remaining) */}
+          <button
+            onClick={handleSaveClick}
+            disabled={
+              isLoading || isDeleting || CashtransactionData.isCancelled
+            }
+            className={`flex-1 h-10 px-4 rounded font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-sm
+    ${
+      CashtransactionData.isCancelled
+        ? "bg-red-500 text-white cursor-not-allowed opacity-75"
+        : isLoading
+          ? "bg-blue-400 cursor-wait text-white"
+          : "bg-blue-600 hover:bg-blue-700 hover:shadow active:scale-[0.98] text-white"
+    }`}
+          >
+            {CashtransactionData.isCancelled ? (
+              <>
+                <XCircle className="w-3 h-3" />
+                <span>Cancelled</span>
+              </>
+            ) : isLoading ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-3 h-3" />
+                <span>{isEditMode ? "Update" : "Save Transaction"}</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

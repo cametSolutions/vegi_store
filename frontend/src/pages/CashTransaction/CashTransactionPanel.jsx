@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Edit } from "lucide-react";
 import EditCashTransaction from "./EditCashTransaction";
 import { removeTransactionDataFromStore } from "@/store/slices/transactionSlice";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const CashTransactionPanel = () => {
   const isEditMode = useSelector((state) => state.transaction.isEditMode);
@@ -12,20 +13,43 @@ const CashTransactionPanel = () => {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const dispatch = useDispatch();
 
+  const location = useLocation();
+  const navigate = useNavigate();
+  console.log(location);
+
+  const { from, transactionId, fromPath } = location.state || {};
+  // console.log(location);
+  // console.log(location);
+
+  useEffect(() => {
+    if (from === "transactionSummary" && transactionId) {
+      handleEditTransaction({ _id: transactionId });
+    }
+
+    return () => {
+      ///set location.state to null
+      window.history.replaceState(null, "", window.location.pathname);
+      setSelectedTransaction(null);
+      setEditMode(false);
+    };
+  }, [location.state]);
+
   // Handler to switch to edit mode
   const handleEditTransaction = (transaction) => {
     setSelectedTransaction(transaction);
     setEditMode(true);
   };
 
-
   // Handler to switch back to create mode
   const handleCancelEdit = () => {
-    console.log("cancel");
-    
+    if (from === "transactionSummary" && transactionId) {
+      // Clear location state using React Router's navigate
+      navigate(fromPath || location.pathname, { replace: true, state: null });
+    }
+
     setEditMode(false);
     setSelectedTransaction(null);
-     dispatch(removeTransactionDataFromStore());
+    dispatch(removeTransactionDataFromStore());
   };
 
   //// Sync local editMode state with Redux store
@@ -45,12 +69,15 @@ const CashTransactionPanel = () => {
             editTransactionData={selectedTransaction}
             handleCancelEdit={handleCancelEdit}
             onSuccess={handleCancelEdit} // Return to create mode after successful edit
+            fromPath={fromPath}
           />
         ) : (
           <CreateCashTransaction />
         )}
       </div>
-      <div className="w-[45%]">
+      <div
+        className={` ${transactionId && from === "transactionSummary" ? "opacity-50 pointer-events-none" : ""}  w-[45%]`}
+      >
         <CashTRansactionList
           onEditTransaction={handleEditTransaction}
           selectedTransaction={selectedTransaction}

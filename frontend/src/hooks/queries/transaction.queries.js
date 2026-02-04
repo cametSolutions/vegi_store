@@ -48,7 +48,7 @@ export const transactionQueries = {
       ...options, // Allow overrides
     }),
 
-  getTransactionById: (companyId, branchId, transactionId, transactionType) =>
+  getTransactionById: (companyId, branchId, transactionId, transactionType,isEdit) =>
     queryOptions({
       queryKey: [
         ...transactionQueries.all(),
@@ -57,17 +57,19 @@ export const transactionQueries = {
         branchId,
         transactionId,
         transactionType,
+        // isEdit
       ],
       queryFn: () =>
         transactionServices.getById(
           companyId,
           branchId,
           transactionId,
-          transactionType
+          transactionType,
+          isEdit
         ),
       enabled:
         !!companyId && !!branchId && !!transactionId && !!transactionType,
-      staleTime: 60 * 1000,
+      staleTime: 0,
       refetchOnWindowFocus: false,
       
     }),

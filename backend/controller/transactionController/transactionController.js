@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { set } from "mongoose";
 import { processTransaction } from "../../helpers/transactionHelpers/transactionProcessor.js";
 import {
   calculateTransactionDeltas,
@@ -9,10 +9,19 @@ import {
   transactionTypeToModelName,
 } from "../../helpers/transactionHelpers/transactionMappers.js";
 import { sleep } from "../../../shared/utils/delay.js";
-
-import { createFundTransaction } from "../../services/fundTransactionService.js";
-import { fetchOriginalTransaction } from "../../helpers/transactionHelpers/modelFindHelper.js";
-import { applyStockDeltas } from "../../helpers/transactionHelpers/stockManager.js";
+fetchOriginalTransaction;
+import {
+  createFundTransaction,
+  handleReceiptOnEdit,
+} from "../../services/fundTransactionService.js";
+import {
+  determineTransactionBehavior,
+  fetchOriginalTransaction,
+} from "../../helpers/transactionHelpers/modelFindHelper.js";
+import {
+  applyStockDeltas,
+  updateStock,
+} from "../../helpers/transactionHelpers/stockManager.js";
 import {
   createAdjustmentEntries,
   // createCashAccountAdjustment,
@@ -26,6 +35,12 @@ import {
   updateOriginalTransactionRecord,
 } from "../../helpers/transactionHelpers/transactionEditHelper.js";
 import { triggerOffsetAfterEdit } from "../../helpers/transactionHelpers/offsetTriggerHooks.js";
+import OutstandingSettlementModel from "../../model/OutstandingSettlementModel.js";
+import OutstandingModel from "../../model/OutstandingModel.js";
+import { validateAccountChangeOnEdit } from "../../helpers/FundTransactionHelper/FundTransactionHelper.js";
+import { reverseOutstandingSettlements } from "../../helpers/FundTransactionHelper/OutstandingSettlementHelper.js";
+import CashBankLedgerModel from "../../model/CashBankLedgerModel.js";
+import AdjustmentEntryModel from "../../model/AdjustmentEntryModel.js";
 
 /**
  * get transactions (handles sales, purchase, sales_return, purchase_return)
@@ -77,19 +92,19 @@ export const getTransactions = async (req, res) => {
     if (companyId) filter.company = companyId;
     if (branchId) filter.branch = branchId;
 
-    if (startDate && endDate) {
-      filter.transactionDate = {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate),
-      };
-    }
+    // if (startDate && endDate) {
+    //   filter.transactionDate = {
+    //     $gte: new Date(startDate),
+    //     $lte: new Date(endDate),
+    //   };
+    // }
 
     // Use the static method for pagination
     const result = await transactionModel.getPaginatedTransactions(
       filter,
       page,
       limit,
-      sort
+      sort,
     );
 
     res.status(200).json(result);
@@ -168,8 +183,6 @@ export const createTransaction = async (req, res) => {
     // Process transaction using helper
     const result = await processTransaction(transactionData, userId, session);
 
- 
-
     // Create receipt if paid amount > 0
     let receiptResult = null;
     if (paidAmount > 0) {
@@ -205,7 +218,7 @@ export const createTransaction = async (req, res) => {
           date: transactionData.date || new Date(),
           user: req.user,
         },
-        session
+        session,
       );
     }
 
@@ -273,19 +286,88 @@ export const createTransaction = async (req, res) => {
 export const getTransactionDetail = async (req, res) => {
   try {
     const { transactionId } = req.params;
-    const { companyId, branchId, transactionType } = req.query;
+    const { companyId, branchId, transactionType, isEdit } = req.query;
     const TransactionModel = getTransactionModel(transactionType);
 
     const transaction = await TransactionModel.findOne({
       _id: transactionId,
       company: companyId,
       branch: branchId,
-    });
+    }).lean();
 
     if (!transaction) {
       return res.status(404).json({
         message: "Transaction not found",
       });
+    }
+
+    // Handle isEdit logic
+    if (isEdit === "true") {
+      // Case 1: Receipt or Payment
+      if (transactionType === "receipt" || transactionType === "payment") {
+        // Fetch sum of closingBalanceAmount for pending outstandings
+        const outstandings = await OutstandingModel.find({
+          account: transaction.account,
+          company: companyId,
+          branch: branchId,
+          status: { $in: ["pending", "partial"] },
+        }).lean();
+
+        const sumOfClosingBalance = outstandings.reduce(
+          (sum, outstanding) => sum + (outstanding.closingBalanceAmount || 0),
+          0,
+        );
+        console.log("outstandings", outstandings);
+
+        // console.log("sumOfClosingBalance", sumOfClosingBalance);
+        console.log({
+          account: transaction.account,
+          company: companyId,
+          branch: branchId,
+          status: "pending",
+        });
+
+        if (transactionType === "payment") {
+          // Tweak previousBalanceAmount
+          transaction.previousBalanceAmount =
+            sumOfClosingBalance + (-transaction.amount || 0);
+        } else if (transactionType === "receipt") {
+          // Tweak previousBalanceAmount
+          transaction.previousBalanceAmount =
+            sumOfClosingBalance + (transaction.amount || 0);
+        }
+      }
+
+      // Case 2: Sale
+      if (transactionType === "sale") {
+        // Find outstanding for this sale
+        const outstanding = await OutstandingModel.findOne({
+          sourceTransaction: transactionId,
+        }).lean();
+
+        if (outstanding) {
+          // Tweak paidAmount
+          transaction.paidAmount = outstanding.paidAmount || 0;
+        }
+      }
+    }
+
+    // Find settlement count for sale (original logic - runs always)
+    if (transactionType === "sale") {
+      const outstanding = await OutstandingModel.findOne({
+        sourceTransaction: transactionId,
+      });
+
+      let settlementCount = 0;
+
+      if (outstanding) {
+        settlementCount = await OutstandingSettlementModel.countDocuments({
+          outstanding: outstanding._id,
+          settlementStatus: "active",
+        });
+      }
+
+      transaction.settlementCount = settlementCount || 0;
     }
 
     return res.status(200).json(transaction);
@@ -318,13 +400,27 @@ export const editTransaction = async (req, res) => {
     const originalTransaction = await fetchOriginalTransaction(
       transactionId,
       updatedData.transactionType,
-      session
+      session,
     );
 
-    const oldAccount= originalTransaction.account;
+    const oldAccount = originalTransaction.account;
 
-    console.log("originalTransaction", originalTransaction);
-    
+    // ========================================
+    // ✅ NEW: STEP 1.5: Validate Account Change
+    // ========================================
+    try {
+      await validateAccountChangeOnEdit({
+        originalTransaction,
+        updatedData,
+        session,
+      });
+    } catch (validationError) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: validationError.message,
+      });
+    }
 
     if (!originalTransaction) {
       await session.abortTransaction();
@@ -362,7 +458,8 @@ export const editTransaction = async (req, res) => {
       await applyStockDeltas(
         deltas.stockDelta,
         originalTransaction.branch,
-        session
+        session,
+        originalTransaction.transactionType
       );
     }
 
@@ -374,7 +471,7 @@ export const editTransaction = async (req, res) => {
       updatedData,
       deltas,
       userId,
-      session
+      session,
     );
 
     // console.log("adjustment entries", adjustmentResult);
@@ -391,17 +488,56 @@ export const editTransaction = async (req, res) => {
       updatedData,
       deltas,
       userId,
-      session
+      session,
     );
 
     // ========================================
-    // STEP 7: Mark Monthly Balances as Dirty
+    // STEP 6: Mark Monthly Balances as Dirty
     // ========================================
     await markMonthlyBalancesForRecalculation(
       originalTransaction,
       updatedData,
-      session
+      session,
+      true, /// NEW PARAM TO MARK ITEM WITH OUT CHECK IF IT IS CHANGED OR NOT
     );
+
+    // ========================================
+    // ✅ NEW: STEP 7: Handle Receipt/Payment Management
+    // ========================================
+    let receiptHandlingResult = null;
+
+    // Check if paid amount changed
+    const oldPaidAmount = originalTransaction.paidAmount || 0;
+    const newPaidAmount = updatedData.paidAmount || 0;
+
+    if (oldPaidAmount !== newPaidAmount) {
+      console.log("\n💰 Paid amount changed, handling receipt/payment...");
+
+      receiptHandlingResult = await handleReceiptOnEdit({
+        transactionId: originalTransaction._id,
+        transactionType: updatedData.transactionType,
+        oldPaidAmount,
+        newPaidAmount,
+        accountId: updatedData.account,
+        accountName: updatedData.accountName,
+        company: updatedData.company,
+        branch: updatedData.branch,
+        transactionDate: updatedData.transactionDate,
+        netAmount: updatedData.netAmount,
+        previousBalanceAmount: updatedData.previousBalanceAmount,
+        user: req.user,
+        session,
+      });
+
+      console.log(
+        "✅ Receipt/payment handling completed:",
+        receiptHandlingResult.action,
+      );
+    } else {
+      console.log("⏭️ Paid amount unchanged, skipping receipt handling");
+    }
+
+    // console.log("deltas",deltas);
 
     // ========================================
     // STEP 8: Update Original Transaction Document
@@ -410,16 +546,15 @@ export const editTransaction = async (req, res) => {
       originalTransaction,
       updatedData,
       userId,
-      session
+      session,
     );
 
-
-    // Step 3: ✅ ADD THIS - Trigger offset after edit
+    // Step 9: ✅ ADD THIS - Trigger offset after edit
     await triggerOffsetAfterEdit(
       oldAccount,
       updatedTransaction,
       userId,
-      session
+      session,
     );
 
     // Commit transaction
@@ -457,6 +592,218 @@ export const editTransaction = async (req, res) => {
       message: "Failed to edit transaction",
       error: error.message,
     });
+  } finally {
+    session.endSession();
+  }
+};
+
+/**
+ * Soft Delete Transaction (Cancellation) - Sale/Purchase/Returns Only
+ * 
+ * Logic:
+ * 1. Validates transaction.
+ * 2. Updates Outstanding (Zero out total, recalculate balance including active settlements).
+ * 3. Reverses Stock.
+
+ * 4. Creates Audit Trail (Adjustment Entry).
+ * 5. Marks Transaction as Cancelled.
+ * 6. Marks Monthly Balances as Dirty.
+ */
+export const deleteTransaction = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { transactionId } = req.params;
+    const reason = req.body.reason;
+    const userId = req.user._id;
+
+    console.log(`\n🛑 STARTING CANCELLATION: Transaction ${transactionId}`);
+
+    // ==================== STEP 1: VALIDATE & FETCH ====================
+    const transactionType =
+      req.query.transactionType || req.body.transactionType;
+    if (!transactionType) throw new Error("Transaction type is required");
+
+    const TransactionModel = getTransactionModel(transactionType);
+    const transaction =
+      await TransactionModel.findById(transactionId).session(session);
+
+    if (!transaction) throw new Error("Transaction not found");
+    if (transaction.isCancelled)
+      throw new Error("Transaction is already cancelled");
+
+    const {
+      company,
+      branch,
+      account,
+      accountName,
+      accountType,
+      items,
+      netAmount,
+    } = transaction;
+
+    console.log(
+      `✅ Validated ${transactionType} #${transaction.transactionNumber}`,
+    );
+
+    // ==================== STEP 2: UPDATE LINKED OUTSTANDING ====================
+    // We zero out the bill amount but KEEP all settlements (Receipts/Offsets) active.
+    // This creates a negative balance (Credit) if payments exist.
+
+    console.log("🔄 Step 2: Updating linked outstanding...");
+    const outstanding = await OutstandingModel.findOne({
+      sourceTransaction: transactionId,
+      company,
+      branch,
+    }).session(session);
+
+    if (outstanding) {
+      const behavior = await determineTransactionBehavior(transactionType);
+
+      // Zero out the Total Amount
+      outstanding.totalAmount = 0;
+
+      // Recalculate Closing Balance (Including ALL active settlements)
+      const activeSettlements = await OutstandingSettlementModel.find({
+        outstanding: outstanding._id,
+        settlementStatus: "active",
+      }).session(session);
+
+      const totalReceipts = activeSettlements
+        .filter((s) => s.transactionType === "receipt")
+        .reduce((sum, s) => sum + s.settledAmount, 0);
+      const totalPayments = activeSettlements
+        .filter((s) => s.transactionType === "payment")
+        .reduce((sum, s) => sum + s.settledAmount, 0);
+      const totalOffsets = activeSettlements
+        .filter((s) => s.transactionType === "offset")
+        .reduce((sum, s) => sum + s.settledAmount, 0);
+
+      // Formula: 0 - (Settlements)
+      let closingBalance = 0;
+      if (behavior.outstandingType === "dr") {
+        closingBalance = 0 - (totalReceipts + totalOffsets) + totalPayments;
+      } else {
+        closingBalance = -(0 - (totalPayments + totalOffsets) + totalReceipts);
+      }
+
+      outstanding.closingBalanceAmount = closingBalance;
+
+      // Update type (CR means we owe the customer money)
+      if (closingBalance > 0) outstanding.outstandingType = "dr";
+      else if (closingBalance < 0) outstanding.outstandingType = "cr";
+
+      // Update status
+      if (Math.abs(closingBalance) < 0.01)
+        outstanding.status = "settled"; // Fully settled (0 balance)
+      else outstanding.status = "cancelled"; // Negative balance (Credit due)
+
+      await outstanding.save({ session });
+      console.log(`✅ Outstanding cancelled (New Balance: ${closingBalance})`);
+    }
+
+    // ==================== STEP 3: REVERSE STOCK ====================
+    console.log("📦 Step 3: Reversing stock...");
+    const behavior = await determineTransactionBehavior(transactionType);
+
+    if (items && items.length > 0) {
+      const reverseDir = behavior.stockDirection === "out" ? "in" : "out";
+      await updateStock(items, reverseDir, branch, session, transactionType);
+      console.log(
+        `✅ Stock reversed (${reverseDir}) for ${items.length} items`,
+      );
+    }
+
+    // ==================== STEP 6: CREATE ADJUSTMENT ENTRY ====================
+    console.log("📋 Step 6: Creating Audit Trail (Adjustment Entry)...");
+
+    const adjustmentNumber =
+      await AdjustmentEntryModel.generateAdjustmentNumber(
+        company,
+        branch,
+        session,
+      );
+    const itemAdjustments = items
+      ? items.map((item) => ({
+          item: item.item,
+          itemName: item.itemName,
+          itemCode: item.itemCode,
+          adjustmentType: "removed",
+          oldQuantity: item.quantity,
+          newQuantity: 0,
+          quantityDelta: -item.quantity,
+          oldRate: item.rate,
+          newRate: 0,
+          rateDelta: -item.rate,
+        }))
+      : [];
+
+    const adjustment = new AdjustmentEntryModel({
+      company,
+      branch,
+      originalTransaction: transactionId,
+      originalTransactionModel: transactionTypeToModelName(transactionType),
+      originalTransactionNumber: transaction.transactionNumber,
+      originalTransactionDate: transaction.transactionDate,
+      adjustmentNumber,
+      adjustmentDate: new Date(),
+      adjustmentType: "cancellation",
+      affectedAccount: account,
+      affectedAccountName: transaction.accountName,
+      amountDelta: -netAmount,
+      oldAmount: netAmount,
+      newAmount: 0,
+      itemAdjustments,
+      outstandingAffected: outstanding?._id,
+      outstandingOldBalance: outstanding ? netAmount : 0,
+      outstandingNewBalance: outstanding ? outstanding.closingBalanceAmount : 0,
+      reason: reason || "Transaction Cancelled",
+      editedBy: userId,
+      cancellationDetails: {
+        isCancellation: true,
+        cancellationReason: reason,
+        cancelledBy: userId,
+        cancelledAt: new Date(),
+      },
+    });
+    await adjustment.save({ session });
+
+    // ==================== STEP 7: UPDATE TRANSACTION STATUS ====================
+    console.log("🚫 Step 6: Updating Transaction Status...");
+
+    transaction.isCancelled = true;
+    transaction.cancelledAt = new Date();
+    transaction.cancelledBy = userId;
+    transaction.cancellationReason = reason || "Transaction Cancelled";
+    await transaction.save({ session });
+
+    // ==================== STEP 8: MARK MONTHLY BALANCES DIRTY ====================
+    console.log("📅 Step 7: Marking Monthly Balances for Recalculation...");
+
+    await markMonthlyBalancesForRecalculation(
+      transaction, // original (same)
+      transaction, // updated (same)
+      session,
+      true, // forceRecalculate = true
+    );
+
+    await session.commitTransaction();
+    console.log("✅ CANCELLATION COMPLETED SUCCESSFULLY");
+
+    res.status(200).json({
+      success: true,
+      message: "Transaction cancelled successfully",
+      data: {
+        id: transaction._id,
+        number: transaction.transactionNumber,
+        adjustmentNumber,
+      },
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("❌ Cancellation Failed:", error);
+    res.status(500).json({ success: false, message: error.message });
   } finally {
     session.endSession();
   }

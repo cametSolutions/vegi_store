@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { units } from "../../../../constants/units";
 import { itemMasterQueries } from "../../../hooks/queries/item.queries";
@@ -23,9 +23,12 @@ const AddItemForm = ({
     item: null,
     itemCode: "",
     itemName: "",
-    unit: units[0]?.value || "",
+    unit: units[0]?.value || "", // still kept internally (not shown in UI)
+    priceLevels: [],
     quantity: "",
     rate: "",
+    baseAmount: "0",
+    amountAfterTax: "0",
     taxable: false,
     taxRate: "0",
     taxAmount: "0",
@@ -37,69 +40,51 @@ const AddItemForm = ({
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  // Refs for all inputs
+  // Refs
   const codeInputRef = useRef(null);
   const nameInputRef = useRef(null);
-  const unitInputRef = useRef(null);
   const quantityInputRef = useRef(null);
   const rateInputRef = useRef(null);
   const addButtonRef = useRef(null);
-console.log("Account info:", {
-  account: account,
-  accountId: account?._id,
-  transactionType: transactionType
-});
 
-useEffect(() => {
-    setLocalItem({
-      item: null,
-      itemCode: "",
-      itemName: "",
-      unit: units[0]?.value || "",
-      priceLevels: [],
-      quantity: "",
-      rate: "",
-      baseAmount: "0",
-      amountAfterTax: "0",
-      taxable: false,
-      taxRate: "0",
-      taxAmount: "0",
-    });
-    setSearchTerm("");
-    setShowDropdown(false);
-    setShouldSearch(false);
-  }, [transactionType]); // Resets when switching between sale/purchase
+  useEffect(() => {
+    clearLocalItemData();
+  }, [transactionType]);
 
-
-const isSearchEnabled = 
-  shouldSearch && 
-  debouncedSearchTerm.trim() !== "" &&
-  (
-    transactionType === "sale" || 
-    transactionType === "sales_return" || 
+  const isSearchEnabled =
+    shouldSearch &&
+    debouncedSearchTerm.trim() !== "" &&
+    (transactionType === "sale" ||
+      transactionType === "sales_return" ||
       transactionType === "stock_adjustment" ||
-    (
-      (transactionType === "purchase" || transactionType === "purchase_return") && 
-      !!account
-    )
-  );
+      ((transactionType === "purchase" ||
+        transactionType === "purchase_return") &&
+        !!account));
 
-  // TanStack Query
   const {
     data: searchResponse,
     isFetching,
     isError,
     error,
   } = useQuery({
-    ...itemMasterQueries.search(debouncedSearchTerm, company, branch, 25, true,  account, // Pass accountId
-    transactionType),
+    ...itemMasterQueries.search(
+      debouncedSearchTerm,
+      company,
+      branch,
+      25,
+      true,
+      account,
+      transactionType,
+    ),
     enabled: isSearchEnabled,
-    // staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
 
-  // Show error toast when there's a backend error
+  console.log(isSearchEnabled);
+  console.log(transactionType);
+  
+
   useEffect(() => {
     if (isError && error) {
       toast.error("Search Error", {
@@ -109,120 +94,119 @@ const isSearchEnabled =
     }
   }, [isError, error]);
 
-  // ✅ FIXED: Update form fields when search results are received
- useEffect(() => {
-  if (shouldSearch && !isFetching && searchResponse !== undefined) {
-    
-    // ✅ CHECK ACCOUNT REQUIREMENT
-    if (requireAccount && !account) {
-      toast.error("Customer Not Selected", {
-        description: "Please select a customer before adding items.",
-      });
-      setShouldSearch(false);
-      return;
-    }
+  useEffect(() => {
+    if (shouldSearch && !isFetching && searchResponse !== undefined) {
+      // if (requireAccount && !account) {
+      //   toast.error("Customer Not Selected", {
+      //     description: "Please select a customer before adding items.",
+      //   });
+      //   setShouldSearch(false);
+      //   return;
+      // }
 
-    if (searchResponse?.data && searchResponse.data.length > 0) {
-      const foundProduct = searchResponse.data[0];
-      console.log(foundProduct);
+      if (searchResponse?.data && searchResponse.data.length > 0) {
+        const foundProduct = searchResponse.data[0];
 
-      // ✅ UPDATED: Priority - priceLevel first, then lastRate
-      let rate = "";
-      
-      // First priority: Use price level rate (for sales transactions with priceLevel)
-      if (
-        foundProduct.priceLevels && 
-        foundProduct.priceLevels.length > 0 &&
-        priceLevel &&
-        (transactionType === "sale" || transactionType === "sales_return")
-      ) {
-        const priceLevelData = foundProduct.priceLevels.find(
-          (pl) =>
-            pl.priceLevel._id === priceLevel ||
-            pl.priceLevel.priceLevelName === priceLevel
+        let rate = "";
+
+        // Price level priority (sale / sales_return)
+        if (
+          foundProduct.priceLevels &&
+          foundProduct.priceLevels.length > 0 &&
+          priceLevel &&
+          (transactionType === "sale" || transactionType === "sales_return")
+        ) {
+          const priceLevelData = foundProduct?.priceLevels?.find(
+            (pl) =>
+              pl?.priceLevel?._id === priceLevel ||
+              pl?.priceLevel?.priceLevelName === priceLevel,
+          );
+          rate = priceLevelData?.rate || "";
+        }
+
+        // Fallback lastRate
+        if (!rate && foundProduct.lastRate) {
+          rate = foundProduct.lastRate;
+        }
+
+        const currentStock = foundProduct.stock?.find(
+          (st) => st.branch._id === branch,
         );
-        rate = priceLevelData?.rate || "";
-      }
-      
-      // Second priority: Use last transaction rate if priceLevel didn't give a rate
-      if (!rate && foundProduct.lastRate) {
-        rate = foundProduct.lastRate;
-      }
 
-      // Update localItem with found product details
-      setLocalItem((prev) => ({
-        ...prev,
-        item: foundProduct?._id,
-        itemCode: foundProduct.itemCode || debouncedSearchTerm,
-        itemName: foundProduct.itemName || "",
-        priceLevels: foundProduct.priceLevels || [],
-        unit: foundProduct.unit || "",
-        rate: rate.toString() || "",
-        taxable: false,
-        taxRate: "0",
-        taxAmount: "0",
-      }));
-      setShowDropdown(false);
-      setShouldSearch(false);
-      setTimeout(() => unitInputRef.current?.focus(), 100);
-    } else if (searchResponse?.data && searchResponse.data.length === 0) {
-      setLocalItem((prev) => ({
-        ...prev,
-        itemCode: debouncedSearchTerm,
-      }));
-      setShowDropdown(true);
-      setShouldSearch(false);
+        const availableQty = currentStock ? currentStock.currentStock : 0;
+
+        setLocalItem((prev) => ({
+          ...prev,
+          item: foundProduct?._id,
+          itemCode: foundProduct.itemCode || debouncedSearchTerm,
+          itemName: foundProduct.itemName || "",
+          priceLevels: foundProduct.priceLevels || [],
+          unit: foundProduct.unit || prev.unit, // still stored, not editable
+          rate: rate?.toString?.() || "",
+          taxable: false,
+          taxRate: "0",
+          taxAmount: "0",
+          availableQuantity: availableQty.toString(),
+        }));
+
+        setShowDropdown(false);
+        setShouldSearch(false);
+
+        // focus Qty directly (since Unit is removed)
+        setTimeout(() => quantityInputRef.current?.focus(), 100);
+      } else if (searchResponse?.data && searchResponse.data.length === 0) {
+        setLocalItem((prev) => ({
+          ...prev,
+          itemCode: debouncedSearchTerm,
+        }));
+        setShowDropdown(true);
+        setShouldSearch(false);
+      }
     }
-  }
-}, [
-  searchResponse,
-  isFetching,
-  shouldSearch,
-  debouncedSearchTerm,
-  priceLevel,
-  branch,
-  requireAccount,
-  account,
-  transactionType,
-]);
+  }, [
+    searchResponse,
+    isFetching,
+    shouldSearch,
+    debouncedSearchTerm,
+    priceLevel,
+    branch,
+    requireAccount,
+    account,
+    transactionType,
+  ]);
 
+  useEffect(() => {
+    if (!localItem.item) return;
+    const foundProduct = searchResponse?.data[0];
+    if (!foundProduct) return;
 
-  // Rest of your useEffects remain the same...
-useEffect(() => {
-  if (!localItem.item) return;
-  const foundProduct = searchResponse?.data[0];
-  if (!foundProduct) return;
+    let newRate = "";
 
-  let newRate = "";
-  
-  // First check priceLevel
-  if (
-    foundProduct.priceLevels &&
-    foundProduct.priceLevels.length > 0 &&
-    priceLevel &&
-    (transactionType === "sale" || transactionType === "sales_return")
-  ) {
-    const priceLevelData = foundProduct.priceLevels.find(
-      (pl) =>
-        pl.priceLevel._id === priceLevel ||
-        pl.priceLevel.priceLevelName === priceLevel
-    );
-    newRate = priceLevelData?.rate || "";
-  }
-  
-  // Fallback to lastRate if no priceLevel rate found
-  if (!newRate && foundProduct.lastRate) {
-    newRate = foundProduct.lastRate.toString();
-  }
+    if (
+      foundProduct.priceLevels &&
+      foundProduct.priceLevels.length > 0 &&
+      priceLevel &&
+      (transactionType === "sale" || transactionType === "sales_return")
+    ) {
+      const priceLevelData = foundProduct?.priceLevels?.find(
+        (pl) =>
+          pl?.priceLevel?._id === priceLevel ||
+          pl?.priceLevel?.priceLevelName === priceLevel,
+      );
+      newRate = priceLevelData?.rate || "";
+    }
 
-  if (localItem.rate !== newRate.toString()) {
-    setLocalItem((prev) => ({
-      ...prev,
-      rate: newRate.toString(),
-    }));
-  }
-}, [priceLevel, localItem.item, searchResponse, transactionType]);
+    if (!newRate && foundProduct.lastRate) {
+      newRate = foundProduct.lastRate.toString();
+    }
 
+    if ((localItem.rate || "") !== (newRate?.toString?.() || "")) {
+      setLocalItem((prev) => ({
+        ...prev,
+        rate: newRate?.toString?.() || "",
+      }));
+    }
+  }, [priceLevel, localItem.item, searchResponse, transactionType]);
 
   useEffect(() => {
     if (clickedItemInTable) {
@@ -243,23 +227,27 @@ useEffect(() => {
         item,
         itemCode,
         itemName,
-        unit,
+        unit: unit || prev.unit, // keep internally
         quantity,
         rate,
         taxable,
         taxRate,
         taxAmount,
       }));
-      unitInputRef.current?.focus();
+
+      quantityInputRef.current?.focus();
     }
   }, [clickedItemInTable]);
 
-  // All your handler functions remain the same...
   const handleCodeKeyDown = (e) => {
+
+    
     if (e.key === "Enter" && searchTerm.trim() !== "") {
       e.preventDefault();
       setShowDropdown(false);
       setShouldSearch(true);
+
+
     }
   };
 
@@ -268,13 +256,6 @@ useEffect(() => {
     setSearchTerm(value);
     setShowDropdown(false);
     setLocalItem({ ...localItem, itemCode: value });
-  };
-
-  const handleUnitKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      quantityInputRef.current?.focus();
-    }
   };
 
   const handleQuantityKeyDown = (e) => {
@@ -291,57 +272,66 @@ useEffect(() => {
     }
   };
 
-// Update the handleAddClick function in your AddItemForm component
+  const amountValue = useMemo(() => {
+    const q = parseFloat(localItem.quantity) || 0;
+    const r = parseFloat(localItem.rate) || 0;
+    return q * r;
+  }, [localItem.quantity, localItem.rate]);
 
-const handleAddClick = () => {
-  // Validate required fields
-  if (!localItem.itemCode || !localItem.itemName || !localItem.item || !localItem.quantity) {
-    toast.error("Validation Error", {
-      description: "Name, Code, and Quantity are required",
+  const handleAddClick = () => {
+    if (
+      !localItem.itemCode ||
+      !localItem.itemName ||
+      !localItem.item ||
+      !localItem.quantity
+    ) {
+      toast.error("Validation Error", {
+        description: "Name, Code, and Quantity are required",
+      });
+      return;
+    }
+
+    const quantity = parseFloat(localItem.quantity) || 0;
+    const rate = parseFloat(localItem.rate) || 0;
+    const baseAmount = quantity * rate;
+
+    const taxRate = parseFloat(localItem.taxRate) || 0;
+    const taxAmount = localItem.taxable ? (baseAmount * taxRate) / 100 : 0;
+    const amountAfterTax = baseAmount + taxAmount;
+
+    const itemToAdd = {
+      ...localItem,
+      quantity: localItem.quantity,
+      rate: localItem.rate,
+      baseAmount: baseAmount.toFixed(2),
+      taxAmount: taxAmount.toFixed(2),
+      amountAfterTax: amountAfterTax.toFixed(2),
+    };
+
+    // console.log(itemToAdd);
+    
+
+    const newItems = addItem(items, itemToAdd);
+    updateTransactionField("items", newItems);
+
+    setLocalItem({
+      item: null,
+      itemCode: "",
+      itemName: "",
+      unit: units[0]?.value || "",
+      priceLevels: [],
+      quantity: "",
+      rate: "",
+      baseAmount: "0",
+      amountAfterTax: "0",
+      taxable: false,
+      taxRate: "0",
+      taxAmount: "0",
     });
-    return;
-  }
 
-  // ✅ CALCULATE AMOUNTS BEFORE ADDING
-  const quantity = parseFloat(localItem.quantity) || 0;
-  const rate = parseFloat(localItem.rate) || 0;
-  const baseAmount = quantity * rate;
-  const taxRate = parseFloat(localItem.taxRate) || 0;
-  const taxAmount = localItem.taxable ? (baseAmount * taxRate) / 100 : 0;
-  const amountAfterTax = baseAmount + taxAmount;
-
-  // Create item with calculated amounts
-  const itemToAdd = {
-    ...localItem,
-    quantity: localItem.quantity,
-    rate: localItem.rate,
-    baseAmount: baseAmount.toFixed(2),
-    taxAmount: taxAmount.toFixed(2),
-    amountAfterTax: amountAfterTax.toFixed(2),
+    setSearchTerm("");
+    setTimeout(() => codeInputRef.current?.focus(), 0);
   };
-
-  const newItems = addItem(items, itemToAdd);
-  updateTransactionField("items", newItems);
-
-  // Reset form
-  setLocalItem({
-    item: null,
-    itemCode: "",
-    itemName: "",
-    unit: units[0]?.value || "",
-    priceLevels: [],
-    quantity: "",
-    rate: "",
-    baseAmount: "0",
-    amountAfterTax: "0",
-    taxable: false,
-    taxRate: "0",
-    taxAmount: "0",
-  });
-  setSearchTerm("");
-
-  setTimeout(() => codeInputRef.current?.focus(), 0);
-};
 
   const handleAddButtonKeyDown = (e) => {
     if (e.key === "Enter") {
@@ -350,10 +340,31 @@ const handleAddClick = () => {
     }
   };
 
+  const clearLocalItemData = () => {
+    setLocalItem({
+      item: null,
+      itemCode: "",
+      itemName: "",
+      unit: units[0]?.value || "",
+      priceLevels: [],
+      quantity: "",
+      rate: "",
+      baseAmount: "0",
+      amountAfterTax: "0",
+      taxable: false,
+      taxRate: "0",
+      taxAmount: "0",
+    });
+    setSearchTerm("");
+    setShowDropdown(false);
+    setShouldSearch(false);
+  };
+
   return (
-    <div className="bg-white shadow-sm px-3 mt-1 py-3 ">
+    <div className="bg-white shadow-sm px-3 mt-1 py-3">
+      {/* Code, Name, Qty, Rate, Amount, Add */}
       <div className="grid grid-cols-6 gap-2 items-end">
-        {/* CODE INPUT */}
+        {/* CODE */}
         <div className="relative">
           <label className="block text-[11px] font-medium text-slate-700 mb-1">
             Code
@@ -373,7 +384,6 @@ const handleAddClick = () => {
             )}
           </div>
 
-          {/* Dropdown for "Not Found" */}
           {showDropdown && !isFetching && (
             <div className="absolute z-50 mt-1 w-full bg-white border border-slate-300 rounded-xs shadow-lg">
               <div className="px-2 py-1.5 text-[11px] text-red-600 border-b border-slate-200">
@@ -397,34 +407,12 @@ const handleAddClick = () => {
             type="text"
             disabled
             value={localItem.itemName}
-            className="w-full px-1.5 py-1 border border-slate-300 bg-slate-200  text-[11px] focus:ring-1 focus:ring-blue-500"
+            className="w-full px-1.5 py-1 border border-slate-300 bg-slate-200 text-[11px] focus:ring-1 focus:ring-blue-500"
             placeholder="Name"
           />
         </div>
 
-        {/* UNIT */}
-        <div>
-          <label className="block text-[11px] font-medium text-slate-700 mb-1">
-            Unit
-          </label>
-          <select
-            ref={unitInputRef}
-            value={localItem.unit}
-            onChange={(e) =>
-              setLocalItem({ ...localItem, unit: e.target.value })
-            }
-            onKeyDown={handleUnitKeyDown}
-            className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500"
-          >
-            {units.map((unit) => (
-              <option key={unit?.value} value={unit?.value}>
-                {unit?.displayName}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* QUANTITY INPUT - Allows empty values, no default zero */}
+        {/* QTY */}
         <div>
           <label className="block text-[11px] font-medium text-slate-700 mb-1">
             Qty
@@ -436,19 +424,40 @@ const handleAddClick = () => {
             allowNegative={false}
             decimalScale={3}
             onKeyDown={handleQuantityKeyDown}
+            isAllowed={(values) => {
+              const { floatValue } = values;
+
+              // For sale or purchase_return, check against available quantity
+              if (
+                transactionType === "sale" ||
+                transactionType === "purchase_return"
+              ) {
+                if (localItem.availableQuantity !== "") {
+                  const maxQty = parseFloat(localItem.availableQuantity);
+
+                  console.log(localItem.availableQuantity);
+
+                  if (floatValue > maxQty) {
+                    toast.error("Insufficient Stock", {
+                      description: `Only ${localItem.availableQuantity} units available in stock.`,
+                    });
+                    return false; // This prevents the value from being set
+                  }
+                }
+              }
+
+              return true; // Allow the value
+            }}
             onValueChange={(values) => {
               const { value } = values;
-              setLocalItem({
-                ...localItem,
-                quantity: value,
-              });
+              setLocalItem({ ...localItem, quantity: value });
             }}
             className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500"
             placeholder="0"
           />
         </div>
 
-        {/* RATE INPUT - Allows empty values and editing */}
+        {/* RATE */}
         <div>
           <label className="block text-[11px] font-medium text-slate-700 mb-1">
             Rate
@@ -462,17 +471,31 @@ const handleAddClick = () => {
             onKeyDown={handleRateKeyDown}
             onValueChange={(values) => {
               const { value } = values;
-              setLocalItem({
-                ...localItem,
-                rate: value,
-              });
+              setLocalItem({ ...localItem, rate: value });
             }}
             className="w-full px-1.5 py-1 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500"
             placeholder="₹0.00"
           />
         </div>
 
-        {/* ADD BUTTON */}
+        {/* AMOUNT (Qty * Rate) - read-only display */}
+        <div>
+          <label className="block text-[11px] font-medium text-slate-700 mb-1">
+            Amount
+          </label>
+          <NumericFormat
+            value={amountValue}
+            displayType="input"
+            thousandSeparator
+            decimalScale={2}
+            fixedDecimalScale
+            readOnly
+            className="w-full px-1.5 py-1 border border-slate-300 bg-slate-200 rounded-xs text-[11px] text-left" // Changed text-right to text-left
+            placeholder="0.00"
+          />
+        </div>
+
+        {/* ADD */}
         <button
           ref={addButtonRef}
           onClick={handleAddClick}

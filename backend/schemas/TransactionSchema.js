@@ -9,7 +9,7 @@ const PriceLevelSchema = new mongoose.Schema(
     },
     rate: { type: Number, required: true, min: [0, "Rate cannot be negative"] },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const ItemSchema = new mongoose.Schema(
@@ -64,7 +64,7 @@ const ItemSchema = new mongoose.Schema(
     },
     priceLevels: [PriceLevelSchema],
   },
-  { _id: false }
+  { _id: false },
 );
 
 const TransactionSchema = new mongoose.Schema(
@@ -232,12 +232,26 @@ const TransactionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+
+    /// cancelled info
+    // In your transaction schemas (Sale, Purchase, etc.)
+    isCancelled: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    cancelledAt: Date,
+    cancelledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    cancellationReason: String,
   },
   {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 TransactionSchema.virtual("totalItems").get(function () {
@@ -266,8 +280,8 @@ TransactionSchema.virtual("accountDisplayName").get(function () {
   return this.accountType === "customer"
     ? "Customer"
     : this.accountType === "supplier"
-    ? "Supplier"
-    : "Others";
+      ? "Supplier"
+      : "Others";
 });
 
 // ==================== STATIC METHODS ====================
@@ -293,7 +307,7 @@ TransactionSchema.statics.getPaginatedTransactions = async function (
   filter = {},
   page = 1,
   limit = 20,
-  sort = { transactionDate: -1, _id: -1 } // -1 = descending (newest first)
+  sort = { transactionDate: -1, _id: -1 }, // -1 = descending (newest first)
 ) {
   const skip = (page - 1) * limit;
 
@@ -302,7 +316,7 @@ TransactionSchema.statics.getPaginatedTransactions = async function (
     this.find(filter)
       .populate({ path: "account", select: "accountName accountType" })
       .select(
-        "transactionNumber transactionDate totalAmount totalAmountAfterTax discountAmount paidAmount balanceAmount netAmount"
+        "transactionNumber transactionDate totalAmount totalAmountAfterTax discountAmount paidAmount balanceAmount netAmount isCancelled",
       )
       .sort(sort) // This should be { transactionDate: -1, _id: -1 }
       .skip(skip)
@@ -330,7 +344,7 @@ TransactionSchema.statics.getPaginatedTransactions = async function (
  */
 TransactionSchema.statics.getSummaryByType = async function (
   transactionType,
-  filter = {}
+  filter = {},
 ) {
   const mergedFilter = { ...filter, transactionType };
 
@@ -374,10 +388,15 @@ TransactionSchema.index({
 });
 TransactionSchema.index({ company: 1, paymentStatus: 1 });
 TransactionSchema.index({ transactionDate: -1 });
-TransactionSchema.index({ "items.item": 1 ,company: 1, branch: 1});
-TransactionSchema.index({ "items.item": 1 ,account: 1});
+TransactionSchema.index({ "items.item": 1, company: 1, branch: 1 });
+TransactionSchema.index({ "items.item": 1, account: 1 });
 // In your TransactionSchema
-TransactionSchema.index({ account: 1,  "items.item": 1, transactionDate: -1,status: 1});
+TransactionSchema.index({
+  account: 1,
+  "items.item": 1,
+  transactionDate: -1,
+  status: 1,
+});
 
 TransactionSchema.index({ priceLevel: 1 });
 TransactionSchema.index({ "items.itemCode": 1 });

@@ -169,6 +169,12 @@ OutstandingSettlementSchema.index({
   transactionType: 1 
 });
 
+// ✅ ADD THIS INDEX (for filtering reversed settlements)
+OutstandingSettlementSchema.index({ 
+  settlementStatus: 1,
+  reversedAt: -1 
+});
+
 // ==================== VIRTUALS ====================
 OutstandingSettlementSchema.virtual("isActive").get(function () {
   return this.settlementStatus === "active";

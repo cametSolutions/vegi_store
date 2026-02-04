@@ -79,8 +79,8 @@ app.use(express.json({ limit: "10mb" })); // Parse JSON requests
 
 // Rate limiting (apply only to /api/*)
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  windowMs: 1 * 60 * 1000, // 15 minutes
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
 });

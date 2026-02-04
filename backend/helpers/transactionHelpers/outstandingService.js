@@ -70,7 +70,7 @@ export const createOutstanding = async (data, session) => {
           createdBy,
         },
       ],
-      { session }
+      { session },
     );
 
     return outstanding[0];
@@ -86,12 +86,11 @@ export const updateOutstandingPayment = async (
   outstandingId,
   paidAmount,
   userId,
-  session
+  session,
 ) => {
   try {
-    const outstanding = await Outstanding.findById(outstandingId).session(
-      session
-    );
+    const outstanding =
+      await Outstanding.findById(outstandingId).session(session);
 
     if (!outstanding) {
       throw new Error("Outstanding record not found");
@@ -117,7 +116,7 @@ export const updateOutstandingOnEdit = async (
   updated,
   deltas,
   userId,
-  session
+  session,
 ) => {
   // Find existing outstanding by original transaction ID
   const existingOutstanding = await Outstanding.findOne({
@@ -254,18 +253,41 @@ export const handleAccountTypeChangeOnEdit = async (
   updated, // edited data
   deltas, // result from calculateTransactionDeltas
   userId,
-  session
-
-  
+  session,
 ) => {
-
   const behavior = determineTransactionBehavior(updated.transactionType);
 
   const originalAccountType = original.accountType;
   const newAccountType = updated.accountType;
 
+  // ========================================
+  // ✅ Skip outstanding update if paid amount exists
+  // The receipt handler will manage outstanding via settlements
+  // ========================================
+  const hasPaidAmount =
+    (original.paidAmount || 0) > 0 || (updated.paidAmount || 0) > 0;
+
+    console.log("hasPaidAmount:", hasPaidAmount);
+    
+
+  if (
+    hasPaidAmount &&
+    original.account.toString() === updated.account.toString()
+  ) {
+    console.log(
+      "⏭️ Skipping outstanding update - receipt handler will manage it",
+    );
+    return {
+      outstandingDeleted: false,
+      outstandingCreated: false,
+      cashBankDeleted: false,
+      cashBankCreated: false,
+      note: "Outstanding managed by receipt handler",
+    };
+  }
+
   console.log(
-    `Account type transition: ${originalAccountType} → ${newAccountType}`
+    `Account type transition: ${originalAccountType} → ${newAccountType}`,
   );
 
   const result = {
@@ -299,7 +321,7 @@ export const handleAccountTypeChangeOnEdit = async (
         behavior,
         userId,
         session,
-        result
+        result,
       );
       return result;
     }
@@ -317,7 +339,7 @@ export const handleAccountTypeChangeOnEdit = async (
 
       result.outstandingDeleted = deleteResult.deletedCount > 0;
       console.log(
-        `🗑️ Deleted outstanding (no settlements): ${result.outstandingDeleted}`
+        `🗑️ Deleted outstanding (no settlements): ${result.outstandingDeleted}`,
       );
 
       await handleCreateCashBankLedgerOnEdit(
@@ -326,7 +348,7 @@ export const handleAccountTypeChangeOnEdit = async (
         behavior,
         userId,
         session,
-        result
+        result,
       );
 
       return result;
@@ -347,7 +369,7 @@ export const handleAccountTypeChangeOnEdit = async (
       behavior,
       userId,
       session,
-      result
+      result,
     );
 
     return result;
@@ -370,7 +392,7 @@ export const handleAccountTypeChangeOnEdit = async (
 
     result.cashBankDeleted = deleteResult.deletedCount > 0;
     console.log(
-      `🗑️ Deleted cash/bank ledger for cash txn: ${result.cashBankDeleted}`
+      `🗑️ Deleted cash/bank ledger for cash txn: ${result.cashBankDeleted}`,
     );
 
     // 2) Create new Outstanding for party
@@ -400,13 +422,13 @@ export const handleAccountTypeChangeOnEdit = async (
           createdBy: userId,
         },
       ],
-      { session }
+      { session },
     );
 
     result.outstandingCreated = true;
     result.outstanding = newOutstandingArr[0];
     console.log(
-      `✅ Created outstanding for party from cash: ${result.outstanding._id}`
+      `✅ Created outstanding for party from cash: ${result.outstanding._id}`,
     );
 
     return result;
@@ -421,7 +443,7 @@ export const handleAccountTypeChangeOnEdit = async (
   ) {
     if (deltas.accountChanged) {
       console.log(
-        "📝 Case 3: Customer/Supplier → Another Customer/Supplier (account changed)"
+        "📝 Case 3: Customer/Supplier → Another Customer/Supplier (account changed)",
       );
 
       const oldOutstanding = await Outstanding.findOne({
@@ -430,7 +452,7 @@ export const handleAccountTypeChangeOnEdit = async (
 
       if (!oldOutstanding) {
         console.log(
-          "⚠️ No outstanding found for original transaction, nothing to migrate."
+          "⚠️ No outstanding found for original transaction, nothing to migrate.",
         );
         return result;
       }
@@ -449,10 +471,9 @@ export const handleAccountTypeChangeOnEdit = async (
 
         result.outstandingDeleted = deleteResult.deletedCount > 0;
         console.log(
-          `🗑️ Deleted old outstanding (no settlements): ${result.outstandingDeleted}`
+          `🗑️ Deleted old outstanding (no settlements): ${result.outstandingDeleted}`,
         );
 
-        
         const newOutstandingArr = await Outstanding.create(
           [
             {
@@ -462,7 +483,7 @@ export const handleAccountTypeChangeOnEdit = async (
               accountName: updated.accountName,
               accountType: updated.accountType,
               transactionModel: transactionTypeToModelName(
-                updated.transactionType
+                updated.transactionType,
               ),
               sourceTransaction: original._id,
               transactionType: updated.transactionType,
@@ -482,13 +503,13 @@ export const handleAccountTypeChangeOnEdit = async (
               createdBy: userId,
             },
           ],
-          { session }
+          { session },
         );
 
         result.outstandingCreated = true;
         result.outstanding = newOutstandingArr[0];
         console.log(
-          `✅ Created new outstanding for new party (no settlements): ${result.outstanding._id}`
+          `✅ Created new outstanding for new party (no settlements): ${result.outstanding._id}`,
         );
 
         return result;
@@ -512,7 +533,7 @@ export const handleAccountTypeChangeOnEdit = async (
             accountName: updated.accountName,
             accountType: updated.accountType,
             transactionModel: transactionTypeToModelName(
-              updated.transactionType
+              updated.transactionType,
             ),
             sourceTransaction: original._id,
             transactionType: updated.transactionType,
@@ -532,13 +553,13 @@ export const handleAccountTypeChangeOnEdit = async (
             createdBy: userId,
           },
         ],
-        { session }
+        { session },
       );
 
       result.outstandingCreated = true;
       result.outstanding = newOutstandingArr[0];
       console.log(
-        `✅ Created new outstanding for new party (with previous settlements moved to advance): ${result.outstanding._id}`
+        `✅ Created new outstanding for new party (with previous settlements moved to advance): ${result.outstanding._id}`,
       );
 
       return result;
@@ -582,7 +603,7 @@ export const handleAccountTypeChangeOnEdit = async (
       await existingOutstanding.save({ session });
       result.outstanding = existingOutstanding;
       console.log(
-        `✅ Updated existing outstanding totals (same party): ${existingOutstanding._id}`
+        `✅ Updated existing outstanding totals (same party): ${existingOutstanding._id}`,
       );
 
       return result;
@@ -645,7 +666,7 @@ export const handleAccountTypeChangeOnEdit = async (
         const existingEntry = await CashBankLedgerModel.findOne({
           transaction: original._id,
           transactionModel: transactionTypeToModelName(
-            original.transactionType
+            original.transactionType,
           ),
         }).session(session);
 
@@ -695,7 +716,7 @@ export const convertSettlementsToAdvancesAndDeleteOutstanding = async ({
 
   if (!settlements.length) {
     console.log(
-      `ℹ️ No active settlements found for outstanding ${oldOutstanding._id}, deleting only.`
+      `ℹ️ No active settlements found for outstanding ${oldOutstanding._id}, deleting only.`,
     );
     const deleteResult = await Outstanding.deleteOne({
       _id: oldOutstanding._id,
@@ -709,7 +730,7 @@ export const convertSettlementsToAdvancesAndDeleteOutstanding = async ({
   }
 
   console.log(
-    `🔄 Converting ${settlements.length} settlements on outstanding ${oldOutstanding._id} to advances...`
+    `🔄 Converting ${settlements.length} settlements on outstanding ${oldOutstanding._id} to advances...`,
   );
 
   const originalType = originalTransaction.transactionType;
@@ -724,7 +745,7 @@ export const convertSettlementsToAdvancesAndDeleteOutstanding = async ({
       accountName: oldOutstanding.accountName,
       accountType: oldOutstanding.accountType,
       transactionModel: transactionTypeToModelName(
-        originalTransaction.transactionType
+        originalTransaction.transactionType,
       ),
       sourceTransaction: s.transaction, // receipt/payment _id
       transactionNumber: s.transactionNumber,
@@ -758,7 +779,7 @@ export const convertSettlementsToAdvancesAndDeleteOutstanding = async ({
   });
 
   console.log(
-    `✅ Created ${createdAdvances.length} advance outstandings for party ${oldOutstanding.accountName}`
+    `✅ Created ${createdAdvances.length} advance outstandings for party ${oldOutstanding.accountName}`,
   );
 
   const settlementUpdateResult = await OutstandingSettlement.updateMany(
@@ -772,11 +793,11 @@ export const convertSettlementsToAdvancesAndDeleteOutstanding = async ({
       reversedBy: userId,
       reversalReason: reason,
     },
-    { session }
+    { session },
   );
 
   console.log(
-    `✅ Reversed ${settlementUpdateResult.modifiedCount} settlements for outstanding ${oldOutstanding._id}`
+    `✅ Reversed ${settlementUpdateResult.modifiedCount} settlements for outstanding ${oldOutstanding._id}`,
   );
 
   const deleteResult = await Outstanding.deleteOne({
@@ -786,7 +807,7 @@ export const convertSettlementsToAdvancesAndDeleteOutstanding = async ({
   console.log(
     `🗑️ Deleted original outstanding ${oldOutstanding._id}: ${
       deleteResult.deletedCount > 0
-    }`
+    }`,
   );
 
   return {
@@ -805,7 +826,7 @@ const handleCreateCashBankLedgerOnEdit = async (
   behavior,
   userId,
   session,
-  result
+  result,
 ) => {
   const cashBankAccount = await getCashBankAccountForPayment({
     paymentMode: "cash",

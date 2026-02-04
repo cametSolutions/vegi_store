@@ -16,7 +16,7 @@ export const updateOriginalTransactionRecord = async (
   originalTransaction,
   updatedData,
   userId,
-  session
+  session,
 ) => {
   // ========================================
   // Update all editable fields
@@ -80,65 +80,57 @@ export const updateOriginalTransactionRecord = async (
 };
 
 /**
- * Mark monthly balances as needing recalculation + CREATE missing records
- * Handles: item rename/add/remove + account changes + ensures ItemLedger/AccountLedger exists
- * Recalculation will be done in nightly job.
+ * Marks monthly balances as dirty (needsRecalculation = true)
+ *
+ * @param {Object} original - The original transaction state (before edit/cancel)
+ * @param {Object} updated - The updated transaction state (after edit/cancel)
+ * @param {ClientSession} session - Mongoose session
+ * @param {Boolean} forceRecalculate - If true, skips change detection and marks ALL involved entities as dirty (Use for Cancellations/Deletions)
  */
 export const markMonthlyBalancesForRecalculation = async (
   original,
   updated,
-  session
+  session,
+  forceRecalculate = false, // ✅ Renamed for clarity
 ) => {
   const { company, branch } = updated;
   const { year, month } = getMonthYear(updated.transactionDate);
   const periodKey = generatePeriodKey(updated.transactionDate);
 
-  console.log(`🔄 Processing items/accounts for ${year}-${month}...`);
+  console.log(
+    `🔄 Processing items/accounts for ${year}-${month}... (Force: ${forceRecalculate})`,
+  );
 
   // ========================================
-  // 1. Account Monthly Balances (MAIN ACCOUNT)
+  // 1. DETERMINE AFFECTED ITEMS
   // ========================================
-  await AccountMonthlyBalance.updateMany(
-    {
-      account: original.account,
-      $or: [{ year: { $gt: year } }, { year: year, month: { $gte: month } }],
-    },
-    {
-      $set: {
-        needsRecalculation: true,
-        lastUpdated: new Date(),
-      },
-    }
-  ).session(session);
+  let changedItemIds = new Set();
 
-  if (
-    updated.account &&
-    updated.account.toString() !== original.account.toString()
-  ) {
-    await AccountMonthlyBalance.updateMany(
-      {
-        account: updated.account,
-        $or: [{ year: { $gt: year } }, { year: year, month: { $gte: month } }],
-      },
-      {
-        $set: {
-          needsRecalculation: true,
-          lastUpdated: new Date(),
-        },
-      }
-    ).session(session);
+  if (forceRecalculate) {
+    // If forced (e.g., cancellation), treat ALL items in the transaction as "changed"
+    // We combine items from both original and updated just in case (though for cancel they are same)
+    if (original.items)
+      original.items.forEach((item) =>
+        changedItemIds.add(item.item.toString()),
+      );
+    if (updated.items)
+      updated.items.forEach((item) => changedItemIds.add(item.item.toString()));
+    console.log(
+      `⚠️ Force Mode: Marking all ${changedItemIds.size} items as dirty`,
+    );
+  } else {
+    // Standard edit: Detect actual changes
+    changedItemIds = detectActualItemChanges(original.items, updated.items);
+    console.log(`🔍 Detected ${changedItemIds.size} CHANGED items only`);
   }
 
   // ========================================
-  // 2. SMART DETECTION: ONLY CHANGED ITEMS
+  // 2. PROCESS ITEM RECALCULATION
   // ========================================
-  const changedItemIds = detectActualItemChanges(original.items, updated.items);
-  console.log(`🔍 Detected ${changedItemIds.size} CHANGED items only`);
-
   if (changedItemIds.size === 0) {
     console.log(`✨ No item changes detected - skipping item recalculation`);
   } else {
-    // For EACH CHANGED item only: CREATE monthly balance if missing + mark dirty
+    // For EACH affected item: Ensure monthly balance exists + mark dirty
     for (const itemId of changedItemIds) {
       await ensureItemMonthlyBalanceExistsAndMarkDirty(
         company,
@@ -147,55 +139,77 @@ export const markMonthlyBalancesForRecalculation = async (
         year,
         month,
         session,
-        updated
+        updated,
       );
     }
 
-    // Mark subsequent months ONLY for CHANGED items (cascade)
+    // Mark subsequent months for these items (cascade effect)
     await markSubsequentMonthsDirty(
-      Array.from(changedItemIds), // ✅ ONLY changed items
+      Array.from(changedItemIds),
       branch,
       year,
       month,
-      session
+      session,
     );
   }
 
   // ========================================
-  // 3. SMART DETECTION: ONLY CHANGED ACCOUNTS
+  // 3. DETERMINE AFFECTED ACCOUNTS
   // ========================================
-  const changedAccountIds = detectActualAccountChanges(original, updated);
-  console.log(`💰 Detected ${changedAccountIds.size} CHANGED accounts only`);
+  let changedAccountIds = new Set();
 
-  if (changedAccountIds.size === 0) {
-    console.log(`✨ No account changes detected - skipping account recalculation`);
+  if (forceRecalculate) {
+    // If forced, mark the account as dirty regardless of "change"
+    if (original.account) changedAccountIds.add(original.account.toString());
+    if (updated.account) changedAccountIds.add(updated.account.toString());
+    // Also include cash/bank accounts if involved (optional, depending on your logic)
+    console.log(`⚠️ Force Mode: Marking account(s) as dirty`);
   } else {
-    // For EACH CHANGED account only: CREATE monthly balance if missing + mark dirty
+    // Standard edit: Detect if account changed
+    changedAccountIds = detectActualAccountChanges(original, updated);
+    console.log(`💰 Detected ${changedAccountIds.size} CHANGED accounts only`);
+  }
+
+  // ========================================
+  // 4. PROCESS ACCOUNT RECALCULATION
+  // ========================================
+  if (changedAccountIds.size === 0) {
+    console.log(
+      `✨ No account changes detected - skipping account recalculation`,
+    );
+  } else {
+    // For EACH affected account: Ensure balance exists + mark dirty
     for (const accountId of changedAccountIds) {
+      // Find relevant account name (from original or updated)
+      const accName =
+        accountId === updated.account?.toString()
+          ? updated.accountName
+          : original.accountName;
+
       await ensureAccountMonthlyBalanceExistsAndMarkDirty(
         company,
         branch,
         accountId,
-        updated.accountName,
+        accName,
         year,
         month,
         session,
-        updated
+        updated,
       );
     }
 
-    // Mark subsequent months ONLY for CHANGED accounts (cascade)
+    // Mark subsequent months for these accounts
     await markSubsequentAccountMonthsDirty(
       Array.from(changedAccountIds),
       branch,
       year,
       month,
-      session
+      session,
     );
   }
 
   console.log(
-    `✅ Processed ${changedItemIds.size} items + ${changedAccountIds.size} accounts from ${year}-${month} onwards`
+    `✅ Processed ${changedItemIds.size} items + ${changedAccountIds.size} accounts from ${year}-${month} onwards`,
   );
 
   return {
@@ -204,8 +218,6 @@ export const markMonthlyBalancesForRecalculation = async (
     month,
     itemsProcessed: changedItemIds.size,
     accountsProcessed: changedAccountIds.size,
-    changedItems: Array.from(changedItemIds),
-    changedAccounts: Array.from(changedAccountIds),
     message: `Marked ${changedItemIds.size} items + ${changedAccountIds.size} accounts for recalculation`,
   };
 };
@@ -220,7 +232,7 @@ const ensureItemMonthlyBalanceExistsAndMarkDirty = async (
   year,
   month,
   session,
-  transactionData
+  transactionData,
 ) => {
   const monthKey = formatYearMonth(year, month);
 
@@ -242,7 +254,7 @@ const ensureItemMonthlyBalanceExistsAndMarkDirty = async (
       .lean();
 
     const transactionItem = transactionData.items?.find(
-      (item) => item.item.toString() === itemId
+      (item) => item.item.toString() === itemId,
     );
 
     monthlyBalance = new ItemMonthlyBalance({
@@ -273,7 +285,7 @@ const ensureItemMonthlyBalanceExistsAndMarkDirty = async (
         needsRecalculation: true,
         lastUpdated: new Date(),
       },
-      { session }
+      { session },
     );
     console.log(`🔄 Marked existing item ${monthKey} as dirty`);
   }
@@ -284,7 +296,7 @@ const ensureItemMonthlyBalanceExistsAndMarkDirty = async (
     branchId,
     itemId,
     transactionData,
-    session
+    session,
   );
 };
 
@@ -299,7 +311,7 @@ const ensureAccountMonthlyBalanceExistsAndMarkDirty = async (
   year,
   month,
   session,
-  transactionData
+  transactionData,
 ) => {
   console.log("Processing account:", accountId);
 
@@ -315,7 +327,9 @@ const ensureAccountMonthlyBalanceExistsAndMarkDirty = async (
   }).session(session);
 
   if (!monthlyBalance) {
-    console.log(`💰 Creating NEW account monthly balance: Account ${accountId}, ${monthKey}`);
+    console.log(
+      `💰 Creating NEW account monthly balance: Account ${accountId}, ${monthKey}`,
+    );
 
     // Get account details from AccountMaster or transaction
     const accountMaster = await AccountMasterModel.findById(accountId)
@@ -348,7 +362,7 @@ const ensureAccountMonthlyBalanceExistsAndMarkDirty = async (
         needsRecalculation: true,
         lastUpdated: new Date(),
       },
-      { session }
+      { session },
     );
     console.log(`🔄 Marked existing account ${monthKey} as dirty`);
   }
@@ -360,7 +374,7 @@ const ensureAccountMonthlyBalanceExistsAndMarkDirty = async (
     accountId,
     accountName,
     transactionData,
-    session
+    session,
   );
 };
 
@@ -372,7 +386,7 @@ const ensureItemLedgerEntryExists = async (
   branchId,
   itemId,
   transactionData,
-  session
+  session,
 ) => {
   const {
     _id: transactionId,
@@ -395,7 +409,7 @@ const ensureItemLedgerEntryExists = async (
 
   if (!existingLedger) {
     console.log(
-      `📝 Creating ItemLedger: Item ${itemId}, Tx ${transactionNumber}`
+      `📝 Creating ItemLedger: Item ${itemId}, Tx ${transactionNumber}`,
     );
 
     const newLedger = new ItemLedger({
@@ -433,9 +447,13 @@ const ensureAccountLedgerEntryExists = async (
   accountId,
   accountName,
   transactionData,
-  session
+  session,
 ) => {
-  const { _id: transactionId, transactionNumber, transactionDate } = transactionData;
+  const {
+    _id: transactionId,
+    transactionNumber,
+    transactionDate,
+  } = transactionData;
 
   // Check if AccountLedger already exists
   const existingLedger = await AccountLedger.findOne({
@@ -446,7 +464,9 @@ const ensureAccountLedgerEntryExists = async (
   }).session(session);
 
   if (!existingLedger) {
-    console.log(`📝 Creating AccountLedger: Account ${accountId}, Tx ${transactionNumber}`);
+    console.log(
+      `📝 Creating AccountLedger: Account ${accountId}, Tx ${transactionNumber}`,
+    );
 
     // Use placeholder values - nightly job will recalculate
     const newLedger = new AccountLedger({
@@ -458,7 +478,8 @@ const ensureAccountLedgerEntryExists = async (
       transactionNumber,
       transactionDate,
       transactionType: transactionData.transactionType,
-      ledgerSide: determineTransactionBehavior(transactionData.transactionType).ledgerSide, // Placeholder
+      ledgerSide: determineTransactionBehavior(transactionData.transactionType)
+        .ledgerSide, // Placeholder
       amount: 0, // Placeholder
       runningBalance: 0, // Nightly job will calculate
       createdBy: transactionData.createdBy || "system",
@@ -476,7 +497,7 @@ const markSubsequentMonthsDirty = async (
   branchId,
   year,
   month,
-  session
+  session,
 ) => {
   for (const itemId of itemIds) {
     await ItemMonthlyBalance.updateMany(
@@ -491,7 +512,7 @@ const markSubsequentMonthsDirty = async (
           lastUpdated: new Date(),
         },
       },
-      { session }
+      { session },
     );
   }
 };
@@ -504,7 +525,7 @@ const markSubsequentAccountMonthsDirty = async (
   branchId,
   year,
   month,
-  session
+  session,
 ) => {
   for (const accountId of accountIds) {
     await AccountMonthlyBalance.updateMany(
@@ -519,7 +540,7 @@ const markSubsequentAccountMonthsDirty = async (
           lastUpdated: new Date(),
         },
       },
-      { session }
+      { session },
     );
   }
 };
@@ -568,7 +589,7 @@ const detectActualItemChanges = (originalItems, updatedItems) => {
     ) {
       changedItemIds.add(itemId);
       console.log(
-        `   ✏️  Item CHANGED: ${itemId} (qty:${origData.quantity}→${updatedData.quantity})`
+        `   ✏️  Item CHANGED: ${itemId} (qty:${origData.quantity}→${updatedData.quantity})`,
       );
     }
   }
@@ -594,24 +615,33 @@ const detectActualAccountChanges = (original, updated) => {
   if (original.account.toString() !== updated.account.toString()) {
     changedAccountIds.add(original.account.toString());
     changedAccountIds.add(updated.account.toString());
-    console.log(`   💱 Main account CHANGED: ${original.account} → ${updated.account}`);
+    console.log(
+      `   💱 Main account CHANGED: ${original.account} → ${updated.account}`,
+    );
   }
 
   // 2. OUTSTANDING CUSTOMERS changed (if any)
-  if (original.outstandingCustomers?.length !== updated.outstandingCustomers?.length) {
-    (original.outstandingCustomers || []).forEach(cust => 
-      changedAccountIds.add(cust.account.toString())
+  if (
+    original.outstandingCustomers?.length !==
+    updated.outstandingCustomers?.length
+  ) {
+    (original.outstandingCustomers || []).forEach((cust) =>
+      changedAccountIds.add(cust.account.toString()),
     );
-    (updated.outstandingCustomers || []).forEach(cust => 
-      changedAccountIds.add(cust.account.toString())
+    (updated.outstandingCustomers || []).forEach((cust) =>
+      changedAccountIds.add(cust.account.toString()),
     );
     console.log(`   👥 Outstanding customers count changed`);
   }
 
   // 3. CASH/BANK changed
-  if (original.cashBankAccount?.toString() !== updated.cashBankAccount?.toString()) {
-    if (original.cashBankAccount) changedAccountIds.add(original.cashBankAccount.toString());
-    if (updated.cashBankAccount) changedAccountIds.add(updated.cashBankAccount.toString());
+  if (
+    original.cashBankAccount?.toString() !== updated.cashBankAccount?.toString()
+  ) {
+    if (original.cashBankAccount)
+      changedAccountIds.add(original.cashBankAccount.toString());
+    if (updated.cashBankAccount)
+      changedAccountIds.add(updated.cashBankAccount.toString());
     console.log(`   💳 Cash/Bank account CHANGED`);
   }
 

@@ -81,4 +81,22 @@ export const cashTransactionServices = {
       throw new Error("An unexpected error occurred");
     }
   },
+
+  delete: async (id, transactionType, reason) => {
+    try {
+      const response = await api.delete(
+        `/transaction/${transactionType}/delete/${id}`,
+        {
+          data: { reason } // Send reason in request body
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.message);
+      }
+      throw new Error("An unexpected error occurred");
+    }
+  },
 };

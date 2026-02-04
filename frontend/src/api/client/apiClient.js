@@ -4,6 +4,9 @@ import { toast } from "sonner";
 let baseUrl;
 
 const ENV = import.meta.env.VITE_ENV;
+
+console.log(ENV);
+
 // Base axios instance
 
 if (ENV === "development") {
@@ -11,7 +14,9 @@ if (ENV === "development") {
 } else if (ENV === "testing") {
   baseUrl = "https://farm2carttest.camet.in/api";
 } else {
-  baseUrl = "https://farm2cart.camet.in/api";
+
+  console.log("Production Environment");
+  baseUrl = "https://farm2cart.camet.in/api/hai/";
 }
 
 export const api = axios.create({

@@ -28,7 +28,7 @@ export const processTransaction = async (transactionData, userId, session) => {
     const behavior = await determineTransactionBehavior(transactionType);
 
     // // Step 2: Update stock
-    await updateStock(items, behavior.stockDirection, branch, session);
+    await updateStock(items, behavior.stockDirection, branch, session, transactionType);
 
     const transactionModel = getTransactionModel(transactionType);
 

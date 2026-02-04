@@ -1,6 +1,7 @@
 import express from "express";
 import {
   createTransaction,
+  deleteTransaction,
   editTransaction,
   getTransactionDetail,
   getTransactions,
@@ -11,5 +12,7 @@ router.post("/create", createTransaction);
 router.get("/getall", getTransactions);
 router.get("/getTransactionDetails/:transactionId", getTransactionDetail);
 router.put("/edit/:transactionId", editTransaction);
+  router.delete("/delete/:transactionId", deleteTransaction);
+
 
 export default router;
