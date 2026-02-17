@@ -41,7 +41,10 @@ import { validateAccountChangeOnEdit } from "../../helpers/FundTransactionHelper
 import { reverseOutstandingSettlements } from "../../helpers/FundTransactionHelper/OutstandingSettlementHelper.js";
 import CashBankLedgerModel from "../../model/CashBankLedgerModel.js";
 import AdjustmentEntryModel from "../../model/AdjustmentEntryModel.js";
-import { lockFinancialYearFormat, unlockFinancialYearFormatIfNoTransactions } from "../companyController/companyController.js";
+import {
+  lockFinancialYearFormat,
+  unlockFinancialYearFormatIfNoTransactions,
+} from "../companyController/companyController.js";
 
 /**
  * get transactions (handles sales, purchase, sales_return, purchase_return)
@@ -61,14 +64,17 @@ export const getTransactions = async (req, res) => {
 
     const transactionModel = getTransactionModel(transactionType);
 
-    // Get query parameters
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const searchTerm = req.query.searchTerm || "";
-    const companyId = req.query.companyId;
-    const branchId = req.query.branchId;
-    const sortBy = req.query.sortBy || "transactionDate";
-    const sortOrder = req.query.sortOrder || "desc";
+    const {
+      page = 1,
+      limit = 20,
+      searchTerm = "",
+      companyId,
+      branchId,
+      sortBy = "transactionDate",
+      sortOrder = "desc",
+      startDate,
+      endDate,
+    } = req.query;
 
     // Convert 'desc' to -1, 'asc' to 1
     const sortDirection = sortOrder === "desc" ? -1 : 1;
@@ -90,12 +96,12 @@ export const getTransactions = async (req, res) => {
     if (companyId) filter.company = companyId;
     if (branchId) filter.branch = branchId;
 
-    // if (startDate && endDate) {
-    //   filter.transactionDate = {
-    //     $gte: new Date(startDate),
-    //     $lte: new Date(endDate),
-    //   };
-    // }
+    if (startDate && endDate) {
+      filter.transactionDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
+    }
 
     // Use the static method for pagination
     const result = await transactionModel.getPaginatedTransactions(
@@ -792,7 +798,11 @@ export const deleteTransaction = async (req, res) => {
     );
 
     // 🔓 Auto-unlock if last transaction
-    await unlockFinancialYearFormatIfNoTransactions(company,session,transactionId);
+    await unlockFinancialYearFormatIfNoTransactions(
+      company,
+      session,
+      transactionId,
+    );
 
     await session.commitTransaction();
     console.log("✅ CANCELLATION COMPLETED SUCCESSFULLY");
