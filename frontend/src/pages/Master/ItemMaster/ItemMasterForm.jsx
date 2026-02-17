@@ -71,10 +71,13 @@ const ItemMasterForm = ({ selectedItem, isEditMode, onSuccess, onCancel }) => {
     }
   }, [itemNameValue, showKeyboard]);
 
+
+  
+
   const onSubmit = async (data) => {
     // Close keyboard before saving
     setShowKeyboard(false);
-
+    
     if (selectedBranches.length === 0) {
       toast.error("Please select at least one branch for stock allocation.");
       return;
@@ -175,50 +178,46 @@ const ItemMasterForm = ({ selectedItem, isEditMode, onSuccess, onCancel }) => {
             </div>
 
             <div className="space-y-4">
-              <div className="space-y-1">
+              <div className="relative">
                 <InputLabel label="Item Name" required />
+                <input
+                  ref={itemNameRef}
+                  {...register("itemName", {
+                    required: "Item name is required",
+                    validate: {
+                      notEmpty: (v) =>
+                        v?.trim().length > 0 || "Cannot be empty",
+                    },
+                    onChange: (e) => {
+                      // Sync keyboard when typing in input field
+                      if (keyboardRef.current && showKeyboard) {
+                        keyboardRef.current.setInput(e.target.value);
+                      }
+                    },
+                  })}
+                  className={inputClass}
+                  placeholder="e.g., Premium Rice / പ്രീമിയം അരി"
+                  disabled={isLoading}
+                  onBlur={(e) => {
+                    setValue("itemName", e.target.value.trim(), {
+                      shouldValidate: true,
+                    });
+                    setShowKeyboard(false);
+                  }}
+                />
 
-                <div className="relative">
-                  <input
-                    ref={itemNameRef}
-                    {...register("itemName", {
-                      required: "Item name is required",
-                      validate: {
-                        notEmpty: (v) =>
-                          v?.trim().length > 0 || "Cannot be empty",
-                      },
-                      onChange: (e) => {
-                        if (keyboardRef.current && showKeyboard) {
-                          keyboardRef.current.setInput(e.target.value);
-                        }
-                      },
-                    })}
-                    className={`${inputClass} pr-10`} // add right padding
-                    placeholder="e.g., Premium Rice / പ്രീമിയം അരി"
-                    disabled={isLoading}
-                    onFocus={() => setShowKeyboard(true)}
-                    onBlur={(e) => {
-                      setValue("itemName", e.target.value.trim(), {
-                        shouldValidate: true,
-                      });
-                      setShowKeyboard(false);
-                    }}
-                  />
-
-                  {/* Keyboard Icon */}
-                  <button
-                    type="button"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      itemNameRef.current?.focus();
-                      setShowKeyboard(true);
-                    }}
-                    className="absolute inset-y-0 right-3 flex items-center text-slate-500 hover:text-blue-600"
-                  >
-                    ⌨️
-                  </button>
-                </div>
-
+                {/* Keyboard Icon */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // Prevent blur from firing
+                    itemNameRef.current?.focus();
+                    setShowKeyboard(true);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-blue-600"
+                >
+                  ⌨️
+                </button>
                 {errors.itemName && (
                   <ErrorMessage message={errors.itemName.message} />
                 )}
@@ -316,7 +315,7 @@ const ItemMasterForm = ({ selectedItem, isEditMode, onSuccess, onCancel }) => {
       </div>
 
       {showKeyboard && (
-        <div
+        <div 
           className="fixed bottom-0 right-0 z-[9999] w-[50%] max-h-[80%] overflow-y-auto bg-black shadow-2xl"
           onMouseDown={(e) => {
             // Prevent clicks on keyboard from removing focus from input

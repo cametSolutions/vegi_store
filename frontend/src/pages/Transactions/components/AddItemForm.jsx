@@ -37,12 +37,9 @@ const AddItemForm = ({
   });
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [shouldSearch, setShouldSearch] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
-
-
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const debouncedSearchTerm = useDebounce(searchTerm, 500); 
 
   // Refs
   const codeInputRef = useRef(null);
@@ -56,7 +53,6 @@ const AddItemForm = ({
   }, [transactionType]);
 
   const isSearchEnabled =
-    shouldSearch &&
     debouncedSearchTerm.trim() !== "" &&
     (transactionType === "sale" ||
       transactionType === "sales_return" ||
@@ -85,8 +81,7 @@ const AddItemForm = ({
     refetchOnReconnect: false,
   });
 
-  console.log(isSearchEnabled);
-  console.log(transactionType);
+
   
 
   useEffect(() => {
@@ -94,17 +89,15 @@ const AddItemForm = ({
       toast.error("Search Error", {
         description: "Failed to search for item. Please try again.",
       });
-      setShouldSearch(false);
     }
   }, [isError, error]);
 
   useEffect(() => {
-    if (shouldSearch && !isFetching && searchResponse !== undefined) {
+    if (!isFetching && searchResponse !== undefined && debouncedSearchTerm.trim() !== "") {
       // if (requireAccount && !account) {
       //   toast.error("Customer Not Selected", {
       //     description: "Please select a customer before adding items.",
       //   });
-      //   setShouldSearch(false);
       //   return;
       // }
 
@@ -154,7 +147,6 @@ const AddItemForm = ({
         }));
 
         setShowDropdown(false);
-        setShouldSearch(false);
 
         // focus Qty directly (since Unit is removed)
         setTimeout(() => quantityInputRef.current?.focus(), 100);
@@ -164,13 +156,11 @@ const AddItemForm = ({
           itemCode: debouncedSearchTerm,
         }));
         setShowDropdown(true);
-        setShouldSearch(false);
       }
     }
   }, [
     searchResponse,
     isFetching,
-    shouldSearch,
     debouncedSearchTerm,
     priceLevel,
     branch,
@@ -244,14 +234,13 @@ const AddItemForm = ({
   }, [clickedItemInTable]);
 
   const handleCodeKeyDown = (e) => {
-
-    
-    if (e.key === "Enter" && searchTerm.trim() !== "") {
+    // Allow Tab and other navigation keys to work normally
+    if (e.key === "Enter") {
       e.preventDefault();
-      setShowDropdown(false);
-      setShouldSearch(true);
-
-
+      // Move to quantity field if item is loaded
+      if (localItem.item && localItem.itemName) {
+        quantityInputRef.current?.focus();
+      }
     }
   };
 
@@ -259,7 +248,22 @@ const AddItemForm = ({
     const value = e.target.value;
     setSearchTerm(value);
     setShowDropdown(false);
-    setLocalItem({ ...localItem, itemCode: value });
+    
+    // Clear item data when user starts typing a new code
+    if (value !== localItem.itemCode) {
+      setLocalItem((prev) => ({
+        ...prev,
+        item: null,
+        itemCode: value,
+        itemName: "",
+        priceLevels: [],
+        rate: "",
+        taxable: false,
+        taxRate: "0",
+        taxAmount: "0",
+        availableQuantity: "",
+      }));
+    }
   };
 
   const handleQuantityKeyDown = (e) => {
@@ -361,7 +365,6 @@ const AddItemForm = ({
     });
     setSearchTerm("");
     setShowDropdown(false);
-    setShouldSearch(false);
   };
 
   return (
