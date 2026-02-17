@@ -7,6 +7,8 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
 import { NumericFormat } from "react-number-format";
 
+
+
 const AddItemForm = ({
   items,
   branch,
@@ -37,6 +39,8 @@ const AddItemForm = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [shouldSearch, setShouldSearch] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+
+
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
