@@ -23,7 +23,7 @@ jobs:
             nvm use 22.12.0
             cd frontend
             npm install
-            npm run build
+            npm run build:test
             cd ../backend
             npm install
             pm2 restart vegetable-billing-api-test
