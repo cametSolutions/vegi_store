@@ -9,7 +9,7 @@ const ItemsTable = ({ items, onRemoveItem, handleItemClickInItemsTable }) => {
   //   // console.log("item",item)
   //   handleItemClickInItemsTable(item)
   // }
-console.log(items)
+
   return (
     <div className="bg-white rounded-t shadow-sm">
       <div className="h-[calc(100vh-405px)] overflow-y-auto border border-gray-200 rounded">
@@ -42,7 +42,7 @@ console.log(items)
           <tbody className="divide-y divide-slate-200 text-center">
             {items.map((item, index) => (
               <tr
-                onClick={() => handleItemClickInItemsTable(item)}
+                onClick={() => handleItemClickInItemsTable(index)}
                 key={index}
                 className= " bg-slate-100 hover:bg-slate-200 cursor-pointer"
               >
@@ -62,7 +62,7 @@ console.log(items)
                 </td>
                 <td className="px-2 py-1.5 text-slate-700">₹{item?.rate}</td>
                 <td className="px-2 py-1.5 font-semibold text-slate-900">
-                  ₹{item?.amountAfterTax}
+                  ₹{Number(item?.amountAfterTax)?.toFixed(2)}
                 </td>
                 <td className="px-2 py-1.5">
                   <button

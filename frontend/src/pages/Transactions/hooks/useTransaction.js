@@ -5,6 +5,7 @@ import {
   calculateTransactionTotals,
   recalculateTransactionOnPriceLevelChange,
 } from "../utils/transactionUtils";
+import { set } from "zod";
 
 /**
  * Custom hook for managing transaction state and operations
@@ -32,6 +33,9 @@ export const useTransaction = (initialData = null) => {
 
   const [clickedItemInTable, setClickedItemInTable] = useState(null);
 
+  console.log("clickedItemInTable:", clickedItemInTable);
+  
+
   // ============================================================================
   // REFS FOR TRACKING COMPONENT LIFECYCLE & USER ACTIONS
   // ============================================================================
@@ -51,11 +55,15 @@ export const useTransaction = (initialData = null) => {
   // ITEM MANAGEMENT HANDLERS
   // ============================================================================
 
-  const handleItemClickInItemsTable = useCallback((item) => {
-    setClickedItemInTable(item);
+  const handleItemClickInItemsTable = useCallback((index) => {
+    console.log("Clicked item in table:", index);
+
+    setClickedItemInTable(index ?? null);
   }, []);
 
-  const addItem = (items, newItem) => {
+  const addItem = (items, newItem, index = null) => {
+    console.log(index);
+
     const quantity = parseFloat(newItem.quantity) || 0;
     const rate = parseFloat(newItem.rate) || 0;
     const baseAmount = quantity * rate;
@@ -69,19 +77,30 @@ export const useTransaction = (initialData = null) => {
       amountAfterTax: amountAfterTax.toString(),
     };
 
-    const existingItemIndex = items.findIndex(
-      (item) => item?.item === normalizedItem?.item,
-    );
+    // const existingItemIndex = items.findIndex(
+    //   (item) => item?.item === normalizedItem?.item,
+    // );
 
-    if (existingItemIndex !== -1) {
+    // if (existingItemIndex !== -1) {
+    //   const updatedItems = [...items];
+    //   updatedItems.splice(existingItemIndex, 1);
+    //   // add updated item at the same index
+    //   return [...updatedItems, normalizedItem];
+    // } else {
+    //   // add to end
+
+    /// index is present update at index else add to end
+    if (index !== null) {
       const updatedItems = [...items];
-      updatedItems.splice(existingItemIndex, 1);
-      // add updated item at the same index
-      return [...updatedItems, normalizedItem];
+      updatedItems.splice(index, 1, normalizedItem);
+      setClickedItemInTable(null);
+      return updatedItems;
     } else {
-      // add to end
+      setClickedItemInTable(null);
       return [...items, normalizedItem];
     }
+
+    // }
   };
 
   const updateItemQuantity = useCallback((index, qty) => {
@@ -270,6 +289,7 @@ export const useTransaction = (initialData = null) => {
     transactionData,
     newItem,
     clickedItemInTable,
+    setClickedItemInTable,
 
     // Transaction data updates
     updateTransactionData,
