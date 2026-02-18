@@ -7,8 +7,6 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
 import { NumericFormat } from "react-number-format";
 
-
-
 const AddItemForm = ({
   items,
   branch,
@@ -39,7 +37,7 @@ const AddItemForm = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const debouncedSearchTerm = useDebounce(searchTerm, 500); 
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   // Refs
   const codeInputRef = useRef(null);
@@ -81,9 +79,6 @@ const AddItemForm = ({
     refetchOnReconnect: false,
   });
 
-
-  
-
   useEffect(() => {
     if (isError && error) {
       toast.error("Search Error", {
@@ -93,7 +88,11 @@ const AddItemForm = ({
   }, [isError, error]);
 
   useEffect(() => {
-    if (!isFetching && searchResponse !== undefined && debouncedSearchTerm.trim() !== "") {
+    if (
+      !isFetching &&
+      searchResponse !== undefined &&
+      debouncedSearchTerm.trim() !== ""
+    ) {
       // if (requireAccount && !account) {
       //   toast.error("Customer Not Selected", {
       //     description: "Please select a customer before adding items.",
@@ -149,7 +148,7 @@ const AddItemForm = ({
         setShowDropdown(false);
 
         // focus Qty directly (since Unit is removed)
-        setTimeout(() => quantityInputRef.current?.focus(), 100);
+        // setTimeout(() => quantityInputRef.current?.focus(), 100);
       } else if (searchResponse?.data && searchResponse.data.length === 0) {
         setLocalItem((prev) => ({
           ...prev,
@@ -234,12 +233,16 @@ const AddItemForm = ({
   }, [clickedItemInTable]);
 
   const handleCodeKeyDown = (e) => {
-    // Allow Tab and other navigation keys to work normally
     if (e.key === "Enter") {
       e.preventDefault();
-      // Move to quantity field if item is loaded
+
+      // Only move to Qty if product is already loaded
       if (localItem.item && localItem.itemName) {
         quantityInputRef.current?.focus();
+      } else {
+        toast.error("Product not loaded", {
+          description: "Please wait until product is fetched.",
+        });
       }
     }
   };
@@ -248,7 +251,7 @@ const AddItemForm = ({
     const value = e.target.value;
     setSearchTerm(value);
     setShowDropdown(false);
-    
+
     // Clear item data when user starts typing a new code
     if (value !== localItem.itemCode) {
       setLocalItem((prev) => ({
@@ -317,7 +320,6 @@ const AddItemForm = ({
     };
 
     // console.log(itemToAdd);
-    
 
     const newItems = addItem(items, itemToAdd);
     updateTransactionField("items", newItems);
