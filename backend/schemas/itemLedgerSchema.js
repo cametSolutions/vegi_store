@@ -114,6 +114,9 @@ ItemLedgerSchema.statics.getLastStockBalance = async function (
   branchId,
   session
 ) {
+
+  console.log("itemId",itemId);
+  
   const lastEntry = await this.findOne({ item: itemId, branch: branchId })
     .sort({ transactionDate: -1, createdAt: -1 })
     .session(session);

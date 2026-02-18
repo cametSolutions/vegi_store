@@ -597,7 +597,7 @@ export const refoldMonth = async (
           baseAmount: update.baseAmount,
           taxAmount: update.taxAmount,
           amountAfterTax: update.amountAfterTax,
-          rate: update.rate,
+          rate: update.amountAfterTax / Math.abs(update.quantity || 1), // Recalculate rate based on new amount and quantity
           account: update.account,
           accountName: update.accountName,
         },
