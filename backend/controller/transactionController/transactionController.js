@@ -198,7 +198,7 @@ export const createTransaction = async (req, res) => {
 
       const { previousBalanceAmount, netAmount, paidAmount } = transactionData;
 
-      console.log("transactionData", transactionData);
+     
 
       const totalAmountForReceipt = netAmount + previousBalanceAmount;
       const closingBalanceAmountForReceipt = totalAmountForReceipt - paidAmount;
@@ -458,7 +458,10 @@ export const editTransaction = async (req, res) => {
     // ========================================
     const deltas = calculateTransactionDeltas(originalTransaction, updatedData);
 
-    // console.log("deltas", deltas);
+    // console.log("");
+    
+
+
 
     // ========================================
     // STEP 3: Update Stock with Delta Only
