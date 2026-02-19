@@ -92,7 +92,7 @@ export const getUserById = async (req, res) => {
           settings: s ? s.financialYear : null, // or whole s if you prefer
         };
       });
-      console.log("withSettings", withSettings);
+
 
       // Put back in user object in same shape (array or single)
       if (Array.isArray(user.access)) {
