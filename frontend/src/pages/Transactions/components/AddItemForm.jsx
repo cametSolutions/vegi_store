@@ -40,9 +40,9 @@ const AddItemForm = ({
 
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
-  console.log(clickedItemInTable);
-  console.log(items[clickedItemInTable]);
-  console.log(transactionType);
+  // console.log(clickedItemInTable);
+  // console.log(items[clickedItemInTable]);
+  // console.log(transactionType);
 
   // Refs
   const codeInputRef = useRef(null);
@@ -59,8 +59,8 @@ const AddItemForm = ({
       transactionType === "purchase" ||
       transactionType === "purchase_return");
 
-  console.log(isSearchEnabled);
-  console.log(debouncedSearchTerm);
+  // console.log(isSearchEnabled);
+  // console.log(debouncedSearchTerm);
   console.log();
 
   useEffect(() => {
