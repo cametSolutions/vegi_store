@@ -7,8 +7,6 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
 import { NumericFormat } from "react-number-format";
 
-
-
 const AddItemForm = ({
   items,
   branch,
@@ -20,6 +18,7 @@ const AddItemForm = ({
   transactionType,
   account,
   requireAccount = true,
+  setClickedItemInTable,
 }) => {
   const [localItem, setLocalItem] = useState({
     item: null,
@@ -39,7 +38,11 @@ const AddItemForm = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const debouncedSearchTerm = useDebounce(searchTerm, 500); 
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+  // console.log(clickedItemInTable);
+  // console.log(items[clickedItemInTable]);
+  // console.log(transactionType);
 
   // Refs
   const codeInputRef = useRef(null);
@@ -48,18 +51,42 @@ const AddItemForm = ({
   const rateInputRef = useRef(null);
   const addButtonRef = useRef(null);
 
-  useEffect(() => {
-    clearLocalItemData();
-  }, [transactionType]);
-
   const isSearchEnabled =
     debouncedSearchTerm.trim() !== "" &&
     (transactionType === "sale" ||
       transactionType === "sales_return" ||
       transactionType === "stock_adjustment" ||
-      ((transactionType === "purchase" ||
-        transactionType === "purchase_return") &&
-        !!account));
+      transactionType === "purchase" ||
+      transactionType === "purchase_return");
+
+  // console.log(isSearchEnabled);
+  // console.log(debouncedSearchTerm);
+  console.log();
+
+  useEffect(() => {
+    clearLocalItemData();
+  }, [transactionType]);
+
+  useEffect(() => {
+    if (isSearchEnabled) {
+      setLocalItem({
+        item: null,
+        itemCode: debouncedSearchTerm,
+        itemName: "",
+        unit: units[0]?.value || "",
+        priceLevels: [],
+        quantity: "",
+        rate: "",
+        baseAmount: "0",
+        amountAfterTax: "0",
+        taxable: false,
+        taxRate: "0",
+        taxAmount: "0",
+        availableQuantity: "",
+      });
+      setClickedItemInTable(null);
+    }
+  }, [debouncedSearchTerm, isSearchEnabled]);
 
   const {
     data: searchResponse,
@@ -81,9 +108,6 @@ const AddItemForm = ({
     refetchOnReconnect: false,
   });
 
-
-  
-
   useEffect(() => {
     if (isError && error) {
       toast.error("Search Error", {
@@ -93,7 +117,11 @@ const AddItemForm = ({
   }, [isError, error]);
 
   useEffect(() => {
-    if (!isFetching && searchResponse !== undefined && debouncedSearchTerm.trim() !== "") {
+    if (
+      !isFetching &&
+      searchResponse !== undefined &&
+      debouncedSearchTerm.trim() !== ""
+    ) {
       // if (requireAccount && !account) {
       //   toast.error("Customer Not Selected", {
       //     description: "Please select a customer before adding items.",
@@ -149,7 +177,7 @@ const AddItemForm = ({
         setShowDropdown(false);
 
         // focus Qty directly (since Unit is removed)
-        setTimeout(() => quantityInputRef.current?.focus(), 100);
+        // setTimeout(() => quantityInputRef.current?.focus(), 100);
       } else if (searchResponse?.data && searchResponse.data.length === 0) {
         setLocalItem((prev) => ({
           ...prev,
@@ -203,7 +231,15 @@ const AddItemForm = ({
   }, [priceLevel, localItem.item, searchResponse, transactionType]);
 
   useEffect(() => {
-    if (clickedItemInTable) {
+    console.log(clickedItemInTable);
+
+    if (clickedItemInTable !== null && clickedItemInTable !== undefined) {
+      const selectedItem = items[clickedItemInTable];
+
+      console.log(selectedItem);
+
+      if (!selectedItem) return;
+
       const {
         item,
         itemCode,
@@ -214,7 +250,7 @@ const AddItemForm = ({
         taxable,
         taxRate,
         taxAmount,
-      } = clickedItemInTable;
+      } = selectedItem;
 
       setLocalItem((prev) => ({
         ...prev,
@@ -234,12 +270,16 @@ const AddItemForm = ({
   }, [clickedItemInTable]);
 
   const handleCodeKeyDown = (e) => {
-    // Allow Tab and other navigation keys to work normally
     if (e.key === "Enter") {
       e.preventDefault();
-      // Move to quantity field if item is loaded
+
+      // Only move to Qty if product is already loaded
       if (localItem.item && localItem.itemName) {
         quantityInputRef.current?.focus();
+      } else if (searchTerm.trim() !== "") {
+        toast.error("Product not loaded", {
+          description: "Please wait until product is fetched.",
+        });
       }
     }
   };
@@ -248,7 +288,7 @@ const AddItemForm = ({
     const value = e.target.value;
     setSearchTerm(value);
     setShowDropdown(false);
-    
+
     // Clear item data when user starts typing a new code
     if (value !== localItem.itemCode) {
       setLocalItem((prev) => ({
@@ -286,7 +326,7 @@ const AddItemForm = ({
     return q * r;
   }, [localItem.quantity, localItem.rate]);
 
-  const handleAddClick = () => {
+  const handleAddClick = (clickedItemIndex = null) => {
     if (
       !localItem.itemCode ||
       !localItem.itemName ||
@@ -315,11 +355,11 @@ const AddItemForm = ({
       taxAmount: taxAmount.toFixed(2),
       amountAfterTax: amountAfterTax.toFixed(2),
     };
+    console.log(clickedItemIndex);
 
     // console.log(itemToAdd);
-    
 
-    const newItems = addItem(items, itemToAdd);
+    const newItems = addItem(items, itemToAdd, clickedItemIndex);
     updateTransactionField("items", newItems);
 
     setLocalItem({
@@ -344,7 +384,7 @@ const AddItemForm = ({
   const handleAddButtonKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      handleAddClick();
+      handleAddClick(clickedItemInTable);
     }
   };
 

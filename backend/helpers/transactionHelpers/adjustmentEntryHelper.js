@@ -162,7 +162,7 @@ export const createAdjustmentEntries = async (
     { session },
   );
 
-  console.log("adj", adjustmentEntry);
+
 
   console.log("✅ Adjustment created:", {
     adjustmentNumber,

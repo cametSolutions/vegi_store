@@ -70,6 +70,7 @@ export const itemMasterQueries = {
     
     queryOptions({
       queryKey: [
+        "reports",
         ...itemMasterQueries.all(),
         "item-summary",
         companyId,
