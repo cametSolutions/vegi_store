@@ -69,8 +69,8 @@ const CreateTransaction = () => {
     (state) => state.companyBranch?.selectedBranch,
   );
 
-  console.log("transactionData", transactionData);
-  console.log(clickedItemInTable);
+  // console.log("transactionData", transactionData);
+  // console.log(clickedItemInTable);
 
   return (
     <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">

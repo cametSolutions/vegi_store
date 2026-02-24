@@ -1,69 +1,101 @@
 import React from "react";
-import { Plus, Minus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { truncate } from "../../../../../shared/utils/string";
 
 const ItemsTable = ({ items, onRemoveItem, handleItemClickInItemsTable }) => {
-  console.log("item table component renders");
-
-  // const handleItemClick=(item)=>{
-  //   // console.log("item",item)
-  //   handleItemClickInItemsTable(item)
-  // }
 
   return (
     <div className="bg-white rounded-t shadow-sm">
       <div className="h-[calc(100vh-405px)] overflow-y-auto border border-gray-200 rounded">
-        <table className="w-full text-[11px]">
+
+        <table className="w-full text-[11px] table-fixed">
+
+          {/* ================= HEADER ================= */}
           <thead>
             <tr>
-              <th className="sticky top-0 bg-slate-600 text-white px-4 py-1.5 text-left z-10">
+              {/* SL COLUMN */}
+              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center w-[50px]">
+                SL
+              </th>
+
+              {/* CODE (SMALL WIDTH) */}
+              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-left w-[60px]">
                 Code
               </th>
-              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center z-10">
+
+              {/* ITEM */}
+              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-left">
                 Item
               </th>
-              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center z-10">
+
+              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center">
                 Unit
               </th>
-              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center z-10">
+
+              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center">
                 Qty
               </th>
-              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center z-10">
+
+              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center">
                 Rate
               </th>
-              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center z-10">
+
+              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center">
                 Amount
               </th>
-              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center z-10">
+
+              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center">
                 Action
               </th>
             </tr>
           </thead>
+
+          {/* ================= BODY ================= */}
           <tbody className="divide-y divide-slate-200 text-center">
             {items.map((item, index) => (
               <tr
-                onClick={() => handleItemClickInItemsTable(index)}
                 key={index}
-                className= " bg-slate-100 hover:bg-slate-200 cursor-pointer"
+                onClick={() => handleItemClickInItemsTable(index)}
+                className="bg-slate-100 hover:bg-slate-200 cursor-pointer"
               >
-                <td className="px-5 py-1.5 font-medium text-slate-900 text-left">
+                {/* SL */}
+                <td className="px-2 py-1.5 text-center font-medium text-slate-800">
+                  {index + 1}
+                </td>
+
+                {/* CODE */}
+                <td className="px-2 py-1.5 font-medium text-slate-900 text-left whitespace-nowrap">
                   {truncate(item?.itemCode, 7)}
                 </td>
+
+                {/* ITEM */}
+                <td className="px-2 py-1.5 text-left text-slate-700">
+                  {truncate(item?.itemName, 25)}
+                </td>
+
+                {/* UNIT */}
                 <td className="px-2 py-1.5 text-slate-700">
-                  {truncate(item?.itemName, 15)}
+                  {item?.unit}
                 </td>
-                <td className="px-2 py-1.5 text-slate-700">{item?.unit}</td>
+
+                {/* QTY */}
                 <td className="px-2 py-1.5">
-                  <div className="">
-                    <span className="w-6 text-center font-medium">
-                      {item?.quantity}
-                    </span>
-                  </div>
+                  <span className="font-medium">
+                    {item?.quantity}
+                  </span>
                 </td>
-                <td className="px-2 py-1.5 text-slate-700">₹{item?.rate}</td>
+
+                {/* RATE */}
+                <td className="px-2 py-1.5 text-slate-700">
+                  ₹{item?.rate}
+                </td>
+
+                {/* AMOUNT */}
                 <td className="px-2 py-1.5 font-semibold text-slate-900">
                   ₹{Number(item?.amountAfterTax)?.toFixed(2)}
                 </td>
+
+                {/* DELETE */}
                 <td className="px-2 py-1.5">
                   <button
                     onClick={(event) => {
@@ -78,6 +110,7 @@ const ItemsTable = ({ items, onRemoveItem, handleItemClickInItemsTable }) => {
               </tr>
             ))}
           </tbody>
+
         </table>
       </div>
     </div>
