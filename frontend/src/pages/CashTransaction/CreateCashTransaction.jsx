@@ -37,7 +37,6 @@ const CreateCashTransaction = () => {
     [location, CashtransactionData.transactionType]
   );
 
-  console.log(currentTransactionType);
   
 
   useEffect(() => {
