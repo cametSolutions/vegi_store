@@ -24,15 +24,26 @@ const OutstandingTransactionsList = ({
   branchId,
   selectedParty,
 }) => {
+  const normalizeDateForInput = (dateValue) => {
+    if (!dateValue) return "";
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const dispatch = useDispatch();
   const filters = useSelector((state) => state.filters);
+  const fy = useSelector((state) => state.fy);
 
   // ✅ Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   // Redux filter keys
-  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.THIS_MONTH);
+  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.CUSTOM);
   const startDate = filters.startDate;
   const endDate = filters.endDate;
   const outstandingTypeFilter = filters.outstandingType || "all";
@@ -48,14 +59,25 @@ const OutstandingTransactionsList = ({
       dispatch(setFilter({ key: "outstandingType", value: "all" }));
     }
     if (!startDate || !endDate) {
-      const range = getDateRange(DATE_FILTERS.THIS_MONTH);
-      dispatch(
-        setFilter({ key: "dateFilterKey", value: DATE_FILTERS.THIS_MONTH })
-      );
-      dispatch(setFilter({ key: "startDate", value: range.start }));
-      dispatch(setFilter({ key: "endDate", value: range.end }));
+      const fyStartDate = normalizeDateForInput(fy?.startDate);
+      const fyEndDate = normalizeDateForInput(fy?.endDate);
+
+      if (fyStartDate && fyEndDate) {
+        dispatch(setFilter({ key: "dateFilterKey", value: DATE_FILTERS.CUSTOM }));
+        dispatch(setFilter({ key: "startDate", value: fyStartDate }));
+        dispatch(setFilter({ key: "endDate", value: fyEndDate }));
+        setDateFilter(DATE_FILTERS.CUSTOM);
+      } else {
+        const range = getDateRange(DATE_FILTERS.THIS_MONTH);
+        dispatch(
+          setFilter({ key: "dateFilterKey", value: DATE_FILTERS.THIS_MONTH })
+        );
+        dispatch(setFilter({ key: "startDate", value: range.start }));
+        dispatch(setFilter({ key: "endDate", value: range.end }));
+        setDateFilter(DATE_FILTERS.THIS_MONTH);
+      }
     }
-  }, [filters.outstandingType, startDate, endDate, dispatch]);
+  }, [filters.outstandingType, startDate, endDate, fy?.startDate, fy?.endDate, dispatch]);
 
   const dateRange = { start: startDate, end: endDate };
 

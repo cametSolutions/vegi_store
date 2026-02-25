@@ -82,6 +82,16 @@ const TRANSACTION_CONFIG = {
 };
 
 const TransactionSummary = () => {
+  const normalizeDateForInput = (dateValue) => {
+    if (!dateValue) return "";
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -92,6 +102,7 @@ const TransactionSummary = () => {
     (state) => state?.companyBranch?.selectedBranch,
   );
   const filters = useSelector((state) => state.filters);
+  const fy = useSelector((state) => state.fy);
 
   const companyId = selectedCompany?._id;
   const branchId = selectedBranch?._id;
@@ -100,7 +111,7 @@ const TransactionSummary = () => {
   const [pageSize, setPageSize] = useState(50);
   const [searchTerm, setSearchTerm] = useState("");
   const [isExporting, setIsExporting] = useState(false);
-  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.THIS_MONTH);
+  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.CUSTOM);
 
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
@@ -122,13 +133,28 @@ const TransactionSummary = () => {
       dispatch(setFilter({ key: "transactionType", value: "sale" }));
     }
     if (!filters.startDate || !filters.endDate) {
-      console.log("hai");
+      const fyStartDate = normalizeDateForInput(fy?.startDate);
+      const fyEndDate = normalizeDateForInput(fy?.endDate);
 
-      const range = getDateRange(DATE_FILTERS.THIS_MONTH);
-      dispatch(setFilter({ key: "startDate", value: range.start }));
-      dispatch(setFilter({ key: "endDate", value: range.end }));
+      if (fyStartDate && fyEndDate) {
+        dispatch(setFilter({ key: "startDate", value: fyStartDate }));
+        dispatch(setFilter({ key: "endDate", value: fyEndDate }));
+        setDateFilter(DATE_FILTERS.CUSTOM);
+      } else {
+        const range = getDateRange(DATE_FILTERS.THIS_MONTH);
+        dispatch(setFilter({ key: "startDate", value: range.start }));
+        dispatch(setFilter({ key: "endDate", value: range.end }));
+        setDateFilter(DATE_FILTERS.THIS_MONTH);
+      }
     }
-  }, [filters.transactionType, filters.startDate, filters.endDate, dispatch]);
+  }, [
+    filters.transactionType,
+    filters.startDate,
+    filters.endDate,
+    fy?.startDate,
+    fy?.endDate,
+    dispatch,
+  ]);
 
   const transactionType = filters.transactionType || "sale";
   const config = TRANSACTION_CONFIG[transactionType] || TRANSACTION_CONFIG.sale;
