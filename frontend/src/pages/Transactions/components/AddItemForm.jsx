@@ -331,7 +331,7 @@ const AddItemForm = ({
       !localItem.itemCode ||
       !localItem.itemName ||
       !localItem.item ||
-      !localItem.quantity
+      localItem.quantity <= 0
     ) {
       toast.error("Validation Error", {
         description: "Name, Code, and Quantity are required",
@@ -340,6 +340,8 @@ const AddItemForm = ({
     }
 
     const quantity = parseFloat(localItem.quantity) || 0;
+
+ 
     const rate = parseFloat(localItem.rate) || 0;
     const baseAmount = quantity * rate;
 
@@ -355,7 +357,6 @@ const AddItemForm = ({
       taxAmount: taxAmount.toFixed(2),
       amountAfterTax: amountAfterTax.toFixed(2),
     };
-    console.log(clickedItemIndex);
 
     // console.log(itemToAdd);
 
