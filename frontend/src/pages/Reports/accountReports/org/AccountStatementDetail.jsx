@@ -398,7 +398,7 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                     <tfoot>
                       {/* 1. Total Dr/Cr Row - Fixed above the Closing Balance */}
                       {/* We use bottom-[45px] because the row below it is approx 45px tall */}
-                      <tr>
+                      {/* <tr>
                         <td
                           colSpan={2}
                           className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-600 uppercase tracking-tight border-r border-t-2 border-slate-300 bg-slate-50"
@@ -406,16 +406,16 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                           Total Amount
                         </td>
                         <td className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-700 font-mono tracking-tight border-r border-t-2 border-slate-300 bg-slate-50">
-                          {statementData.summary?.totalDebit > 0
-                            ? formatINR(statementData.summary.totalDebit)
+                          {statementData.summary?.totalDebit+statementData.openingBalance > 0
+                            ? formatINR(statementData.summary.totalDebit + statementData.openingBalance)
                             : "0.00"}
                         </td>
                         <td className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-700 font-mono tracking-tight border-t-2 border-slate-300 bg-slate-50">
-                          {statementData.summary?.totalCredit > 0
-                            ? formatINR(statementData.summary.totalCredit)
+                          {statementData.summary?.totalCredit+statementData.openingBalance > 0
+                            ? formatINR(statementData.summary.totalCredit + statementData.openingBalance)
                             : "0.00"}
                         </td>
-                      </tr>
+                      </tr> */}
 
                       {/* 2. Total Closing Balance Row - Fixed at the very bottom */}
                       <tr>

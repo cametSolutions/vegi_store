@@ -24,7 +24,7 @@ export const getPartyOutstandingDetails = async (req, res) => {
 
     const matchConditions = {
       company: companyObjectId,
-      branch: branchObjectId,
+      // branch: branchObjectId,
       account: customerObjectId,
       status: { $nin: ['paid','written_off'] }
     };
@@ -186,7 +186,7 @@ export const getOutstandingParties = async (req, res) => {
 
     const matchConditions = {
       company: companyObjectId,
-      branch: branchObjectId,
+      // branch: branchObjectId,
       status: { $nin: ['paid', 'cancelled', 'written_off'] }
     };
 

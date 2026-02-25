@@ -69,7 +69,7 @@ export const getBatchOpeningBalances = async (
     {
       $match: {
         company: companyId,
-        branch: branchId,
+            // branch: branchId,,
         account: { $in: accountIdObjs },
         needsRecalculation: false,
         $or: [
@@ -117,7 +117,7 @@ export const getBatchOpeningBalances = async (
       {
         $match: {
           company: companyId,
-          branch: branchId,
+              // branch: branchId,,
           account: { $in: accountsNeedingFallback },
           transactionDate: { $lt: selectedDate },
         },
@@ -248,7 +248,7 @@ export const getBatchOpeningBalances = async (
       {
         $match: {
           company: companyId,
-          branch: branchId,
+              // branch: branchId,,
           $or: ledgerMatchConditions,
         },
       },
@@ -287,7 +287,7 @@ export const getBatchOpeningBalances = async (
     {
       $match: {
         company: companyId,
-        branch: branchId,
+            // branch: branchId,,
         $or: adjustmentMatchConditions,
         status: "active",
         isReversed: false,
@@ -358,7 +358,7 @@ export const checkIfDirtyPeriodExists = async (
 
   const cleanMonthlyBalances = await AccountMonthlyBalance.countDocuments({
     company: companyId,
-    branch: branchId,
+    //     // branch: branchId,,
     account: { $in: accountIdObjs },
     year: prevYear,
     month: prevMonthNum,
@@ -375,7 +375,7 @@ export const checkIfDirtyPeriodExists = async (
 
   const adjustmentsInPeriod = await AdjustmentEntry.countDocuments({
     company: companyId,
-    branch: branchId,
+    //     // branch: branchId,,
     originalTransactionDate: {
       $gte: new Date(startDate),
       $lte: new Date(endDate),
@@ -416,7 +416,7 @@ export const getBatchAdjustedLedgers = async (
 
   const baseMatch = {
     company: companyId,
-    branch: branchId,
+        // branch: branchId,,
     account: { $in: accountIdObjs },
     transactionDate: { $gte: startDate, $lte: endDate },
   };
@@ -435,7 +435,7 @@ export const getBatchAdjustedLedgers = async (
         let: {
           txnNum: "$transactionNumber",
           company: "$company",
-          branch: "$branch",
+          // branch: "$branch",
           currentAccount: "$account",
         },
         pipeline: [
@@ -444,7 +444,7 @@ export const getBatchAdjustedLedgers = async (
               $expr: {
                 $and: [
                   { $eq: ["$company", "$$company"] },
-                  { $eq: ["$branch", "$$branch"] },
+                  // { $eq: ["$branch", "$$branch"] },
                   { $eq: ["$originalTransactionNumber", "$$txnNum"] },
                   { $eq: ["$status", "active"] },
                   { $eq: ["$isReversed", false] },
@@ -747,7 +747,7 @@ export const getSimpleLedgerReport = async (
 
   const baseMatch = {
     company: companyId,
-    branch: branchId,
+        // branch: branchId,,
     transactionDate: { $gte: startDate, $lte: endDate },
     ...singleAccountFilter,
   };
@@ -825,7 +825,7 @@ export const getSimpleLedgerReport = async (
     {
       $match: {
         company: companyId,
-        branch: branchId,
+            // branch: branchId,,
         account: { $in: accountIdObjs },
         year: prevYear,
         month: prevMonthNum,
@@ -1052,7 +1052,7 @@ export const getHybridLedgerReport = async (
 
   const baseMatch = {
     company: companyId,
-    branch: branchId,
+        // branch: branchId,,
     transactionDate: { $gte: startDate, $lte: endDate },
     ...singleAccountFilter,
   };
@@ -1325,7 +1325,7 @@ export const refoldLedgersWithAdjustments = async (
 
   const baseMatch = {
     company: companyId,
-    branch: branchId,
+        // branch: branchId,,
     transactionDate: { $gte: startDate, $lte: endDate },
     ...singleAccountFilter,
   };
