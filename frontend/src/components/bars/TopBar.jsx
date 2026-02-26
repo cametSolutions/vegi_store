@@ -5,6 +5,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
 function TopBar() {
   const selectedCompanyFromStore = useSelector(
@@ -13,6 +14,8 @@ function TopBar() {
   const selectedBranchFromStore = useSelector(
     (state) => state.companyBranch?.selectedBranch
   );
+
+  const navigate= useNavigate();
 
   // From fySlice: { currentFY, startDate, endDate }
   const fy = useSelector((state) => state.fy);
@@ -72,7 +75,10 @@ const formatFYEndDate = (dateStr) => {
         </div>
 
         {/* Right side: Financial year & period */}
-        <div className="flex items-center space-x-2">
+        <div
+
+        onClick={() => navigate("settings/financial-year")}
+         className="flex items-center space-x-2 cursor-pointer">
           <div className="flex items-center space-x-1">
             <CalendarDays size={12} />
             <span className="font-semibold">
