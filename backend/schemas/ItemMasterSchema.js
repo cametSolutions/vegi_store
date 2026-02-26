@@ -37,6 +37,7 @@ const ItemMasterSchema = new mongoose.Schema(
     },
 
     // 🆕 Price levels (Retail, Wholesale, Catering, etc.)
+    // Legacy company-wide rates (kept temporarily for backward compatibility)
     priceLevels: [
       {
         _id: false,
@@ -52,6 +53,58 @@ const ItemMasterSchema = new mongoose.Schema(
         },
       },
     ],
+    // Branch-wise rates by price level
+    branchPriceLevels: {
+      type: [
+        {
+          _id: false,
+          branch: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Branch",
+            required: [true, "Branch is required for branch price levels"],
+          },
+          priceLevels: [
+            {
+              _id: false,
+              priceLevel: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "PriceLevel",
+                required: [true, "Price level reference is required"],
+              },
+              rate: {
+                type: Number,
+                required: [true, "Rate is required"],
+                min: [0, "Rate cannot be negative"],
+              },
+            },
+          ],
+        },
+      ],
+      default: [],
+      validate: {
+        validator: function (branchPriceLevels) {
+          if (!Array.isArray(branchPriceLevels)) return false;
+
+          const branchIds = branchPriceLevels.map((entry) =>
+            entry?.branch?.toString()
+          );
+
+          // Unique branch rows only
+          if (branchIds.length !== new Set(branchIds).size) return false;
+
+          // Unique price levels inside each branch row
+          return branchPriceLevels.every((entry) => {
+            const levels = Array.isArray(entry?.priceLevels)
+              ? entry.priceLevels
+              : [];
+            const levelIds = levels.map((pl) => pl?.priceLevel?.toString());
+            return levelIds.length === new Set(levelIds).size;
+          });
+        },
+        message:
+          "Each branch can have only one rate row, and each price level can appear only once per branch",
+      },
+    },
     stock: {
       type: [
         {
@@ -100,6 +153,8 @@ ItemMasterSchema.index({ branch: 1, });
 ItemMasterSchema.index({ category: 1, status: 1 });
 ItemMasterSchema.index({ "stock.branch": 1 });
 ItemMasterSchema.index({ company: 1, "stock.branch": 1 });
+ItemMasterSchema.index({ "branchPriceLevels.branch": 1 });
+ItemMasterSchema.index({ company: 1, "branchPriceLevels.branch": 1 });
 ItemMasterSchema.index({ itemName: "text", itemCode: "text" });
 // Compound unique index: itemName must be unique per company
 // Case-insensitive unique index: itemName must be unique per company (case-insensitive)

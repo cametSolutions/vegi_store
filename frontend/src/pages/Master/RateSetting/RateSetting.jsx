@@ -33,6 +33,31 @@ const AUTO_SAVE_DELAY = 1500;
 const SUCCESS_DISPLAY_DURATION = 2000;
 const MIN_COLUMNS = 10;
 
+const toId = (value) => {
+  if (!value) return "";
+  if (typeof value === "object")
+    return value?._id?.toString?.() || value?.toString?.() || "";
+  return value.toString();
+};
+
+const resolveItemRateForBranch = (item, branchId, priceLevelId) => {
+  const normalizedBranchId = toId(branchId);
+  const normalizedPriceLevelId = toId(priceLevelId);
+
+  const branchRow = item?.branchPriceLevels?.find(
+    (row) => toId(row?.branch) === normalizedBranchId
+  );
+
+  const branchPriceLevel = branchRow?.priceLevels?.find(
+    (pl) => toId(pl?.priceLevel) === normalizedPriceLevelId
+  );
+
+  if (branchPriceLevel?.rate !== undefined && branchPriceLevel?.rate !== null) {
+    return branchPriceLevel.rate;
+  }
+  return 0;
+};
+
 // Reusable Components
 const PageHeader = ({ searchTerm, onSearchChange, disabled }) => (
   <div className="flex-shrink-0">
@@ -79,6 +104,7 @@ const RateSetting = () => {
   const queryClient = useQueryClient();
   const selectedCompanyFromStore = useSelector((state) => state.companyBranch?.selectedCompany);
   const selectedBranchFromStore = useSelector((state) => state.companyBranch?.selectedBranch);
+  const selectedBranchId = selectedBranchFromStore?._id;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [editedRates, setEditedRates] = useState({});
@@ -141,12 +167,13 @@ const RateSetting = () => {
       if (editedData !== undefined) return editedData.value;
 
       const item = allItems.find((i) => i._id === itemId);
-      const priceLevel = item?.priceLevels?.find(
-        (pl) => pl.priceLevel === priceLevelId || pl.priceLevel?._id === priceLevelId
+      return resolveItemRateForBranch(
+        item,
+        selectedBranchId,
+        priceLevelId
       );
-      return priceLevel?.rate || "";
     },
-    [allItems, editedRates]
+    [allItems, editedRates, selectedBranchId]
   );
 
   const getCellStatus = useCallback(
@@ -223,7 +250,16 @@ const RateSetting = () => {
       setSavingCells((prev) => new Set([...prev, cellKey]));
 
       try {
-        await updateRateMutation.mutateAsync({ itemId, priceLevelId, rate: numericRate });
+        if (!selectedBranchId) {
+          throw new Error("Please select a branch before updating rates");
+        }
+
+        await updateRateMutation.mutateAsync({
+          itemId,
+          branchId: selectedBranchId,
+          priceLevelId,
+          rate: numericRate,
+        });
 
         setEditedRates((prev) => ({
           ...prev,
@@ -253,7 +289,7 @@ const RateSetting = () => {
         });
       }
     },
-    [updateRateMutation, clearEditedRate]
+    [updateRateMutation, clearEditedRate, selectedBranchId]
   );
 
   const handleRateChange = useCallback(
@@ -263,10 +299,11 @@ const RateSetting = () => {
       }
 
       const item = allItems.find((i) => i._id === itemId);
-      const priceLevel = item?.priceLevels?.find(
-        (pl) => pl.priceLevel === priceLevelId || pl.priceLevel?._id === priceLevelId
+      const originalValue = resolveItemRateForBranch(
+        item,
+        selectedBranchId,
+        priceLevelId
       );
-      const originalValue = priceLevel?.rate || "";
 
       const timeoutId = setTimeout(() => handleAutoSave(itemId, priceLevelId, value), AUTO_SAVE_DELAY);
 
@@ -278,7 +315,7 @@ const RateSetting = () => {
         },
       }));
     },
-    [allItems, editedRates, handleAutoSave]
+    [allItems, editedRates, handleAutoSave, selectedBranchId]
   );
 
   const handleBlur = useCallback(

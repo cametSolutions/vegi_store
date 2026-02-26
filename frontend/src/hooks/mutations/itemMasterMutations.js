@@ -64,12 +64,12 @@ export const itemMasterMutations = {
   }),
 
  updateRate: (queryClient) => ({
-  mutationFn: ({ itemId, priceLevelId, rate }) => 
-    itemServices.updateRate(itemId, priceLevelId, rate),
+  mutationFn: ({ itemId, branchId, priceLevelId, rate }) => 
+    itemServices.updateRate(itemId, branchId, priceLevelId, rate),
 
   onSuccess: (response) => {
     queryClient.invalidateQueries({
-      queryKey: ["item","list",response?.data?.company,""],
+      queryKey: ["item","list",response?.data?.company],
     });
 
     // Optional: also invalidate specific item query if you have one

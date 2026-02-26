@@ -176,11 +176,17 @@ export const calculateClosingBalance = (
 // ==================== RECALCULATE PRICE LEVEL  ====================
 export const recalculateTransactionOnPriceLevelChange = (transaction) => {
   const selectedPriceLevelId = transaction.priceLevel;
+  const toId = (value) => {
+    if (!value) return "";
+    if (typeof value === "object")
+      return value?._id?.toString?.() || value?.toString?.() || "";
+    return value.toString();
+  };
 
   // update each item rate and recalc baseAmount and tax amounts
   const updatedItems = transaction.items.map((item) => {
     const priceLevelObj = item?.priceLevels?.find(
-      (pl) => pl?.priceLevel?._id === selectedPriceLevelId
+      (pl) => toId(pl?.priceLevel) === toId(selectedPriceLevelId)
     );
     const newRate = priceLevelObj
       ? parseFloat(priceLevelObj?.rate || 0)

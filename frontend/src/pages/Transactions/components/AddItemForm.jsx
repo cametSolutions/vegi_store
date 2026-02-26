@@ -7,6 +7,20 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
 import { NumericFormat } from "react-number-format";
 
+const toId = (value) => {
+  if (!value) return "";
+  if (typeof value === "object")
+    return value?._id?.toString?.() || value?.toString?.() || "";
+  return value.toString();
+};
+
+const getBranchPriceLevels = (product, branchId) => {
+  const branchRow = product?.branchPriceLevels?.find(
+    (row) => toId(row?.branch) === toId(branchId)
+  );
+  return Array.isArray(branchRow?.priceLevels) ? branchRow.priceLevels : [];
+};
+
 const AddItemForm = ({
   items,
   branch,
@@ -131,26 +145,29 @@ const AddItemForm = ({
 
       if (searchResponse?.data && searchResponse.data.length > 0) {
         const foundProduct = searchResponse.data[0];
+        const branchPriceLevels = getBranchPriceLevels(foundProduct, branch);
 
         let rate = "";
 
         // Price level priority (sale / sales_return)
         if (
-          foundProduct.priceLevels &&
-          foundProduct.priceLevels.length > 0 &&
           priceLevel &&
           (transactionType === "sale" || transactionType === "sales_return")
         ) {
-          const priceLevelData = foundProduct?.priceLevels?.find(
-            (pl) =>
-              pl?.priceLevel?._id === priceLevel ||
-              pl?.priceLevel?.priceLevelName === priceLevel,
+          const priceLevelData = branchPriceLevels.find(
+            (pl) => toId(pl?.priceLevel) === toId(priceLevel),
           );
-          rate = priceLevelData?.rate || "";
+          rate = priceLevelData?.rate ?? 0;
         }
 
-        // Fallback lastRate
-        if (!rate && foundProduct.lastRate) {
+        // Fallback lastRate for non-sales transactions only
+        if (
+          (transactionType === "purchase" ||
+            transactionType === "purchase_return" ||
+            transactionType === "stock_adjustment") &&
+          !rate &&
+          foundProduct.lastRate
+        ) {
           rate = foundProduct.lastRate;
         }
 
@@ -165,7 +182,7 @@ const AddItemForm = ({
           item: foundProduct?._id,
           itemCode: foundProduct.itemCode || debouncedSearchTerm,
           itemName: foundProduct.itemName || "",
-          priceLevels: foundProduct.priceLevels || [],
+          priceLevels: branchPriceLevels,
           unit: foundProduct.unit || prev.unit, // still stored, not editable
           rate: rate?.toString?.() || "",
           taxable: false,
@@ -201,24 +218,27 @@ const AddItemForm = ({
     if (!localItem.item) return;
     const foundProduct = searchResponse?.data[0];
     if (!foundProduct) return;
+    const branchPriceLevels = getBranchPriceLevels(foundProduct, branch);
 
     let newRate = "";
 
     if (
-      foundProduct.priceLevels &&
-      foundProduct.priceLevels.length > 0 &&
       priceLevel &&
       (transactionType === "sale" || transactionType === "sales_return")
     ) {
-      const priceLevelData = foundProduct?.priceLevels?.find(
-        (pl) =>
-          pl?.priceLevel?._id === priceLevel ||
-          pl?.priceLevel?.priceLevelName === priceLevel,
+      const priceLevelData = branchPriceLevels.find(
+        (pl) => toId(pl?.priceLevel) === toId(priceLevel),
       );
-      newRate = priceLevelData?.rate || "";
+      newRate = priceLevelData?.rate ?? 0;
     }
 
-    if (!newRate && foundProduct.lastRate) {
+    if (
+      (transactionType === "purchase" ||
+        transactionType === "purchase_return" ||
+        transactionType === "stock_adjustment") &&
+      !newRate &&
+      foundProduct.lastRate
+    ) {
       newRate = foundProduct.lastRate.toString();
     }
 

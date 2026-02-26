@@ -45,6 +45,107 @@ import {
   lockFinancialYearFormat,
   unlockFinancialYearFormatIfNoTransactions,
 } from "../companyController/companyController.js";
+import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
+
+const toId = (value) => {
+  if (!value) return "";
+  if (typeof value === "object") return value?._id?.toString?.() || value.toString();
+  return value.toString();
+};
+
+const recalculateTransactionTotalsForSales = (transactionData) => {
+  const subtotal = (transactionData.items || []).reduce(
+    (sum, item) => sum + Number(item?.baseAmount || 0),
+    0,
+  );
+
+  const totalTaxAmount = (transactionData.items || []).reduce(
+    (sum, item) => sum + Number(item?.taxAmount || 0),
+    0,
+  );
+
+  const totalAmountAfterTax = subtotal + totalTaxAmount;
+
+  const discountValue = Number(transactionData.discount || 0);
+  const discountAmount =
+    transactionData.discountType === "percent"
+      ? (totalAmountAfterTax * discountValue) / 100
+      : discountValue;
+
+  const netAmount = totalAmountAfterTax - discountAmount;
+
+  const multiplier =
+    transactionData.transactionType === "sale" ||
+    transactionData.transactionType === "purchase_return"
+      ? 1
+      : -1;
+
+  const totalDue = netAmount * multiplier + Number(transactionData.openingBalance || 0);
+  const balanceAmount = totalDue - Number(transactionData.paidAmount || 0);
+
+  transactionData.subtotal = Number(subtotal.toFixed(2));
+  transactionData.totalTaxAmount = Number(totalTaxAmount.toFixed(2));
+  transactionData.totalAmountAfterTax = Number(totalAmountAfterTax.toFixed(2));
+  transactionData.discountAmount = Number(discountAmount.toFixed(2));
+  transactionData.netAmount = Number(netAmount.toFixed(2));
+  transactionData.totalDue = Number(totalDue.toFixed(2));
+  transactionData.balanceAmount = Number(balanceAmount.toFixed(2));
+};
+
+const applyBranchPriceLevelRatesForSales = async (transactionData, session) => {
+  const { transactionType, items, branch, priceLevel, company } = transactionData;
+
+  if (!["sale", "sales_return"].includes(transactionType)) return;
+  if (!Array.isArray(items) || items.length === 0) return;
+
+  const itemIds = [
+    ...new Set(
+      items
+        .map((item) => toId(item?.item))
+        .filter(Boolean),
+    ),
+  ];
+
+  if (itemIds.length === 0) return;
+
+  const masterItems = await ItemMasterModel.find({
+    _id: { $in: itemIds },
+    company,
+  })
+    .select("_id branchPriceLevels")
+    .session(session)
+    .lean();
+
+  const itemMap = new Map(masterItems.map((doc) => [toId(doc._id), doc]));
+
+  transactionData.items = items.map((item) => {
+    const master = itemMap.get(toId(item.item));
+    const branchRow = master?.branchPriceLevels?.find(
+      (row) => toId(row?.branch) === toId(branch),
+    );
+    const branchRateRow = branchRow?.priceLevels?.find(
+      (pl) => toId(pl?.priceLevel) === toId(priceLevel),
+    );
+
+    const rate = Number(branchRateRow?.rate ?? 0);
+    const quantity = Number(item?.quantity || 0);
+    const baseAmount = rate * quantity;
+    const taxable = Boolean(item?.taxable);
+    const taxRate = Number(item?.taxRate || 0);
+    const taxAmount = taxable ? (baseAmount * taxRate) / 100 : 0;
+    const amountAfterTax = baseAmount + taxAmount;
+
+    return {
+      ...item,
+      rate: Number(rate.toFixed(2)),
+      baseAmount: Number(baseAmount.toFixed(2)),
+      taxAmount: Number(taxAmount.toFixed(2)),
+      amountAfterTax: Number(amountAfterTax.toFixed(2)),
+    };
+  });
+
+  recalculateTransactionTotalsForSales(transactionData);
+};
 
 /**
  * get transactions (handles sales, purchase, sales_return, purchase_return)
@@ -168,6 +269,9 @@ export const createTransaction = async (req, res) => {
         message: "At least one item is required",
       });
     }
+
+    // Enforce branch-wise pricing for sales flows from item master.
+    await applyBranchPriceLevelRatesForSales(transactionData, session);
 
     // Calculate and validate totals
     const { netAmount, paidAmount } = transactionData;
@@ -452,6 +556,9 @@ export const editTransaction = async (req, res) => {
         message: "Cannot change company or branch during edit",
       });
     }
+
+    // Enforce branch-wise pricing for sales edits from item master.
+    await applyBranchPriceLevelRatesForSales(updatedData, session);
 
     // ========================================
     // STEP 2: Calculate Deltas (Differences)
