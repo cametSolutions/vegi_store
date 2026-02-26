@@ -29,6 +29,8 @@ export const updateAccountMonthlyBalance = async (data, session) => {
     let monthlyBalance = await AccountMonthlyBalance.findOne({
       account,
       periodKey,
+      company,
+      branch,
     }).session(session);
 
     // If doesn't exist, we need to set opening balance

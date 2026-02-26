@@ -183,7 +183,7 @@ const reverseExistingOffsets = async ({
   // Find all active offsets for this account
   const activeOffsets = await OutstandingOffset.find({
     company: companyId,
-    branch: branchId,
+    // branch: branchId,
     account: accountId,
     status: "active",
   }).session(session);

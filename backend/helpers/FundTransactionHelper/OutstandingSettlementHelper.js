@@ -157,7 +157,7 @@ export const settleOutstandingFIFO = async ({
     // ✅ FIX: Use validated createdBy
     const settlementLink = new OutstandingSettlementModel({
       company: company || outstanding.company,
-      branch: branch || outstanding.branch,
+      branch: outstanding.branch,
       account: accountId,
       accountName,
 

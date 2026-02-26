@@ -69,7 +69,7 @@ export const getBatchOpeningBalances = async (
     {
       $match: {
         company: companyId,
-            // branch: branchId,,
+            branch: branchId,
         account: { $in: accountIdObjs },
         needsRecalculation: false,
         $or: [
