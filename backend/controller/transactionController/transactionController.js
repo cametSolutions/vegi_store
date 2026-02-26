@@ -92,6 +92,48 @@ const recalculateTransactionTotalsForSales = (transactionData) => {
   transactionData.balanceAmount = Number(balanceAmount.toFixed(2));
 };
 
+const normalizeItemPriceLevelsForTransaction = (transactionData) => {
+  if (!Array.isArray(transactionData?.items)) return;
+
+  transactionData.items = transactionData.items.map((item) => {
+    if (!Array.isArray(item?.priceLevels)) return item;
+
+    const normalizedPriceLevels = item.priceLevels.map((pl) => {
+      const priceLevelValue = pl?.priceLevel;
+
+      // Already in expected object shape
+      if (
+        priceLevelValue &&
+        typeof priceLevelValue === "object" &&
+        (priceLevelValue._id || priceLevelValue.priceLevelName)
+      ) {
+        return {
+          ...pl,
+          priceLevel: {
+            _id: priceLevelValue._id || null,
+            priceLevelName: priceLevelValue.priceLevelName || "",
+          },
+        };
+      }
+
+      // ObjectId/string -> wrap into expected embedded object
+      const normalizedId = priceLevelValue ? toId(priceLevelValue) : null;
+      return {
+        ...pl,
+        priceLevel: {
+          _id: normalizedId,
+          priceLevelName: pl?.priceLevelName || "",
+        },
+      };
+    });
+
+    return {
+      ...item,
+      priceLevels: normalizedPriceLevels,
+    };
+  });
+};
+
 const applyBranchPriceLevelRatesForSales = async (transactionData, session) => {
   const { transactionType, items, branch, priceLevel, company } = transactionData;
 
@@ -270,8 +312,8 @@ export const createTransaction = async (req, res) => {
       });
     }
 
-    // Enforce branch-wise pricing for sales flows from item master.
-    await applyBranchPriceLevelRatesForSales(transactionData, session);
+    // Keep item priceLevels shape consistent in transaction documents.
+    normalizeItemPriceLevelsForTransaction(transactionData);
 
     // Calculate and validate totals
     const { netAmount, paidAmount } = transactionData;
@@ -556,6 +598,9 @@ export const editTransaction = async (req, res) => {
         message: "Cannot change company or branch during edit",
       });
     }
+
+    // Keep item priceLevels shape consistent in transaction documents.
+    normalizeItemPriceLevelsForTransaction(updatedData);
 
     // Enforce branch-wise pricing for sales edits from item master.
     await applyBranchPriceLevelRatesForSales(updatedData, session);

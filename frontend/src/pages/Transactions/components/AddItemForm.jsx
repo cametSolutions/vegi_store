@@ -16,9 +16,38 @@ const toId = (value) => {
 
 const getBranchPriceLevels = (product, branchId) => {
   const branchRow = product?.branchPriceLevels?.find(
-    (row) => toId(row?.branch) === toId(branchId)
+    (row) => toId(row?.branch) === toId(branchId),
   );
   return Array.isArray(branchRow?.priceLevels) ? branchRow.priceLevels : [];
+};
+
+const resolveDisplayRate = ({
+  product,
+  branchId,
+  selectedPriceLevel,
+  txType,
+}) => {
+  const branchPriceLevels = getBranchPriceLevels(product, branchId);
+
+  let rate = "";
+
+  if (
+    selectedPriceLevel &&
+    (txType === "sale" || txType === "sales_return")
+  ) {
+    const priceLevelData = branchPriceLevels.find(
+      (pl) => toId(pl?.priceLevel) === toId(selectedPriceLevel),
+    );
+    rate = priceLevelData?.rate ?? 0;
+  }
+
+  // Keep current behavior as requested:
+  // 0 is treated as falsy and can fall back to lastRate.
+  if (!rate && product?.lastRate) {
+    rate = product.lastRate;
+  }
+
+  return { rate, branchPriceLevels };
 };
 
 const AddItemForm = ({
@@ -145,31 +174,13 @@ const AddItemForm = ({
 
       if (searchResponse?.data && searchResponse.data.length > 0) {
         const foundProduct = searchResponse.data[0];
-        const branchPriceLevels = getBranchPriceLevels(foundProduct, branch);
-
-        let rate = "";
-
-        // Price level priority (sale / sales_return)
-        if (
-          priceLevel &&
-          (transactionType === "sale" || transactionType === "sales_return")
-        ) {
-          const priceLevelData = branchPriceLevels.find(
-            (pl) => toId(pl?.priceLevel) === toId(priceLevel),
-          );
-          rate = priceLevelData?.rate ?? 0;
-        }
-
-        // Fallback lastRate for non-sales transactions only
-        if (
-          (transactionType === "purchase" ||
-            transactionType === "purchase_return" ||
-            transactionType === "stock_adjustment") &&
-          !rate &&
-          foundProduct.lastRate
-        ) {
-          rate = foundProduct.lastRate;
-        }
+        const { rate, branchPriceLevels } = resolveDisplayRate({
+          product: foundProduct,
+          branchId: branch,
+          selectedPriceLevel: priceLevel,
+          txType: transactionType,
+        });
+        
 
         const currentStock = foundProduct.stock?.find(
           (st) => st.branch._id === branch,
@@ -218,29 +229,12 @@ const AddItemForm = ({
     if (!localItem.item) return;
     const foundProduct = searchResponse?.data[0];
     if (!foundProduct) return;
-    const branchPriceLevels = getBranchPriceLevels(foundProduct, branch);
-
-    let newRate = "";
-
-    if (
-      priceLevel &&
-      (transactionType === "sale" || transactionType === "sales_return")
-    ) {
-      const priceLevelData = branchPriceLevels.find(
-        (pl) => toId(pl?.priceLevel) === toId(priceLevel),
-      );
-      newRate = priceLevelData?.rate ?? 0;
-    }
-
-    if (
-      (transactionType === "purchase" ||
-        transactionType === "purchase_return" ||
-        transactionType === "stock_adjustment") &&
-      !newRate &&
-      foundProduct.lastRate
-    ) {
-      newRate = foundProduct.lastRate.toString();
-    }
+    const { rate: newRate } = resolveDisplayRate({
+      product: foundProduct,
+      branchId: branch,
+      selectedPriceLevel: priceLevel,
+      txType: transactionType,
+    });
 
     if ((localItem.rate || "") !== (newRate?.toString?.() || "")) {
       setLocalItem((prev) => ({
@@ -248,7 +242,7 @@ const AddItemForm = ({
         rate: newRate?.toString?.() || "",
       }));
     }
-  }, [priceLevel, localItem.item, searchResponse, transactionType]);
+  }, [priceLevel, localItem.item, searchResponse, transactionType, branch]);
 
   useEffect(() => {
     console.log(clickedItemInTable);
@@ -361,7 +355,6 @@ const AddItemForm = ({
 
     const quantity = parseFloat(localItem.quantity) || 0;
 
- 
     const rate = parseFloat(localItem.rate) || 0;
     const baseAmount = quantity * rate;
 
