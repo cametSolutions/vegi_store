@@ -90,15 +90,13 @@ export const getById = async (req, res) => {
 
 export const update = async (req, res) => {
   try {
-    // Clone req.body to avoid mutating it directly
     const updateData = { ...req.body };
 
-    // Remove priceLevel field if it exists in the update data
     if ("priceLevels" in updateData) {
       delete updateData.priceLevels;
     }
 
-    // Remove stock field if it exists in the update data
+    const incomingStock = updateData.stock || [];
     if ("stock" in updateData) {
       delete updateData.stock;
     }
@@ -115,9 +113,48 @@ export const update = async (req, res) => {
     // Update item fields except stock
     Object.keys(updateData).forEach((key) => {
       item[key] = updateData[key];
-    })
+    });
 
-    
+    // Sync stock branches
+    const incomingBranchIds = incomingStock.map((s) => s.branch.toString());
+
+    // Find branches to remove (in DB but not in payload)
+    const branchesToRemove = item.stock
+      .filter((s) => !incomingBranchIds.includes(s.branch.toString()))
+      .map((s) => s.branch);
+
+    // Check if any branch to remove has transactions in ItemLedger
+    if (branchesToRemove.length > 0) {
+      const branchesWithTransactions = await ItemLedger.find({
+        item: item._id,
+        branch: { $in: branchesToRemove },
+      }).distinct("branch");
+
+      if (branchesWithTransactions.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot remove branch(es) that have existing transactions`,
+        });
+      }
+    }
+
+    // Remove branches not in incoming payload (only safe ones reach here)
+    item.stock = item.stock.filter((s) =>
+      incomingBranchIds.includes(s.branch.toString())
+    );
+
+    // Add new branches that don't exist in current stock
+    const existingBranchIds = item.stock.map((s) => s.branch.toString());
+    incomingStock.forEach((s) => {
+      if (!existingBranchIds.includes(s.branch.toString())) {
+        item.stock.push({
+          branch: s.branch,
+          openingStock: 0,
+          currentStock: 0,
+        });
+      }
+    });
+
     await item.save();
     res.status(200).json({
       success: true,
@@ -126,8 +163,7 @@ export const update = async (req, res) => {
     });
   } catch (error) {
     if (error.code === 11000) {
-      const field = Object.keys(error.keyPattern)[1]; // Gets 'itemName' or 'itemCode'
-
+      const field = Object.keys(error.keyPattern)[1];
       return res.status(400).json({
         success: false,
         message: `An item with this ${field} already exists for this company`,

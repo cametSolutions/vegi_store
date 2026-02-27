@@ -92,7 +92,7 @@ export const getBatchOpeningBalances = async (
   company,
   branch,
   itemIds,
-  selectedDate
+  selectedDate,
 ) => {
   console.log("=== getBatchOpeningBalances START ===");
   console.log("Input params:", {
@@ -117,7 +117,7 @@ export const getBatchOpeningBalances = async (
   const prevMonthDate = new Date(
     selectedDate.getFullYear(),
     selectedDate.getMonth() - 1,
-    1
+    1,
   );
   const prevYear = prevMonthDate.getFullYear();
   const prevMonthNum = prevMonthDate.getMonth() + 1;
@@ -162,7 +162,7 @@ export const getBatchOpeningBalances = async (
      ----------------------------------------------------------------------- */
   const itemsWithBalances = monthlyBalances.map((m) => m._id.toString());
   const itemsNeedingFallback = itemIdObjs.filter(
-    (id) => !itemsWithBalances.includes(id.toString())
+    (id) => !itemsWithBalances.includes(id.toString()),
   );
 
   console.log("Items needing fallback logic:", itemsNeedingFallback.length);
@@ -176,7 +176,7 @@ export const getBatchOpeningBalances = async (
     baseBalances[itemKey] = mb.closingStock || 0;
     dirtyPeriodStarts[itemKey] = new Date(mb.year, mb.month, 1);
     console.log(
-      `Item ${itemKey}: Monthly balance ${mb.closingStock} from ${mb.year}-${mb.month}`
+      `Item ${itemKey}: Monthly balance ${mb.closingStock} from ${mb.year}-${mb.month}`,
     );
   });
 
@@ -240,17 +240,17 @@ export const getBatchOpeningBalances = async (
   masterBalances.forEach((master) => {
     const itemKey = master._id.toString();
     baseBalances[itemKey] = master.openingStock || 0;
-    
+
     // Find earliest transaction date for this item (if exists)
     const txnInfo = itemsWithTransactions.find(
-      (i) => i._id.toString() === itemKey
+      (i) => i._id.toString() === itemKey,
     );
-    
+
     // If item has transactions, dirty period starts from earliest transaction
     // If no transactions, dirty period starts from selectedDate (so range is empty)
     dirtyPeriodStarts[itemKey] = txnInfo?.earliestTransaction || selectedDate;
     console.log(
-      `Item ${itemKey}: Master opening ${master.openingStock}, dirty start ${dirtyPeriodStarts[itemKey]?.toISOString()}`
+      `Item ${itemKey}: Master opening ${master.openingStock}, dirty start ${dirtyPeriodStarts[itemKey]?.toISOString()}`,
     );
   });
 
@@ -333,7 +333,7 @@ export const getBatchOpeningBalances = async (
   console.log("Ledger movements found:", ledgerMovements.length);
   ledgerMovements.forEach((lm) => {
     console.log(
-      `  Item ${lm._id}: ${lm.transactionCount} transactions, total signed qty: ${lm.totalSignedQuantity}`
+      `  Item ${lm._id}: ${lm.transactionCount} transactions, total signed qty: ${lm.totalSignedQuantity}`,
     );
   });
 
@@ -427,7 +427,7 @@ export const getBatchOpeningBalances = async (
 
     // Add ledger movements
     const ledgerMove = ledgerMovements.find(
-      (m) => m._id.toString() === itemKey
+      (m) => m._id.toString() === itemKey,
     );
     let ledgerMovement = 0;
     if (ledgerMove) {
@@ -437,7 +437,7 @@ export const getBatchOpeningBalances = async (
 
     // Add adjustment deltas
     const adjMove = adjustmentMovements.find(
-      (m) => m._id.toString() === itemKey
+      (m) => m._id.toString() === itemKey,
     );
     let adjustmentMovement = 0;
     if (adjMove) {
@@ -448,7 +448,7 @@ export const getBatchOpeningBalances = async (
     finalBalances[itemKey] = balance;
 
     console.log(
-      `Item ${itemKey} final: ${baseBalance} (base) + ${ledgerMovement} (ledger) + ${adjustmentMovement} (adj) = ${balance}`
+      `Item ${itemKey} final: ${baseBalance} (base) + ${ledgerMovement} (ledger) + ${adjustmentMovement} (adj) = ${balance}`,
     );
   });
 
@@ -457,7 +457,6 @@ export const getBatchOpeningBalances = async (
 
   return finalBalances;
 };
-
 
 /**
  * Get last purchase rate for multiple items at once (BATCHED)
@@ -481,7 +480,7 @@ export const getBatchLastPurchaseRates = async (
   branchId,
   itemIds,
   startDate,
-  endDate
+  endDate,
 ) => {
   const itemIdObjs = itemIds.map((id) => toObjectId(id));
 
@@ -518,7 +517,7 @@ export const getBatchLastPurchaseRates = async (
 
   // Step 2: Fallback to item master for items without purchase history
   const itemsNeedingMasterRate = itemIdObjs.filter(
-    (id) => !ratesMap[id.toString()]
+    (id) => !ratesMap[id.toString()],
   );
 
   if (itemsNeedingMasterRate.length > 0) {
@@ -944,7 +943,7 @@ export const checkIfDirtyPeriodExists = async ({
   const prevMonthDate = new Date(
     reportStartDate.getFullYear(),
     reportStartDate.getMonth() - 1,
-    1
+    1,
   );
   const prevYear = prevMonthDate.getFullYear();
   const prevMonthNum = prevMonthDate.getMonth() + 1;
@@ -969,7 +968,7 @@ export const checkIfDirtyPeriodExists = async ({
 
   if (cleanMonthlyBalances !== itemIds.length) {
     console.log(
-      `❌ Only ${cleanMonthlyBalances}/${itemIds.length} items have clean monthly balance`
+      `❌ Only ${cleanMonthlyBalances}/${itemIds.length} items have clean monthly balance`,
     );
     return {
       isDirty: true,
@@ -1145,6 +1144,21 @@ export const getSimpleLedgerReport = async ({
 
   console.log(`Processing ${itemIds.length} items`);
 
+  // Get latest item names from ItemMaster
+  const itemMasters = await ItemMasterModel.find(
+    { _id: { $in: itemIdObjs } },
+    { _id: 1, itemName: 1, itemCode: 1, unit: 1 },
+  ).lean();
+
+  const itemMasterMap = {};
+  itemMasters.forEach((im) => {
+    itemMasterMap[im._id.toString()] = {
+      itemName: im.itemName || null,
+      itemCode: im.itemCode || null,
+      unit: im.unit || null,
+    };
+  });
+
   /* -----------------------------------------------------------------------
      QUERY 2: Get opening balances DIRECTLY from monthly balance
      No calculation needed! Just read closing stock from previous month
@@ -1153,7 +1167,7 @@ export const getSimpleLedgerReport = async ({
   const prevMonthDate = new Date(
     startDate.getFullYear(),
     startDate.getMonth() - 1,
-    1
+    1,
   );
   const prevYear = prevMonthDate.getFullYear();
   const prevMonthNum = prevMonthDate.getMonth() + 1;
@@ -1194,7 +1208,7 @@ export const getSimpleLedgerReport = async ({
   });
 
   console.log(
-    `Opening balances loaded for ${Object.keys(openingBalances).length} items`
+    `Opening balances loaded for ${Object.keys(openingBalances).length} items`,
   );
 
   /* -----------------------------------------------------------------------
@@ -1206,7 +1220,7 @@ export const getSimpleLedgerReport = async ({
     branchId,
     itemIds,
     startDate,
-    endDate
+    endDate,
   );
   console.timeEnd("Query 3: Last purchase rates");
 
@@ -1323,12 +1337,17 @@ export const getSimpleLedgerReport = async ({
   const ledgersPerItem = itemsPage.map((row) => {
     const itemKey = row._id.toString();
     const data = ledgerMap[itemKey];
-
-    return {
-      _id: row._id,
+    const master = itemMasterMap[itemKey] || {
       itemName: row.itemName,
       itemCode: row.itemCode,
       unit: row.unit,
+    };
+
+    return {
+      _id: row._id,
+      itemName: master.itemName || row.itemName,
+      itemCode: master.itemCode || row.itemCode,
+      unit: master.unit || row.unit,
       openingQuantity: data.openingQuantity,
       summary: data.summary,
       transactions: data.transactions,
@@ -1337,7 +1356,7 @@ export const getSimpleLedgerReport = async ({
 
   const totalTime = Date.now() - reportStartTime;
   console.log(
-    `=== getSimpleLedgerReport (FAST PATH) END - ${totalTime}ms ===\n`
+    `=== getSimpleLedgerReport (FAST PATH) END - ${totalTime}ms ===\n`,
   );
 
   return {
@@ -1474,6 +1493,21 @@ export const getHybridLedgerReport = async ({
 
   console.log(`Processing ${itemIds.length} items`);
 
+  // Get latest item names from ItemMaster
+  const itemMasters = await ItemMasterModel.find(
+    { _id: { $in: itemIdObjs } },
+    { _id: 1, itemName: 1, itemCode: 1, unit: 1 },
+  ).lean();
+
+  const itemMasterMap = {};
+  itemMasters.forEach((im) => {
+    itemMasterMap[im._id.toString()] = {
+      itemName: im.itemName || null,
+      itemCode: im.itemCode || null,
+      unit: im.unit || null,
+    };
+  });
+
   /* -----------------------------------------------------------------------
      QUERY 2: Calculate opening balances with dirty period
      Uses getBatchOpeningBalances which handles adjustments/movements
@@ -1483,14 +1517,14 @@ export const getHybridLedgerReport = async ({
     company,
     branch,
     itemIds,
-    startDate
+    startDate,
   );
   console.timeEnd("Query 2: Calculate opening balances");
 
   console.log(
     `Opening balances calculated for ${
       Object.keys(openingBalances).length
-    } items`
+    } items`,
   );
 
   /* -----------------------------------------------------------------------
@@ -1502,7 +1536,7 @@ export const getHybridLedgerReport = async ({
     branchId,
     itemIds,
     startDate,
-    endDate
+    endDate,
   );
   console.timeEnd("Query 3: Last purchase rates");
 
@@ -1618,12 +1652,17 @@ export const getHybridLedgerReport = async ({
   const ledgersPerItem = itemsPage.map((row) => {
     const itemKey = row._id.toString();
     const data = ledgerMap[itemKey];
-
-    return {
-      _id: row._id,
+    const master = itemMasterMap[itemKey] || {
       itemName: row.itemName,
       itemCode: row.itemCode,
       unit: row.unit,
+    };
+
+    return {
+      _id: row._id,
+      itemName: master.itemName || row.itemName,
+      itemCode: master.itemCode || row.itemCode,
+      unit: master.unit || row.unit,
       openingQuantity: data.openingQuantity,
       summary: data.summary,
       transactions: data.transactions,
@@ -1632,7 +1671,7 @@ export const getHybridLedgerReport = async ({
 
   const totalTime = Date.now() - reportStartTime;
   console.log(
-    `=== getHybridLedgerReport (HYBRID PATH) END - ${totalTime}ms ===\n`
+    `=== getHybridLedgerReport (HYBRID PATH) END - ${totalTime}ms ===\n`,
   );
 
   return {
@@ -1770,6 +1809,20 @@ export const refoldLedgersWithAdjustments = async ({
   const itemIdObjs = itemIds.map((id) => toObjectId(id));
 
   console.log(`Processing ${itemIds.length} items`);
+  // Get latest item names from ItemMaster
+  const itemMasters = await ItemMasterModel.find(
+    { _id: { $in: itemIdObjs } },
+    { _id: 1, itemName: 1, itemCode: 1, unit: 1 },
+  ).lean();
+
+  const itemMasterMap = {};
+  itemMasters.forEach((im) => {
+    itemMasterMap[im._id.toString()] = {
+      itemName: im.itemName || null,
+      itemCode: im.itemCode || null,
+      unit: im.unit || null,
+    };
+  });
 
   /* -----------------------------------------------------------------------
      QUERY 2: Calculate opening balances
@@ -1779,7 +1832,7 @@ export const refoldLedgersWithAdjustments = async ({
     company,
     branch,
     itemIds,
-    startDate
+    startDate,
   );
   console.timeEnd("Query 2: Calculate opening balances");
 
@@ -1792,7 +1845,7 @@ export const refoldLedgersWithAdjustments = async ({
     branchId,
     itemIds,
     startDate,
-    endDate
+    endDate,
   );
   console.timeEnd("Query 3: Last purchase rates");
 
@@ -1820,12 +1873,17 @@ export const refoldLedgersWithAdjustments = async ({
   const ledgersPerItem = itemsPage.map((row) => {
     const itemKey = row._id.toString();
     const data = ledgerMap[itemKey];
-
-    return {
-      _id: row._id,
+    const master = itemMasterMap[itemKey] || {
       itemName: row.itemName,
       itemCode: row.itemCode,
       unit: row.unit,
+    };
+
+    return {
+      _id: row._id,
+      itemName: master.itemName || row.itemName,
+      itemCode: master.itemCode || row.itemCode,
+      unit: master.unit || row.unit,
       openingQuantity: data.openingQuantity,
       summary: data.summary,
       transactions: data.transactions,
@@ -1834,7 +1892,7 @@ export const refoldLedgersWithAdjustments = async ({
 
   const totalTime = Date.now() - reportStartTime;
   console.log(
-    `=== refoldLedgersWithAdjustments (FULL REFOLD) END - ${totalTime}ms ===\n`
+    `=== refoldLedgersWithAdjustments (FULL REFOLD) END - ${totalTime}ms ===\n`,
   );
 
   return {
