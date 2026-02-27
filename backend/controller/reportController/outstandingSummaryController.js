@@ -2,22 +2,22 @@ import Outstanding from "../../model/OutstandingModel.js";
 import mongoose from "mongoose";
 import OutstandingSettlementModel from "../../model/OutstandingSettlementModel.js";
 
-
-
 /**
  * Get all customers with outstanding balances
  * @route GET /api/reports/getOutstandingCustomers/:companyId/:branchId
  */
 
-
 export const getPartyOutstandingDetails = async (req, res) => {
   try {
     const { companyId, branchId, customerId } = req.params;
-    const { outstandingType, startDate, endDate, page = 1, limit = 10 } = req.query;
+    const {
+      outstandingType,
+      startDate,
+      endDate,
+      page = 1,
+      limit = 10,
+    } = req.query;
 
-
-
-    
     const companyObjectId = new mongoose.Types.ObjectId(companyId);
     const branchObjectId = new mongoose.Types.ObjectId(branchId);
     const customerObjectId = new mongoose.Types.ObjectId(customerId);
@@ -26,11 +26,11 @@ export const getPartyOutstandingDetails = async (req, res) => {
       company: companyObjectId,
       branch: branchObjectId,
       account: customerObjectId,
-      status: { $nin: ['paid','written_off'] }
+      status: { $nin: ["paid", "written_off"] },
     };
 
     // Add outstanding type filter if provided
-    if (outstandingType && ['dr', 'cr'].includes(outstandingType)) {
+    if (outstandingType && ["dr", "cr"].includes(outstandingType)) {
       matchConditions.outstandingType = outstandingType;
     }
 
@@ -38,7 +38,7 @@ export const getPartyOutstandingDetails = async (req, res) => {
     if (startDate && endDate) {
       matchConditions.transactionDate = {
         $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $lte: new Date(endDate),
       };
     }
 
@@ -54,29 +54,35 @@ export const getPartyOutstandingDetails = async (req, res) => {
 
       {
         $lookup: {
-          from: 'accountmasters',
-          localField: 'account',
-          foreignField: '_id',
-          as: 'accountDetails'
-        }
+          from: "accountmasters",
+          localField: "account",
+          foreignField: "_id",
+          as: "accountDetails",
+        },
       },
-      { $unwind: '$accountDetails' },
+      { $unwind: "$accountDetails" },
 
       {
         $addFields: {
           daysOverdue: {
             $cond: {
-              if: { $and: [{ $ne: ['$dueDate', null] }, { $ne: ['$dueDate', undefined] }] },
+              if: {
+                $and: [
+                  { $ne: ["$dueDate", null] },
+                  { $ne: ["$dueDate", undefined] },
+                ],
+              },
               then: {
                 $divide: [
-                  { $subtract: [new Date(), '$dueDate'] },
-                  1000 * 60 * 60 * 24
-                ]
+                  { $subtract: [new Date(), "$dueDate"] },
+                  1000 * 60 * 60 * 24,
+                ],
               },
-              else: 0
-            }
-          }
-        }
+              else: 0,
+            },
+          },
+          accountName: "$accountDetails.accountName",
+        },
       },
 
       { $sort: { transactionDate: -1 } },
@@ -85,23 +91,23 @@ export const getPartyOutstandingDetails = async (req, res) => {
 
       {
         $project: {
-          transactionId: '$_id',
+          transactionId: "$_id",
           transactionNumber: 1,
           transactionDate: 1,
           transactionType: 1,
           dueDate: 1,
-          totalAmount: { $round: ['$totalAmount', 2] },
-          paidAmount: { $round: ['$paidAmount', 2] },
-          closingBalanceAmount: { $round: ['$closingBalanceAmount', 2] },
+          totalAmount: { $round: ["$totalAmount", 2] },
+          paidAmount: { $round: ["$paidAmount", 2] },
+          closingBalanceAmount: { $round: ["$closingBalanceAmount", 2] },
           outstandingType: 1,
-          daysOverdue: { $round: ['$daysOverdue', 0] },
+          daysOverdue: { $round: ["$daysOverdue", 0] },
           status: 1,
           notes: 1,
-          customerName: '$accountDetails.accountName',
-          customerEmail: '$accountDetails.email',
-          customerPhone: '$accountDetails.phoneNo'
-        }
-      }
+          customerName: "$accountDetails.accountName",
+          customerEmail: "$accountDetails.email",
+          customerPhone: "$accountDetails.phoneNo",
+        },
+      },
     ]);
 
     // Calculate totals without pagination
@@ -110,63 +116,63 @@ export const getPartyOutstandingDetails = async (req, res) => {
       {
         $group: {
           _id: null,
-          totalOutstanding: { $sum: '$closingBalanceAmount' },
+          totalOutstanding: { $sum: "$closingBalanceAmount" },
           totalDr: {
             $sum: {
               $cond: [
-                { $eq: ['$outstandingType', 'dr'] },
-                '$closingBalanceAmount',
-                0
-              ]
-            }
+                { $eq: ["$outstandingType", "dr"] },
+                "$closingBalanceAmount",
+                0,
+              ],
+            },
           },
           totalCr: {
             $sum: {
               $cond: [
-                { $eq: ['$outstandingType', 'cr'] },
-                '$closingBalanceAmount',
-                0
-              ]
-            }
-          }
-        }
-      }
+                { $eq: ["$outstandingType", "cr"] },
+                "$closingBalanceAmount",
+                0,
+              ],
+            },
+          },
+        },
+      },
     ]);
-
-    
 
     const totals = totalsAggregate[0] || {
       totalOutstanding: 0,
       totalDr: 0,
-      totalCr: 0
+      totalCr: 0,
     };
 
     res.status(200).json({
       success: true,
       data: {
-        customer: customerOutstanding[0] ? {
-          name: customerOutstanding[0].customerName,
-          email: customerOutstanding[0].customerEmail,
-          phone: customerOutstanding[0].customerPhone
-        } : null,
+        customer: customerOutstanding[0]
+          ? {
+              name: customerOutstanding[0].customerName,
+              email: customerOutstanding[0].customerEmail,
+              phone: customerOutstanding[0].customerPhone,
+            }
+          : null,
         totalOutstanding: Math.round(totals.totalOutstanding * 100) / 100,
         totalDr: Math.round(totals.totalDr * 100) / 100,
         totalCr: Math.round(Math.abs(totals.totalCr) * 100) / 100,
-        netOutstanding: Math.round((totals.totalDr + totals.totalCr) * 100) / 100,
+        netOutstanding:
+          Math.round((totals.totalDr + totals.totalCr) * 100) / 100,
         totalCount: totalCount,
         currentPage: pageNum,
         totalPages: Math.ceil(totalCount / limitNum),
         transactionCount: customerOutstanding.length,
-        transactions: customerOutstanding
-      }
+        transactions: customerOutstanding,
+      },
     });
-
   } catch (error) {
-    console.error('Error fetching customer outstanding details:', error);
+    console.error("Error fetching customer outstanding details:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch customer outstanding details',
-      error: error.message
+      message: "Failed to fetch customer outstanding details",
+      error: error.message,
     });
   }
 };
@@ -187,7 +193,7 @@ export const getOutstandingParties = async (req, res) => {
     const matchConditions = {
       company: companyObjectId,
       branch: branchObjectId,
-      status: { $nin: ['paid', 'cancelled', 'written_off'] }
+      status: { $nin: ["paid", "cancelled", "written_off"] },
     };
 
     const outstandingParties = await Outstanding.aggregate([
@@ -195,267 +201,164 @@ export const getOutstandingParties = async (req, res) => {
 
       {
         $lookup: {
-          from: 'accountmasters',
-          localField: 'account',
-          foreignField: '_id',
-          as: 'accountDetails'
-        }
+          from: "accountmasters",
+          localField: "account",
+          foreignField: "_id",
+          as: "accountDetails",
+        },
       },
-      { $unwind: '$accountDetails' },
+      { $unwind: "$accountDetails" },
 
-      ...(search ? [{
-        $match: {
-          $or: [
-            { 'accountDetails.accountName': { $regex: search, $options: 'i' } },
-            { 'accountDetails.email': { $regex: search, $options: 'i' } },
-            { 'accountDetails.phoneNo': { $regex: search, $options: 'i' } },
-            { accountName: { $regex: search, $options: 'i' } }
+      ...(search
+        ? [
+            {
+              $match: {
+                $or: [
+                  {
+                    "accountDetails.accountName": {
+                      $regex: search,
+                      $options: "i",
+                    },
+                  },
+                  { "accountDetails.email": { $regex: search, $options: "i" } },
+                  {
+                    "accountDetails.phoneNo": { $regex: search, $options: "i" },
+                  },
+                  { accountName: { $regex: search, $options: "i" } },
+                ],
+              },
+            },
           ]
-        }
-      }] : []),
-
-      // {
-      //   $addFields: {
-      //     daysOverdue: {
-      //       $cond: {
-      //         if: { $and: [{ $ne: ['$dueDate', null] }, { $ne: ['$dueDate', undefined] }] },
-      //         then: {
-      //           $divide: [
-      //             { $subtract: [new Date(), '$dueDate'] },
-      //             1000 * 60 * 60 * 24
-      //           ]
-      //         },
-      //         else: 0
-      //       }
-      //     }
-      //   }
-      // },
+        : []),
 
       // Group by account (party)
       {
         $group: {
-          _id: '$account',
-          partyId: { $first: '$account' },
-          partyName: { $first: '$accountName' },
-          partyEmail: { $first: '$accountDetails.email' },
-          partyPhone: { $first: '$accountDetails.phoneNo' },
-          
+          _id: "$account",
+          partyId: { $first: "$account" },
+          partyName: { $first: "$accountDetails.accountName" },
+          partyEmail: { $first: "$accountDetails.email" },
+          partyPhone: { $first: "$accountDetails.phoneNo" },
+
           customerOutstanding: {
             $sum: {
               $cond: [
-                { $eq: ['$accountType', 'customer'] },
-                '$closingBalanceAmount',
-                0
-              ]
-            }
+                { $eq: ["$accountType", "customer"] },
+                "$closingBalanceAmount",
+                0,
+              ],
+            },
           },
           customerTransactionCount: {
             $sum: {
-              $cond: [
-                { $eq: ['$accountType', 'customer'] },
-                1,
-                0
-              ]
-            }
+              $cond: [{ $eq: ["$accountType", "customer"] }, 1, 0],
+            },
           },
-          
+
           supplierOutstanding: {
             $sum: {
               $cond: [
-                { $eq: ['$accountType', 'supplier'] },
-                '$closingBalanceAmount',
-                0
-              ]
-            }
+                { $eq: ["$accountType", "supplier"] },
+                "$closingBalanceAmount",
+                0,
+              ],
+            },
           },
           supplierTransactionCount: {
             $sum: {
-              $cond: [
-                { $eq: ['$accountType', 'supplier'] },
-                1,
-                0
-              ]
-            }
+              $cond: [{ $eq: ["$accountType", "supplier"] }, 1, 0],
+            },
           },
-          
-          totalOutstanding: { $sum: '$closingBalanceAmount' },
-          
+
+          totalOutstanding: { $sum: "$closingBalanceAmount" },
+
           totalDr: {
             $sum: {
               $cond: [
-                { $eq: ['$outstandingType', 'dr'] },
-                '$closingBalanceAmount',
-                0
-              ]
-            }
+                { $eq: ["$outstandingType", "dr"] },
+                "$closingBalanceAmount",
+                0,
+              ],
+            },
           },
           totalCr: {
             $sum: {
               $cond: [
-                { $eq: ['$outstandingType', 'cr'] },
-                '$closingBalanceAmount',
-                0
-              ]
-            }
+                { $eq: ["$outstandingType", "cr"] },
+                "$closingBalanceAmount",
+                0,
+              ],
+            },
           },
-          
+
           transactionCount: { $sum: 1 },
           // oldestTransactionDate: { $min: '$transactionDate' },
           // newestTransactionDate: { $max: '$transactionDate' },
           // maxDaysOverdue: { $max: '$daysOverdue' },
-          accountTypes: { $addToSet: '$accountType' }, // This creates an array
-          
+          accountTypes: { $addToSet: "$accountType" }, // This creates an array
+
           transactions: {
             $push: {
-              transactionId: '$_id',
-              transactionNumber: '$transactionNumber',
-              transactionDate: '$transactionDate',
-              transactionType: '$transactionType',
-              accountType: '$accountType',
-              dueDate: '$dueDate',
-              totalAmount: '$totalAmount',
-              paidAmount: '$paidAmount',
-              closingBalanceAmount: '$closingBalanceAmount',
-              outstandingType: '$outstandingType',
+              transactionId: "$_id",
+              transactionNumber: "$transactionNumber",
+              transactionDate: "$transactionDate",
+              transactionType: "$transactionType",
+              accountType: "$accountType",
+              dueDate: "$dueDate",
+              totalAmount: "$totalAmount",
+              paidAmount: "$paidAmount",
+              closingBalanceAmount: "$closingBalanceAmount",
+              outstandingType: "$outstandingType",
               // daysOverdue: '$daysOverdue',
-              status: '$status'
-            }
-          }
-        }
+              status: "$status",
+            },
+          },
+        },
       },
 
-      ...(minAmount ? [{
-        $match: {
-          totalOutstanding: { $gte: parseFloat(minAmount) }
-        }
-      }] : []),
+      ...(minAmount
+        ? [
+            {
+              $match: {
+                totalOutstanding: { $gte: parseFloat(minAmount) },
+              },
+            },
+          ]
+        : []),
 
       {
         $addFields: {
           partyType: {
             $cond: [
-              { $gt: [{ $size: '$accountTypes' }, 1] },
-              'both',
-              { $arrayElemAt: ['$accountTypes', 0] }
-            ]
+              { $gt: [{ $size: "$accountTypes" }, 1] },
+              "both",
+              { $arrayElemAt: ["$accountTypes", 0] },
+            ],
           },
-          
+
           netPositionType: {
             $cond: [
-              { $gte: ['$totalOutstanding', 0] },
-              'receivable',
-              'payable'
-            ]
+              { $gte: ["$totalOutstanding", 0] },
+              "receivable",
+              "payable",
+            ],
           },
-          
-          absOutstanding: { $abs: '$totalOutstanding' },
-          
-          // aging: {
-          //   current: {
-          //     $sum: {
-          //       $map: {
-          //         input: '$transactions',
-          //         as: 'txn',
-          //         in: {
-          //           $cond: [
-          //             { $lte: ['$$txn.daysOverdue', 0] },
-          //             '$$txn.closingBalanceAmount',
-          //             0
-          //           ]
-          //         }
-          //       }
-          //     }
-          //   },
-          //   days1_30: {
-          //     $sum: {
-          //       $map: {
-          //         input: '$transactions',
-          //         as: 'txn',
-          //         in: {
-          //           $cond: [
-          //             {
-          //               $and: [
-          //                 { $gt: ['$$txn.daysOverdue', 0] },
-          //                 { $lte: ['$$txn.daysOverdue', 30] }
-          //               ]
-          //             },
-          //             '$$txn.closingBalanceAmount',
-          //             0
-          //           ]
-          //         }
-          //       }
-          //     }
-          //   },
-          //   days31_60: {
-          //     $sum: {
-          //       $map: {
-          //         input: '$transactions',
-          //         as: 'txn',
-          //         in: {
-          //           $cond: [
-          //             {
-          //               $and: [
-          //                 { $gt: ['$$txn.daysOverdue', 30] },
-          //                 { $lte: ['$$txn.daysOverdue', 60] }
-          //               ]
-          //             },
-          //             '$$txn.closingBalanceAmount',
-          //             0
-          //           ]
-          //         }
-          //       }
-          //     }
-          //   },
-          //   days61_90: {
-          //     $sum: {
-          //       $map: {
-          //         input: '$transactions',
-          //         as: 'txn',
-          //         in: {
-          //           $cond: [
-          //             {
-          //               $and: [
-          //                 { $gt: ['$$txn.daysOverdue', 60] },
-          //                 { $lte: ['$$txn.daysOverdue', 90] }
-          //               ]
-          //             },
-          //             '$$txn.closingBalanceAmount',
-          //             0
-          //           ]
-          //         }
-          //       }
-          //     }
-          //   },
-          //   days90Plus: {
-          //     $sum: {
-          //       $map: {
-          //         input: '$transactions',
-          //         as: 'txn',
-          //         in: {
-          //           $cond: [
-          //             { $gt: ['$$txn.daysOverdue', 90] },
-          //             '$$txn.closingBalanceAmount',
-          //             0
-          //           ]
-          //         }
-          //       }
-          //     }
-          //   }
-          // }
-        }
+
+          absOutstanding: { $abs: "$totalOutstanding" },
+        },
       },
 
       // Facet for pagination - get total count and paginated results
       {
         $facet: {
-          metadata: [{ $count: 'totalCount' }],
+          metadata: [{ $count: "totalCount" }],
           data: [
             { $sort: { absOutstanding: -1 } },
             { $skip: skip },
-            { $limit: pageSize }
-          ]
-        }
-      }
+            { $limit: pageSize },
+          ],
+        },
+      },
     ]);
 
     // Extract results
@@ -463,7 +366,7 @@ export const getOutstandingParties = async (req, res) => {
     const parties = outstandingParties[0]?.data || [];
 
     // Project final shape
-    const formattedParties = parties.map(party => ({
+    const formattedParties = parties.map((party) => ({
       partyId: party.partyId,
       partyName: party.partyName,
       partyEmail: party.partyEmail,
@@ -479,16 +382,6 @@ export const getOutstandingParties = async (req, res) => {
       totalCr: Math.round(party.totalCr * 100) / 100,
       netOutstanding: Math.round((party.totalDr + party.totalCr) * 100) / 100,
       transactionCount: party.transactionCount,
-      // oldestTransactionDate: party.oldestTransactionDate,
-      // newestTransactionDate: party.newestTransactionDate,
-      // maxDaysOverdue: Math.round(party.maxDaysOverdue),
-      // aging: {
-      //   current: Math.round(party.aging.current * 100) / 100,
-      //   days1_30: Math.round(party.aging.days1_30 * 100) / 100,
-      //   days31_60: Math.round(party.aging.days31_60 * 100) / 100,
-      //   days61_90: Math.round(party.aging.days61_90 * 100) / 100,
-      //   days90Plus: Math.round(party.aging.days90Plus * 100) / 100
-      // }
     }));
 
     // Calculate summary - simpler approach without $setUnion
@@ -496,51 +389,67 @@ export const getOutstandingParties = async (req, res) => {
       { $match: matchConditions },
       {
         $lookup: {
-          from: 'accountmasters',
-          localField: 'account',
-          foreignField: '_id',
-          as: 'accountDetails'
-        }
+          from: "accountmasters",
+          localField: "account",
+          foreignField: "_id",
+          as: "accountDetails",
+        },
       },
-      { $unwind: '$accountDetails' },
+      { $unwind: "$accountDetails" },
       {
         $group: {
-          _id: '$account',
-          accountTypes: { $addToSet: '$accountType' }, // Creates array of unique account types
-          totalOutstanding: { $sum: '$closingBalanceAmount' },
+          _id: "$account",
+          accountTypes: { $addToSet: "$accountType" }, // Creates array of unique account types
+          totalOutstanding: { $sum: "$closingBalanceAmount" },
           customerOutstanding: {
             $sum: {
-              $cond: [{ $eq: ['$accountType', 'customer'] }, '$closingBalanceAmount', 0]
-            }
+              $cond: [
+                { $eq: ["$accountType", "customer"] },
+                "$closingBalanceAmount",
+                0,
+              ],
+            },
           },
           supplierOutstanding: {
             $sum: {
-              $cond: [{ $eq: ['$accountType', 'supplier'] }, '$closingBalanceAmount', 0]
-            }
+              $cond: [
+                { $eq: ["$accountType", "supplier"] },
+                "$closingBalanceAmount",
+                0,
+              ],
+            },
           },
           totalDr: {
             $sum: {
-              $cond: [{ $eq: ['$outstandingType', 'dr'] }, '$closingBalanceAmount', 0]
-            }
+              $cond: [
+                { $eq: ["$outstandingType", "dr"] },
+                "$closingBalanceAmount",
+                0,
+              ],
+            },
           },
           totalCr: {
             $sum: {
-              $cond: [{ $eq: ['$outstandingType', 'cr'] }, '$closingBalanceAmount', 0]
-            }
+              $cond: [
+                { $eq: ["$outstandingType", "cr"] },
+                "$closingBalanceAmount",
+                0,
+              ],
+            },
           },
-          transactionCount: { $sum: 1 }
-        }
+          transactionCount: { $sum: 1 },
+        },
       },
       {
         $addFields: {
           partyType: {
             $cond: [
-              { $gt: [{ $size: '$accountTypes' }, 1] },
-              'both',
-              { $arrayElemAt: ['$accountTypes', 0] }
-            ]
-          }
-        }
+              { $gt: [{ $size: "$accountTypes" }, 1] },
+              "both",
+              { $arrayElemAt: ["$accountTypes", 0] },
+            ],
+          },
+        },
       },
       {
         $group: {
@@ -548,27 +457,27 @@ export const getOutstandingParties = async (req, res) => {
           totalParties: { $sum: 1 },
           partiesWithBothTypes: {
             $sum: {
-              $cond: [{ $eq: ['$partyType', 'both'] }, 1, 0]
-            }
+              $cond: [{ $eq: ["$partyType", "both"] }, 1, 0],
+            },
           },
           customersOnly: {
             $sum: {
-              $cond: [{ $eq: ['$partyType', 'customer'] }, 1, 0]
-            }
+              $cond: [{ $eq: ["$partyType", "customer"] }, 1, 0],
+            },
           },
           suppliersOnly: {
             $sum: {
-              $cond: [{ $eq: ['$partyType', 'supplier'] }, 1, 0]
-            }
+              $cond: [{ $eq: ["$partyType", "supplier"] }, 1, 0],
+            },
           },
-          totalNetOutstanding: { $sum: '$totalOutstanding' },
-          totalReceivables: { $sum: '$customerOutstanding' },
-          totalPayables: { $sum: { $abs: '$supplierOutstanding' } },
-          totalDrAmount: { $sum: '$totalDr' },
-          totalCrAmount: { $sum: '$totalCr' },
-          totalTransactions: { $sum: '$transactionCount' }
-        }
-      }
+          totalNetOutstanding: { $sum: "$totalOutstanding" },
+          totalReceivables: { $sum: "$customerOutstanding" },
+          totalPayables: { $sum: { $abs: "$supplierOutstanding" } },
+          totalDrAmount: { $sum: "$totalDr" },
+          totalCrAmount: { $sum: "$totalCr" },
+          totalTransactions: { $sum: "$transactionCount" },
+        },
+      },
     ]);
 
     const summaryData = summaryAggregate[0] || {};
@@ -586,23 +495,22 @@ export const getOutstandingParties = async (req, res) => {
       totalPayables: summaryData.totalPayables || 0,
       totalDrAmount: summaryData.totalDrAmount || 0,
       totalCrAmount: summaryData.totalCrAmount || 0,
-      totalTransactions: summaryData.totalTransactions || 0
+      totalTransactions: summaryData.totalTransactions || 0,
     };
 
     res.status(200).json({
       success: true,
       data: {
         parties: formattedParties,
-        summary
-      }
+        summary,
+      },
     });
-
   } catch (error) {
-    console.error('Error fetching outstanding parties:', error);
+    console.error("Error fetching outstanding parties:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch outstanding parties',
-      error: error.message
+      message: "Failed to fetch outstanding parties",
+      error: error.message,
     });
   }
 };
@@ -618,8 +526,7 @@ export const getOutstandingSettlements = async (req, res) => {
 
     // Normalize boolean from query (?includeReversed=true/false)
     const includeReversedBool =
-      includeReversed === true ||
-      includeReversed === "true";
+      includeReversed === true || includeReversed === "true";
 
     // Validate outstandingId
     if (!mongoose.Types.ObjectId.isValid(outstandingId)) {
@@ -632,7 +539,7 @@ export const getOutstandingSettlements = async (req, res) => {
     // Get outstanding details
     const outstanding = await Outstanding.findById(outstandingId)
       .select(
-        "transactionNumber transactionDate transactionType totalAmount paidAmount closingBalanceAmount outstandingType status"
+        "transactionNumber transactionDate transactionType totalAmount paidAmount closingBalanceAmount outstandingType status",
       )
       .lean();
 
@@ -648,17 +555,17 @@ export const getOutstandingSettlements = async (req, res) => {
 
     const settlements = await OutstandingSettlementModel.find(baseQuery)
       .select(
-        "transaction transactionModel transactionNumber transactionDate transactionType settledAmount settlementDate settlementStatus reversedAt reversalReason"
+        "transaction transactionModel transactionNumber transactionDate transactionType settledAmount settlementDate settlementStatus reversedAt reversalReason",
       )
       .sort({ settlementDate: 1 })
       .lean();
 
     // Derived lists
     const activeSettlements = settlements.filter(
-      (s) => s.settlementStatus === "active"
+      (s) => s.settlementStatus === "active",
     );
     const reversedSettlements = settlements.filter(
-      (s) => s.settlementStatus === "reversed"
+      (s) => s.settlementStatus === "reversed",
     );
 
     // Use either active only or all based on flag
@@ -669,7 +576,7 @@ export const getOutstandingSettlements = async (req, res) => {
     // Totals based on *visible* settlements
     const totalSettled = visibleSettlements.reduce(
       (sum, s) => sum + s.settledAmount,
-      0
+      0,
     );
 
     const remaining = Math.abs(outstanding.closingBalanceAmount);
@@ -711,8 +618,8 @@ export const getOutstandingSettlements = async (req, res) => {
         summary: {
           totalSettled,
           remaining,
-          settlementCount: activeSettlements.length,      // active count (always)
-          reversedCount: reversedSettlements.length,      // always returned
+          settlementCount: activeSettlements.length, // active count (always)
+          reversedCount: reversedSettlements.length, // always returned
         },
         byType: Object.values(settlementsByType),
       },
@@ -726,5 +633,3 @@ export const getOutstandingSettlements = async (req, res) => {
     });
   }
 };
-
-
