@@ -1392,12 +1392,13 @@ export const refoldLedgersWithAdjustments = async (
 
   const accountContacts = await AccountMasterModel.aggregate([
     { $match: { _id: { $in: accountIdObjs }, company: companyId } },
-    { $project: { _id: 1, email: 1, phoneNo: 1 } },
+    { $project: { _id: 1, email: 1,accountName: 1, phoneNo: 1 } },
   ]);
 
   const contactMap = {};
   accountContacts.forEach((ac) => {
     contactMap[ac._id.toString()] = {
+       accountName: ac.accountName || null,
       email: ac.email || null,
       phoneNo: ac.phoneNo || null,
     };
@@ -1428,7 +1429,7 @@ export const refoldLedgersWithAdjustments = async (
 
     return {
       accountId: row._id,
-      accountName: row.accountName,
+      accountName: contact.accountName || row.accountName,
       email: contact.email,
       phoneNo: contact.phoneNo,
       openingBalance: data.openingBalance,
