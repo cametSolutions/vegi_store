@@ -31,10 +31,7 @@ const resolveDisplayRate = ({
 
   let rate = "";
 
-  if (
-    selectedPriceLevel &&
-    (txType === "sale" || txType === "sales_return")
-  ) {
+  if (selectedPriceLevel && (txType === "sale" || txType === "sales_return")) {
     const priceLevelData = branchPriceLevels.find(
       (pl) => toId(pl?.priceLevel) === toId(selectedPriceLevel),
     );
@@ -180,7 +177,6 @@ const AddItemForm = ({
           selectedPriceLevel: priceLevel,
           txType: transactionType,
         });
-        
 
         const currentStock = foundProduct.stock?.find(
           (st) => st.branch._id === branch,
@@ -245,12 +241,8 @@ const AddItemForm = ({
   }, [priceLevel, localItem.item, searchResponse, transactionType, branch]);
 
   useEffect(() => {
-    console.log(clickedItemInTable);
-
     if (clickedItemInTable !== null && clickedItemInTable !== undefined) {
       const selectedItem = items[clickedItemInTable];
-
-      console.log(selectedItem);
 
       if (!selectedItem) return;
 

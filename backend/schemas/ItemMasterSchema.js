@@ -38,21 +38,21 @@ const ItemMasterSchema = new mongoose.Schema(
 
     // 🆕 Price levels (Retail, Wholesale, Catering, etc.)
     // Legacy company-wide rates (kept temporarily for backward compatibility)
-    priceLevels: [
-      {
-        _id: false,
-        priceLevel: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "PriceLevelModel",
-          required: [true, "Price level reference is required"],
-        },
-        rate: {
-          type: Number,
-          required: [true, "Rate is required"],
-          min: [0, "Rate cannot be negative"],
-        },
-      },
-    ],
+    // priceLevels: [
+    //   {
+    //     _id: false,
+    //     priceLevel: {
+    //       type: mongoose.Schema.Types.ObjectId,
+    //       ref: "PriceLevelModel",
+    //       required: [true, "Price level reference is required"],
+    //     },
+    //     rate: {
+    //       type: Number,
+    //       required: [true, "Rate is required"],
+    //       min: [0, "Rate cannot be negative"],
+    //     },
+    //   },
+    // ],
     // Branch-wise rates by price level
     branchPriceLevels: {
       type: [
@@ -308,7 +308,7 @@ ItemMasterSchema.statics.searchItems = async function (
     })
     .limit(parseInt(limit))
     .populate({
-      path:"priceLevels.priceLevel",
+      path:"branchPriceLevels.priceLevels.priceLevel",
       model:"PriceLevel",
       select:"priceLevelName "
     })
