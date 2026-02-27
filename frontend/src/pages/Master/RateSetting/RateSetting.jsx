@@ -55,7 +55,7 @@ const resolveItemRateForBranch = (item, branchId, priceLevelId) => {
   if (branchPriceLevel?.rate !== undefined && branchPriceLevel?.rate !== null) {
     return branchPriceLevel.rate;
   }
-  return 0;
+  return "";
 };
 
 // Reusable Components
