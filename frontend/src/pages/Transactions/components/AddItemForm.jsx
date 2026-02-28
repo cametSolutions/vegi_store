@@ -191,7 +191,7 @@ const AddItemForm = ({
           itemName: foundProduct.itemName || "",
           priceLevels: branchPriceLevels,
           unit: foundProduct.unit || prev.unit, // still stored, not editable
-          rate: rate?.toString?.() || "",
+          rate: rate > 0 ? rate.toString() : "",
           taxable: false,
           taxRate: "0",
           taxAmount: "0",
@@ -235,7 +235,7 @@ const AddItemForm = ({
     if ((localItem.rate || "") !== (newRate?.toString?.() || "")) {
       setLocalItem((prev) => ({
         ...prev,
-        rate: newRate?.toString?.() || "",
+        rate: newRate > 0 ? newRate.toString() : "",
       }));
     }
   }, [priceLevel, localItem.item, searchResponse, transactionType, branch]);
