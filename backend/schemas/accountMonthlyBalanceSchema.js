@@ -78,7 +78,7 @@ export const AccountMonthlyBalanceSchema = new mongoose.Schema(
 
 // Compound index for unique constraint and faster queries
 AccountMonthlyBalanceSchema.index(
-  { account: 1, periodKey: 1 },
+  { account: 1,branch: 1, periodKey: 1 },
   { unique: true },
 );
 AccountMonthlyBalanceSchema.index({ company: 1, branch: 1, periodKey: 1 });

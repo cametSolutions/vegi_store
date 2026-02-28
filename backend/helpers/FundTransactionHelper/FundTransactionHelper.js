@@ -15,6 +15,7 @@ export const validateTransactionData = async (data, session) => {
 
     account,
     amount,
+    previousBalanceAmount,
   } = data;
 
   // Check required fields
@@ -41,6 +42,13 @@ export const validateTransactionData = async (data, session) => {
     };
   }
 
+  if (Math.abs(amount) > Math.abs(previousBalanceAmount)) {
+    return {
+      status: 400,
+      message: "Amount cannot be greater than outstanding balance",
+    };
+  }
+
   // Validate transaction type
   if (!["receipt", "payment"].includes(transactionType.toLowerCase())) {
     return {
@@ -58,9 +66,8 @@ export const validateTransactionData = async (data, session) => {
   }
 
   // Verify account exists
-  const accountDoc = await AccountMasterModel.findById(finalAccountId).session(
-    session
-  );
+  const accountDoc =
+    await AccountMasterModel.findById(finalAccountId).session(session);
   if (!accountDoc) {
     return {
       status: 404,
@@ -74,7 +81,7 @@ export const validateTransactionData = async (data, session) => {
     return {
       status: 400,
       message: `Invalid payment mode. Must be one of: ${validPaymentModes.join(
-        ", "
+        ", ",
       )}`,
     };
   }
@@ -201,7 +208,7 @@ export const formatTransactionForDisplay = (transaction) => {
   const settledAmount =
     transaction.settlementDetails?.reduce(
       (sum, s) => sum + s.settledAmount,
-      0
+      0,
     ) || 0;
 
   const unsettledAmount = transaction.amount - settledAmount;
@@ -220,8 +227,8 @@ export const formatTransactionForDisplay = (transaction) => {
       unsettledAmount === 0
         ? "fully_settled"
         : settledAmount > 0
-        ? "partially_settled"
-        : "unsettled",
+          ? "partially_settled"
+          : "unsettled",
     settlementsCount: transaction.settlementDetails?.length || 0,
     narration: transaction.narration,
     createdAt: transaction.createdAt,
@@ -315,7 +322,7 @@ export const validateEditRequest = async (
   originalTx,
   updateData,
   transactionType,
-  session
+  session,
 ) => {
   // Check if trying to change party account (not allowed)
   if (
@@ -323,7 +330,7 @@ export const validateEditRequest = async (
     updateData.account.toString() !== originalTx.account.toString()
   ) {
     throw new Error(
-      "Cannot change party account. Please create a new transaction instead."
+      "Cannot change party account. Please create a new transaction instead.",
     );
   }
 
@@ -334,7 +341,7 @@ export const validateEditRequest = async (
 
     if (originalDate !== newDate) {
       throw new Error(
-        "Transaction date editing is currently restricted. Please contact administrator."
+        "Transaction date editing is currently restricted. Please contact administrator.",
       );
     }
   }
@@ -346,6 +353,16 @@ export const validateEditRequest = async (
     }
   }
 
+
+  /// amount is > previous balance amount
+  if (
+    updateData.amount !== undefined &&
+    updateData.previousBalanceAmount !== undefined &&
+    Math.abs(updateData.amount) > Math.abs(updateData.previousBalanceAmount)
+  ) {
+    throw new Error("Amount cannot be greater than outstanding balance");
+  }
+
   // Validate payment mode if provided
   const validPaymentModes = ["cash", "cheque", "dd", "bankTransfer"];
   if (
@@ -353,7 +370,7 @@ export const validateEditRequest = async (
     !validPaymentModes.includes(updateData.paymentMode)
   ) {
     throw new Error(
-      `Invalid payment mode. Must be one of: ${validPaymentModes.join(", ")}`
+      `Invalid payment mode. Must be one of: ${validPaymentModes.join(", ")}`,
     );
   }
 
@@ -400,7 +417,7 @@ export const validateAccountChangeOnEdit = async ({
     console.log("Paid Amount:", originalTransaction.paidAmount);
 
     throw new Error(
-      `Cannot change customer/supplier when payment exists. Current paid amount: ₹${originalTransaction.paidAmount}. Please set paid amount to ₹0 first, then change the account.`
+      `Cannot change customer/supplier when payment exists. Current paid amount: ₹${originalTransaction.paidAmount}. Please set paid amount to ₹0 first, then change the account.`,
     );
   }
 
@@ -425,7 +442,7 @@ export const validateAccountChangeOnEdit = async ({
     console.log("Receipt Amount:", linkedReceipt.amount);
 
     throw new Error(
-      `Cannot change customer/supplier - linked ${receiptType} exists (${linkedReceipt.transactionNumber}, ₹${linkedReceipt.amount}). Please cancel the ${receiptType} first by setting paid amount to ₹0.`
+      `Cannot change customer/supplier - linked ${receiptType} exists (${linkedReceipt.transactionNumber}, ₹${linkedReceipt.amount}). Please cancel the ${receiptType} first by setting paid amount to ₹0.`,
     );
   }
 

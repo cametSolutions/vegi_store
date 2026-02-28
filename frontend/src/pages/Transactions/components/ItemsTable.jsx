@@ -24,19 +24,19 @@ const ItemsTable = ({ items, onRemoveItem, handleItemClickInItemsTable }) => {
               </th>
 
               {/* ITEM */}
-              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-left">
+              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-left w-[350px]">
                 Item
               </th>
 
-              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center">
+              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center w-[40px]">
                 Unit
               </th>
 
-              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center">
+              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center w-[40px]">
                 Qty
               </th>
 
-              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center">
+              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center w-[80px]">
                 Rate
               </th>
 
@@ -44,7 +44,7 @@ const ItemsTable = ({ items, onRemoveItem, handleItemClickInItemsTable }) => {
                 Amount
               </th>
 
-              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center">
+              <th className="sticky top-0 bg-slate-600 text-white px-2 py-1.5 text-center w-[60px]">
                 Action
               </th>
             </tr>
@@ -70,7 +70,7 @@ const ItemsTable = ({ items, onRemoveItem, handleItemClickInItemsTable }) => {
 
                 {/* ITEM */}
                 <td className="px-2 py-1.5 text-left text-slate-700">
-                  {truncate(item?.itemName, 25)}
+                  {truncate(item?.itemName, 40)}
                 </td>
 
                 {/* UNIT */}

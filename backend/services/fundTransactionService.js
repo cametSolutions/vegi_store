@@ -40,7 +40,7 @@ import { lockFinancialYearFormat } from "../controller/companyController/company
  * @returns {Promise<Object>} Transaction result
  */
 export const createFundTransaction = async (data, session = null) => {
-  console.log("data", data);
+  
 
   // Determine if we need to manage session lifecycle
   const shouldManageSession = !session;

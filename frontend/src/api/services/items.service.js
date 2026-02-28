@@ -89,8 +89,9 @@ export const itemServices = {
     }
   },
 
-  updateRate: async (itemId, priceLevelId, rate) => {
+  updateRate: async (itemId, branchId, priceLevelId, rate) => {
     const response = await api.patch(`/item/${itemId}/rate`, {
+      branchId,
       priceLevelId,
       rate,
     });

@@ -45,10 +45,21 @@ import {
   lockFinancialYearFormat,
   unlockFinancialYearFormatIfNoTransactions,
 } from "../companyController/companyController.js";
+import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
+import PriceLevelModel from "../../model/masters/PricelevelModel.js";
+
+const toId = (value) => {
+  if (!value) return "";
+  if (typeof value === "object")
+    return value?._id?.toString?.() || value.toString();
+  return value.toString();
+};
 
 /**
  * get transactions (handles sales, purchase, sales_return, purchase_return)
  */
+
+
 
 export const getTransactions = async (req, res) => {
   try {
@@ -198,8 +209,6 @@ export const createTransaction = async (req, res) => {
 
       const { previousBalanceAmount, netAmount, paidAmount } = transactionData;
 
-     
-
       const totalAmountForReceipt = netAmount + previousBalanceAmount;
       const closingBalanceAmountForReceipt = totalAmountForReceipt - paidAmount;
 
@@ -234,11 +243,7 @@ export const createTransaction = async (req, res) => {
     // Commit transaction
     await session.commitTransaction();
 
-    // Query using the same session
-    // const receiptInTransaction = await getTransactionModel("receipt").findById(
-    //   receiptResult.transaction._id
-    // ).session(session);
-    // console.log("Receipt visible in transaction:", receiptInTransaction);
+
 
     // Send success response
     res.status(201).json({
@@ -453,15 +458,14 @@ export const editTransaction = async (req, res) => {
       });
     }
 
+
+
     // ========================================
     // STEP 2: Calculate Deltas (Differences)
     // ========================================
     const deltas = calculateTransactionDeltas(originalTransaction, updatedData);
 
     // console.log("");
-    
-
-
 
     // ========================================
     // STEP 3: Update Stock with Delta Only

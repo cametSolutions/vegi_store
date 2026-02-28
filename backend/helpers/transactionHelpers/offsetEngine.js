@@ -121,7 +121,7 @@ const fetchPendingOutstanding = async ({
   // Fetch DR outstanding (customer owes us)
   const drOutstanding = await Outstanding.find({
     company: companyId,
-    branch: branchId,
+    // branch: branchId,
     account: accountId,
     outstandingType: "dr",
     closingBalanceAmount: { $gt: 0 },
@@ -134,7 +134,7 @@ const fetchPendingOutstanding = async ({
   // Fetch CR outstanding (we owe customer/supplier)
   const crOutstanding = await Outstanding.find({
     company: companyId,
-    branch: branchId,
+    // branch: branchId,
     account: accountId,
     outstandingType: "cr",
     closingBalanceAmount: { $lt: 0 },

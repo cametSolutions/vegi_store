@@ -10,6 +10,7 @@ import {
 } from "../../model/FundTransactionMode.js";
 import StockAdjustment from "../../model/StockAdjustmentModel.js";
 import mongoose from "mongoose";
+import AccountMasterModel from "../../model/masters/AccountMasterModel.js";
 
 // Map transaction types to their respective models
 const TRANSACTION_MODELS = {
@@ -101,7 +102,6 @@ export const getTransactionSummary = async (req, res) => {
         { transactionNumber: { $regex: search, $options: "i" } },
       ];
       
-      // Stock adjustment doesn't have accountName/email usually, so conditionally add those
       if (transactionType !== STOCK_ADJUSTMENT_TYPE) {
         searchConditions.push(
           { accountName: { $regex: search, $options: "i" } },
@@ -116,7 +116,7 @@ export const getTransactionSummary = async (req, res) => {
     const skip = (Number(page) - 1) * Number(limit);
 
     // Build select fields dynamically
-    let selectFields = `transactionNumber transactionDate ${amountField} status isCancelled`;
+    let selectFields = `transactionNumber transactionDate ${amountField} status isCancelled account`;
     
     // Add extra fields only if NOT stock adjustment
     if (transactionType !== STOCK_ADJUSTMENT_TYPE) {
@@ -130,6 +130,27 @@ export const getTransactionSummary = async (req, res) => {
       .skip(skip)
       .limit(Number(limit))
       .lean();
+
+    // Get latest account names from AccountMaster
+    let accountNameMap = {};
+    if (transactionType !== STOCK_ADJUSTMENT_TYPE) {
+      const accountIds = [...new Set(
+        rawTransactions
+          .filter(txn => txn.account)
+          .map(txn => txn.account.toString())
+      )];
+
+      if (accountIds.length > 0) {
+        const accountMasters = await AccountMasterModel.find(
+          { _id: { $in: accountIds.map(id => new mongoose.Types.ObjectId(id)) } },
+          { _id: 1, accountName: 1 }
+        ).lean();
+
+        accountMasters.forEach(am => {
+          accountNameMap[am._id.toString()] = am.accountName;
+        });
+      }
+    }
 
     // Normalize transactions
     const transactions = rawTransactions.map(txn => {
@@ -146,6 +167,12 @@ export const getTransactionSummary = async (req, res) => {
       } else if (FUND_TRANSACTION_TYPES.includes(transactionType)) {
         normalizedTxn.netAmount = txn.amount;
         delete normalizedTxn.amount;
+      }
+
+      // Override with latest name from AccountMaster
+      if (transactionType !== STOCK_ADJUSTMENT_TYPE && txn.account) {
+        const latestName = accountNameMap[txn.account.toString()];
+        if (latestName) normalizedTxn.accountName = latestName;
       }
       
       return normalizedTxn;

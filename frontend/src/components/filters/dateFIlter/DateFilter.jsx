@@ -1,5 +1,6 @@
 // components/dateFilter/DateFilter.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useSelector } from "react-redux";
 import { Calendar as CalendarIcon, Check, ArrowRight } from "lucide-react";
 import {
   DropdownMenu,
@@ -17,15 +18,82 @@ import {
 } from "../../../../../shared/utils/date";
 
 const DateFilter = ({
-  selectedFilter = DATE_FILTERS.THIS_MONTH,
+  selectedFilter = DATE_FILTERS.CUSTOM,
   onFilterChange,
   onCustomRangeChange,
   buttonClassName = "",
   customStartDate,
   customEndDate,
 }) => {
+  const fy = useSelector((state) => state.fy);
+  const hasUserInteracted = useRef(false);
+
+  const normalizeDateForInput = (dateValue) => {
+    if (!dateValue) return "";
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const fyStartDate = useMemo(
+    () => normalizeDateForInput(fy?.startDate),
+    [fy?.startDate],
+  );
+  const fyEndDate = useMemo(
+    () => normalizeDateForInput(fy?.endDate),
+    [fy?.endDate],
+  );
+  const normalizedCustomStartDate = useMemo(
+    () => normalizeDateForInput(customStartDate),
+    [customStartDate],
+  );
+  const normalizedCustomEndDate = useMemo(
+    () => normalizeDateForInput(customEndDate),
+    [customEndDate],
+  );
+
   const [localStart, setLocalStart] = useState(customStartDate || "");
   const [localEnd, setLocalEnd] = useState(customEndDate || "");
+
+  useEffect(() => {
+    if (hasUserInteracted.current) return;
+    if (!fyStartDate || !fyEndDate) return;
+
+    const isAlreadyDefaultedToFY =
+      selectedFilter === DATE_FILTERS.CUSTOM &&
+      normalizedCustomStartDate === fyStartDate &&
+      normalizedCustomEndDate === fyEndDate;
+
+    if (isAlreadyDefaultedToFY) {
+      return;
+    }
+
+    setLocalStart(fyStartDate);
+    setLocalEnd(fyEndDate);
+
+    if (onFilterChange && selectedFilter !== DATE_FILTERS.CUSTOM) {
+      onFilterChange(DATE_FILTERS.CUSTOM);
+    }
+
+    if (onCustomRangeChange) {
+      onCustomRangeChange({
+        startDate: fyStartDate,
+        endDate: fyEndDate,
+      });
+    }
+
+  }, [
+    fyStartDate,
+    fyEndDate,
+    selectedFilter,
+    normalizedCustomStartDate,
+    normalizedCustomEndDate,
+    onFilterChange,
+    onCustomRangeChange,
+  ]);
 
   // Sync local state with props when dropdown opens or props change
   useEffect(() => {
@@ -37,17 +105,20 @@ const DateFilter = ({
   }, [customEndDate]);
 
   const handleFilterSelect = (filterType) => {
+    hasUserInteracted.current = true;
     if (onFilterChange) onFilterChange(filterType);
   };
 
   // Only updates local state, does NOT trigger API
   const handleInputChange = (field, value) => {
+    hasUserInteracted.current = true;
     if (field === "start") setLocalStart(value);
     if (field === "end") setLocalEnd(value);
   };
 
   // Trigger API only on Submit
   const handleApplyCustomRange = (e) => {
+    hasUserInteracted.current = true;
     e.preventDefault();
     e.stopPropagation(); // Prevent dropdown from closing immediately if you want, but usually we want close on apply
     

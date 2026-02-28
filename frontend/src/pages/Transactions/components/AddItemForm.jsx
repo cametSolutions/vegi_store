@@ -7,6 +7,46 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
 import { NumericFormat } from "react-number-format";
 
+const toId = (value) => {
+  if (!value) return "";
+  if (typeof value === "object")
+    return value?._id?.toString?.() || value?.toString?.() || "";
+  return value.toString();
+};
+
+const getBranchPriceLevels = (product, branchId) => {
+  const branchRow = product?.branchPriceLevels?.find(
+    (row) => toId(row?.branch) === toId(branchId),
+  );
+  return Array.isArray(branchRow?.priceLevels) ? branchRow.priceLevels : [];
+};
+
+const resolveDisplayRate = ({
+  product,
+  branchId,
+  selectedPriceLevel,
+  txType,
+}) => {
+  const branchPriceLevels = getBranchPriceLevels(product, branchId);
+
+  let rate = "";
+
+  if (selectedPriceLevel && (txType === "sale" || txType === "sales_return")) {
+    const priceLevelData = branchPriceLevels.find(
+      (pl) => toId(pl?.priceLevel) === toId(selectedPriceLevel),
+    );
+    rate = priceLevelData?.rate ?? 0;
+  }
+
+  // Keep current behavior as requested:
+  // 0 is treated as falsy and can fall back to lastRate.
+  if (!rate && product?.lastRate) {
+    rate = product.lastRate;
+  }
+
+  return { rate, branchPriceLevels };
+};
+
 const AddItemForm = ({
   items,
   branch,
@@ -131,28 +171,12 @@ const AddItemForm = ({
 
       if (searchResponse?.data && searchResponse.data.length > 0) {
         const foundProduct = searchResponse.data[0];
-
-        let rate = "";
-
-        // Price level priority (sale / sales_return)
-        if (
-          foundProduct.priceLevels &&
-          foundProduct.priceLevels.length > 0 &&
-          priceLevel &&
-          (transactionType === "sale" || transactionType === "sales_return")
-        ) {
-          const priceLevelData = foundProduct?.priceLevels?.find(
-            (pl) =>
-              pl?.priceLevel?._id === priceLevel ||
-              pl?.priceLevel?.priceLevelName === priceLevel,
-          );
-          rate = priceLevelData?.rate || "";
-        }
-
-        // Fallback lastRate
-        if (!rate && foundProduct.lastRate) {
-          rate = foundProduct.lastRate;
-        }
+        const { rate, branchPriceLevels } = resolveDisplayRate({
+          product: foundProduct,
+          branchId: branch,
+          selectedPriceLevel: priceLevel,
+          txType: transactionType,
+        });
 
         const currentStock = foundProduct.stock?.find(
           (st) => st.branch._id === branch,
@@ -165,9 +189,9 @@ const AddItemForm = ({
           item: foundProduct?._id,
           itemCode: foundProduct.itemCode || debouncedSearchTerm,
           itemName: foundProduct.itemName || "",
-          priceLevels: foundProduct.priceLevels || [],
+          priceLevels: branchPriceLevels,
           unit: foundProduct.unit || prev.unit, // still stored, not editable
-          rate: rate?.toString?.() || "",
+          rate: rate > 0 ? rate.toString() : "",
           taxable: false,
           taxRate: "0",
           taxAmount: "0",
@@ -201,42 +225,24 @@ const AddItemForm = ({
     if (!localItem.item) return;
     const foundProduct = searchResponse?.data[0];
     if (!foundProduct) return;
-
-    let newRate = "";
-
-    if (
-      foundProduct.priceLevels &&
-      foundProduct.priceLevels.length > 0 &&
-      priceLevel &&
-      (transactionType === "sale" || transactionType === "sales_return")
-    ) {
-      const priceLevelData = foundProduct?.priceLevels?.find(
-        (pl) =>
-          pl?.priceLevel?._id === priceLevel ||
-          pl?.priceLevel?.priceLevelName === priceLevel,
-      );
-      newRate = priceLevelData?.rate || "";
-    }
-
-    if (!newRate && foundProduct.lastRate) {
-      newRate = foundProduct.lastRate.toString();
-    }
+    const { rate: newRate } = resolveDisplayRate({
+      product: foundProduct,
+      branchId: branch,
+      selectedPriceLevel: priceLevel,
+      txType: transactionType,
+    });
 
     if ((localItem.rate || "") !== (newRate?.toString?.() || "")) {
       setLocalItem((prev) => ({
         ...prev,
-        rate: newRate?.toString?.() || "",
+        rate: newRate > 0 ? newRate.toString() : "",
       }));
     }
-  }, [priceLevel, localItem.item, searchResponse, transactionType]);
+  }, [priceLevel, localItem.item, searchResponse, transactionType, branch]);
 
   useEffect(() => {
-    console.log(clickedItemInTable);
-
     if (clickedItemInTable !== null && clickedItemInTable !== undefined) {
       const selectedItem = items[clickedItemInTable];
-
-      console.log(selectedItem);
 
       if (!selectedItem) return;
 
@@ -331,7 +337,7 @@ const AddItemForm = ({
       !localItem.itemCode ||
       !localItem.itemName ||
       !localItem.item ||
-      !localItem.quantity
+      localItem.quantity <= 0
     ) {
       toast.error("Validation Error", {
         description: "Name, Code, and Quantity are required",
@@ -340,6 +346,7 @@ const AddItemForm = ({
     }
 
     const quantity = parseFloat(localItem.quantity) || 0;
+
     const rate = parseFloat(localItem.rate) || 0;
     const baseAmount = quantity * rate;
 
@@ -355,7 +362,6 @@ const AddItemForm = ({
       taxAmount: taxAmount.toFixed(2),
       amountAfterTax: amountAfterTax.toFixed(2),
     };
-    console.log(clickedItemIndex);
 
     // console.log(itemToAdd);
 

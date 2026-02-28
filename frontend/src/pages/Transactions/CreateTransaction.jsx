@@ -69,7 +69,7 @@ const CreateTransaction = () => {
     (state) => state.companyBranch?.selectedBranch,
   );
 
-  // console.log("transactionData", transactionData);
+  console.log("transactionData", transactionData);
   // console.log(clickedItemInTable);
 
   return (

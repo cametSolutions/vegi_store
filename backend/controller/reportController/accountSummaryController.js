@@ -42,7 +42,7 @@ export const getAccountSummaryReport = async (req, res) => {
     // STEP 2: Get account IDs for dirty check
     const baseMatch = { 
       company, 
-      branch,
+      // branch,
       transactionDate: { $gte: parsedStartDate, $lte: parsedEndDate }
     };
 
