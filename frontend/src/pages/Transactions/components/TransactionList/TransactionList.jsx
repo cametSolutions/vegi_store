@@ -32,12 +32,25 @@ const TransactionList = ({ onEditTransaction, selectedTransaction }) => {
   const DEBOUNCE_DELAY = 500;
 
 
-const currentMonthRange = useMemo(() => {
-    const now = new Date();
-    const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-    return { startDate, endDate };
-  }, []);
+// const currentMonthRange = useMemo(() => {
+//     const now = new Date();
+//     const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+//     const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+//     return { startDate, endDate };
+//   }, []);
+
+const todayRange = useMemo(() => {
+  const now = new Date();
+
+  const startDate = new Date(now);
+  startDate.setHours(0, 0, 0, 0);
+
+  const endDate = new Date(now);
+  endDate.setHours(23, 59, 59, 999);
+
+  return { startDate, endDate };
+}, []);
+
 
 
 
@@ -69,8 +82,8 @@ const currentMonthRange = useMemo(() => {
       30,
       "transactionDate",
       "desc",
-      currentMonthRange.startDate, // ✅ ADD: Pass start date
-      currentMonthRange.endDate,   // ✅ ADD: Pass end date
+      todayRange.startDate, // ✅ ADD: Pass start date
+      todayRange.endDate,   // ✅ ADD: Pass end date
       { refetchOnWindowFocus: false, retry: 2 }
     )
   );

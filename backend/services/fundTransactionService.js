@@ -28,6 +28,7 @@ import {
 } from "../helpers/transactionHelpers/adjustmentEntryHelper.js";
 import { transactionTypeToModelName } from "../helpers/transactionHelpers/transactionMappers.js";
 import CashBankLedgerModel from "../model/CashBankLedgerModel.js";
+import { lockFinancialYearFormat } from "../controller/companyController/companyController.js";
 // import { createFundTransactionAdjustmentEntry } from "../helpers/transactionHelpers/adjustmentEntryHelper.js";
 
 /**
@@ -39,7 +40,7 @@ import CashBankLedgerModel from "../model/CashBankLedgerModel.js";
  * @returns {Promise<Object>} Transaction result
  */
 export const createFundTransaction = async (data, session = null) => {
-  console.log("data", data);
+  
 
   // Determine if we need to manage session lifecycle
   const shouldManageSession = !session;
@@ -194,7 +195,10 @@ export const createFundTransaction = async (data, session = null) => {
       activeSession,
     );
 
-    console.log("shouldManageSession", shouldManageSession);
+    /// in the initial update lock the fy format if company is being updated
+    if (transactionData.company) {
+      await lockFinancialYearFormat(transactionData.company, activeSession);
+    }
 
     // Commit transaction if we manage the session
     if (shouldManageSession) {

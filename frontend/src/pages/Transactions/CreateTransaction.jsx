@@ -15,7 +15,7 @@ import { useSelector } from "react-redux";
 // Memoized components
 const TransactionHeader = React.memo(TransactionHeaderComponent);
 const TransactionAccountSelector = React.memo(
-  TransactionAccountSelectorComponent
+  TransactionAccountSelectorComponent,
 );
 
 ///
@@ -40,12 +40,13 @@ const CreateTransaction = () => {
     clickedItemInTable,
     handleItemClickInItemsTable,
     resetTransactionData,
+    setClickedItemInTable,
   } = useTransaction();
 
   //// get current transaction type from the url////
   const currentTransactionType = useMemo(
     () => getTransactionType(location),
-    [location]
+    [location],
   );
 
   ////  for adding transaction type to the transaction data when the component loads or when the transaction type changes////
@@ -61,14 +62,15 @@ const CreateTransaction = () => {
     };
   }, [resetTransactionData]);
 
-    const selectedCompanyFromStore = useSelector(
-      (state) => state.companyBranch?.selectedCompany
-    );
+  const selectedCompanyFromStore = useSelector(
+    (state) => state.companyBranch?.selectedCompany,
+  );
   const selectedBranchFromStore = useSelector(
-    (state) => state.companyBranch?.selectedBranch
+    (state) => state.companyBranch?.selectedBranch,
   );
 
   console.log("transactionData", transactionData);
+  // console.log(clickedItemInTable);
 
   return (
     <div className="h-[calc(100vh-110px)] w-full bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden relative">
@@ -84,7 +86,6 @@ const CreateTransaction = () => {
         currentTransactionType={currentTransactionType}
         date={transactionData.transactionDate}
         updateTransactionField={updateTransactionField}
-        
       />
 
       {/* Main Content */}
@@ -116,6 +117,7 @@ const CreateTransaction = () => {
               clickedItemInTable={clickedItemInTable}
               transactionType={transactionData?.transactionType}
               account={transactionData?.account}
+              setClickedItemInTable={setClickedItemInTable}
             />
           </div>
 

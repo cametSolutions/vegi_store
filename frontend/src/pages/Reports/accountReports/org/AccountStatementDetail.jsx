@@ -28,26 +28,47 @@ import DownloadButton from "@/components/DownloadButton/DownloadButton";
 import { useReportDownload } from "@/hooks/downloadHooks/account/useSummaryDownload";
 
 const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
+  const normalizeDateForInput = (dateValue) => {
+    if (!dateValue) return "";
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const dispatch = useDispatch();
 
   // 1. Get Filters from Redux
   const filters = useSelector((state) => state.filters);
+  const fy = useSelector((state) => state.fy);
   const { initiateDownload, isDownloading, progress, status } = useReportDownload();
 
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 20;
-  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.THIS_MONTH);
+  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.CUSTOM);
 
   // 2. Set Default Date Range
   useEffect(() => {
     if (!filters.startDate || !filters.endDate) {
-      const range = getDateRange(DATE_FILTERS.THIS_MONTH);
-      dispatch(setFilter({ key: "startDate", value: range.start }));
-      dispatch(setFilter({ key: "endDate", value: range.end }));
+      const fyStartDate = normalizeDateForInput(fy?.startDate);
+      const fyEndDate = normalizeDateForInput(fy?.endDate);
+
+      if (fyStartDate && fyEndDate) {
+        dispatch(setFilter({ key: "startDate", value: fyStartDate }));
+        dispatch(setFilter({ key: "endDate", value: fyEndDate }));
+        setDateFilter(DATE_FILTERS.CUSTOM);
+      } else {
+        const range = getDateRange(DATE_FILTERS.THIS_MONTH);
+        dispatch(setFilter({ key: "startDate", value: range.start }));
+        dispatch(setFilter({ key: "endDate", value: range.end }));
+        setDateFilter(DATE_FILTERS.THIS_MONTH);
+      }
     }
-  }, [filters.startDate, filters.endDate, dispatch]);
+  }, [filters.startDate, filters.endDate, fy?.startDate, fy?.endDate, dispatch]);
 
   // Reset page
   useEffect(() => {
@@ -377,7 +398,7 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                     <tfoot>
                       {/* 1. Total Dr/Cr Row - Fixed above the Closing Balance */}
                       {/* We use bottom-[45px] because the row below it is approx 45px tall */}
-                      <tr>
+                      {/* <tr>
                         <td
                           colSpan={2}
                           className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-600 uppercase tracking-tight border-r border-t-2 border-slate-300 bg-slate-50"
@@ -385,16 +406,16 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                           Total Amount
                         </td>
                         <td className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-700 font-mono tracking-tight border-r border-t-2 border-slate-300 bg-slate-50">
-                          {statementData.summary?.totalDebit > 0
-                            ? formatINR(statementData.summary.totalDebit)
+                          {statementData.summary?.totalDebit+statementData.openingBalance > 0
+                            ? formatINR(statementData.summary.totalDebit + statementData.openingBalance)
                             : "0.00"}
                         </td>
                         <td className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-700 font-mono tracking-tight border-t-2 border-slate-300 bg-slate-50">
-                          {statementData.summary?.totalCredit > 0
-                            ? formatINR(statementData.summary.totalCredit)
+                          {statementData.summary?.totalCredit+statementData.openingBalance > 0
+                            ? formatINR(statementData.summary.totalCredit + statementData.openingBalance)
                             : "0.00"}
                         </td>
-                      </tr>
+                      </tr> */}
 
                       {/* 2. Total Closing Balance Row - Fixed at the very bottom */}
                       <tr>

@@ -5,6 +5,7 @@ import { useDebounce } from "../../../hooks/useDebounce";
 import { accountMasterQueries } from "@/hooks/queries/accountMaster.queries";
 import { truncate } from "../../../../../shared/utils/string";
 import { NumericFormat } from "react-number-format";
+import { is } from "date-fns/locale";
 
 const CashTransactionAccountSelector = ({
   accountName,
@@ -34,12 +35,14 @@ const CashTransactionAccountSelector = ({
   // ============================================================================
   const [searchTerm, setSearchTerm] = useState(accountName || "");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   // ============================================================================
   // REFS
   // ============================================================================
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
+  const highlightedItemRef = useRef(null);
 
   // ============================================================================
   // COMPUTED VALUES
@@ -67,7 +70,7 @@ const CashTransactionAccountSelector = ({
       RESULT_LIMIT,
       {
         withOutstanding: true,
-      }
+      },
     ),
     enabled: isSearchEnabled,
     refetchOnWindowFocus: false,
@@ -100,7 +103,13 @@ const CashTransactionAccountSelector = ({
     if (closing !== closingBalanceAmount) {
       updateTransactionField("closingBalanceAmount", closing);
     }
-  }, [previousBalanceAmount, amount, transactionType, closingBalanceAmount, updateTransactionField]);
+  }, [
+    previousBalanceAmount,
+    amount,
+    transactionType,
+    closingBalanceAmount,
+    updateTransactionField,
+  ]);
 
   /**
    * Handle clicks outside dropdown to close it
@@ -136,6 +145,18 @@ const CashTransactionAccountSelector = ({
     };
   }, []);
 
+  // Reset highlighted index when accounts list changes
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [accounts]);
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightedItemRef.current) {
+      highlightedItemRef.current.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlightedIndex]);
+
   // ============================================================================
   // EVENT HANDLERS
   // ============================================================================
@@ -159,6 +180,36 @@ const CashTransactionAccountSelector = ({
       }
     }
   };
+
+  /**
+   * Handle keyboard navigation in dropdown
+   */
+  const handleKeyDown = useCallback(
+    (e) => {
+      if (!showDropdown || accounts.length === 0) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setHighlightedIndex((prev) =>
+          prev < accounts.length - 1 ? prev + 1 : 0,
+        );
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setHighlightedIndex((prev) =>
+          prev > 0 ? prev - 1 : accounts.length - 1,
+        );
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < accounts.length) {
+          handleSelectAccount(accounts[highlightedIndex]);
+        }
+      } else if (e.key === "Escape") {
+        setShowDropdown(false);
+        setHighlightedIndex(-1);
+      }
+    },
+    [showDropdown, accounts, highlightedIndex],
+  );
 
   /**
    * Handle account selection from dropdown
@@ -188,8 +239,9 @@ const CashTransactionAccountSelector = ({
       }
 
       setShowDropdown(false);
+      setHighlightedIndex(-1);
     },
-    [updateTransactionData, updateTransactionField, transactionType]
+    [updateTransactionData, updateTransactionField, transactionType],
   );
 
   /**
@@ -233,7 +285,7 @@ const CashTransactionAccountSelector = ({
         onAmountFieldClick();
       }
     },
-    [isEditMode, onAmountFieldClick]
+    [isEditMode, onAmountFieldClick],
   );
 
   // ============================================================================
@@ -305,11 +357,16 @@ const CashTransactionAccountSelector = ({
         )}
 
         {/* Account list */}
-        {accounts.map((account) => (
+        {accounts.map((account, index) => (
           <div
             key={account._id}
+            ref={index === highlightedIndex ? highlightedItemRef : null}
             onClick={() => handleSelectAccount(account)}
-            className="px-3 py-2 text-[11px] hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-b-0"
+            className={`px-3 py-2 text-[11px] cursor-pointer border-b border-slate-100 last:border-b-0 ${
+              index === highlightedIndex
+                ? "bg-blue-100 text-blue-800"
+                : "hover:bg-blue-50"
+            }`}
           >
             <div className="font-medium text-slate-700">
               {truncate(account.accountName, TRUNCATE_LENGTH)}
@@ -344,8 +401,10 @@ const CashTransactionAccountSelector = ({
               type="text"
               name="accountName"
               value={searchTerm}
+              disabled={isEditMode}
               onChange={handleInputChange}
               onFocus={handleInputFocus}
+              onKeyDown={handleKeyDown}
               placeholder="Search account name"
               className="w-full px-2 py-1.5 pr-7 border border-gray-300 text-[11px] bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
               autoComplete="off"
@@ -411,13 +470,21 @@ const CashTransactionAccountSelector = ({
                 value={amount || ""}
                 onValueChange={(values) => {
                   if (!isEditMode) {
-                    updateTransactionField("amount", values.floatValue);
+                    const entered = values.floatValue ?? 0;
+                    const max = Math.abs(previousBalanceAmount) || 0;
+                    const capped = entered > max ? max : entered;
+                    updateTransactionField("amount", capped);
                   }
                 }}
                 onClick={handleAmountClick}
                 placeholder="0"
                 readOnly={isEditMode}
                 allowNegative={false}
+                isAllowed={(values) => {
+                  const { floatValue } = values;
+                  const max = Math.abs(previousBalanceAmount) || 0;
+                  return floatValue === undefined || floatValue <= max;
+                }}
                 className={`w-full px-2 py-1.5 border border-gray-300 text-[11px] text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent ${
                   isEditMode
                     ? "bg-slate-50 cursor-pointer hover:bg-slate-100"

@@ -27,6 +27,16 @@ import { useReportDownload } from "@/hooks/downloadHooks/item/useItemSummaryDown
 import DownloadButton from "@/components/DownloadButton/DownloadButton";
 
 const StockRegister = () => {
+  const normalizeDateForInput = (dateValue) => {
+    if (!dateValue) return "";
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const dispatch = useDispatch();
 
   const companyId = useSelector(
@@ -36,9 +46,10 @@ const StockRegister = () => {
     (state) => state.companyBranch?.selectedBranch._id
   );
   const filters = useSelector((state) => state.filters);
+  const fy = useSelector((state) => state.fy);
 
   // Local state
-  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.THIS_MONTH);
+  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.CUSTOM);
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const limit = 20;
@@ -52,11 +63,28 @@ const StockRegister = () => {
 
     // Default Date Range
     if (!filters.startDate || !filters.endDate) {
-      const range = getDateRange(DATE_FILTERS.THIS_MONTH);
-      dispatch(setFilter({ key: "startDate", value: range.start }));
-      dispatch(setFilter({ key: "endDate", value: range.end }));
+      const fyStartDate = normalizeDateForInput(fy?.startDate);
+      const fyEndDate = normalizeDateForInput(fy?.endDate);
+
+      if (fyStartDate && fyEndDate) {
+        dispatch(setFilter({ key: "startDate", value: fyStartDate }));
+        dispatch(setFilter({ key: "endDate", value: fyEndDate }));
+        setDateFilter(DATE_FILTERS.CUSTOM);
+      } else {
+        const range = getDateRange(DATE_FILTERS.THIS_MONTH);
+        dispatch(setFilter({ key: "startDate", value: range.start }));
+        dispatch(setFilter({ key: "endDate", value: range.end }));
+        setDateFilter(DATE_FILTERS.THIS_MONTH);
+      }
     }
-  }, [filters.transactionType, filters.startDate, filters.endDate, dispatch]);
+  }, [
+    filters.transactionType,
+    filters.startDate,
+    filters.endDate,
+    fy?.startDate,
+    fy?.endDate,
+    dispatch,
+  ]);
 
   const debouncedSearchTerm = useDebounce(search, 500);
 
@@ -220,7 +248,7 @@ const StockRegister = () => {
               <div className="flex-1 overflow-y-auto custom-scrollbar relative">
                 <table className="w-full table-fixed border-collapse">
                   <TableColGroup />
-                  <thead>
+                  <thead className="">
                     {/* 
                        Complex Header with RowSpans 
                        Sticky positioning requires z-index management
@@ -273,22 +301,22 @@ const StockRegister = () => {
                       {/* Grouped Header (ColSpan 3) */}
                       <th
                         colSpan={3}
-                        className="sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold text-slate-700 uppercase tracking-wider border-b border-slate-300 bg-indigo-50/50"
+                        className="sticky top-0 z-30 py-1.5 text-center text-[11px] font-bold text-slate-700 uppercase tracking-wider border-b-2 border-slate-300 bg-indigo-50"
                       >
                         Closing Balance
                       </th>
                     </tr>
 
                     {/* Sub-Header Row */}
-                    <tr className="border-b border-slate-300">
+                    <tr className="border-b border-slate-300 z-50">
                       {/* These columns are pushed by rowSpan above, so we only define the Closing sub-cols */}
-                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-indigo-50/30 border-l border-slate-300">
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-indigo-50 border-l ">
                         Quantity
                       </th>
-                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-indigo-50/30">
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase border-r border-slate-300 bg-indigo-50">
                         Rate
                       </th>
-                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-indigo-50/30">
+                      <th className="sticky top-[29px] z-20 px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase bg-indigo-50">
                         Amount
                       </th>
                     </tr>

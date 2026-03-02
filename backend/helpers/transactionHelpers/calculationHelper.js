@@ -17,6 +17,33 @@ export const calculateTaxableAmount = (items) => {
   }, 0);
 };
 
+/// to manage same item adding multiple times in transaction, we can aggregate them by item id and sum up quantity and amount
+const aggregateItemsByItemId = (items) => {
+  const map = new Map();
+
+  for (const item of items) {
+    const id = item.item.toString();
+
+    if (!map.has(id)) {
+      map.set(id, {
+        item: item.item,
+        itemName: item.itemName,
+        itemCode: item.itemCode,
+        unit: item.unit,
+
+        quantity: Number(item.quantity),
+        amount: Number(item.baseAmount || 0),
+      });
+    } else {
+      const existing = map.get(id);
+      existing.quantity += Number(item.quantity);
+      existing.amount += Number(item.baseAmount || 0);
+    }
+  }
+
+  return map;
+};
+
 /**
  * Calculate tax amount
  */
@@ -34,7 +61,11 @@ export const calculateAmountAfterTax = (subtotal, taxAmount) => {
 /**
  * Calculate discount amount (percentage or fixed)
  */
-export const calculateDiscountAmount = (amount, discount, isPercentage = false) => {
+export const calculateDiscountAmount = (
+  amount,
+  discount,
+  isPercentage = false,
+) => {
   if (isPercentage) {
     return (amount * discount) / 100;
   }
@@ -75,9 +106,7 @@ export const calculateTransactionDeltas = (original, updated) => {
   // Amount delta
   const netAmountDelta = updated.netAmount - original.netAmount;
 
-  console.log("updated.netAmount", updated.netAmount);
-  console.log("original.netAmount", original.netAmount);
-  
+
 
   // Account changed?
   const accountChanged =
@@ -110,51 +139,83 @@ export const calculateTransactionDeltas = (original, updated) => {
 export const calculateStockDeltas = (originalItems, updatedItems) => {
   const deltas = [];
 
-  const originalMap = new Map(
-    originalItems.map((item) => [item.item.toString(), item])
-  );
-  const updatedMap = new Map(
-    updatedItems.map((item) => [item.item.toString(), item])
-  );
+  // 🔥 Aggregate duplicates by itemId using weighted average
+  const aggregate = (items) => {
+    const map = new Map();
 
-  // 1) Items in updated (new or changed)
-  updatedItems.forEach((updatedItem) => {
-    const itemId = updatedItem.item.toString();
+    items.forEach((item) => {
+      const itemId = item.item.toString();
+
+      const qty = Number(item.quantity);
+      const amount = Number(item.baseAmount || qty * item.rate);
+
+      if (!map.has(itemId)) {
+        map.set(itemId, {
+          item: item.item,
+          itemName: item.itemName,
+          itemCode: item.itemCode,
+          unit: item.unit,
+
+          quantity: qty,
+          totalAmount: amount,
+        });
+      } else {
+        const existing = map.get(itemId);
+        existing.quantity += qty;
+        existing.totalAmount += amount;
+      }
+    });
+
+    // Convert totalAmount → avgRate
+    map.forEach((v) => {
+      v.rate =
+        v.quantity > 0
+          ? Number((v.totalAmount / v.quantity))
+          : 0;
+    });
+
+    return map;
+  };
+
+  const originalMap = aggregate(originalItems);
+  const updatedMap = aggregate(updatedItems);
+
+  // 1) New & Changed
+  updatedMap.forEach((updatedItem, itemId) => {
     const originalItem = originalMap.get(itemId);
 
     if (!originalItem) {
-      // NEW item
       deltas.push({
         item: updatedItem.item,
         itemName: updatedItem.itemName,
         itemCode: updatedItem.itemCode,
         unit: updatedItem.unit,
 
-        // stock movement
         quantityDelta: updatedItem.quantity,
         isNew: true,
         isRemoved: false,
 
-        // rate/amount side
         oldRate: 0,
         newRate: updatedItem.rate,
-        rateDelta: updatedItem.rate, // mainly for info
+        rateDelta: updatedItem.rate,
 
-        // helpful classification
         changeType: "added",
       });
     } else {
-      const quantityDelta = updatedItem.quantity - originalItem.quantity;
-      const rateDelta = updatedItem.rate - originalItem.rate;
+      const quantityDelta =
+        updatedItem.quantity - originalItem.quantity;
 
-      // Only push if something actually changed
+      const rateDelta =
+        updatedItem.rate - originalItem.rate;
+
       if (quantityDelta !== 0 || rateDelta !== 0) {
         let changeType = null;
+
         if (quantityDelta !== 0 && rateDelta !== 0) {
           changeType = "quantity_and_rate_changed";
         } else if (quantityDelta !== 0) {
           changeType = "quantity_changed";
-        } else if (rateDelta !== 0) {
+        } else {
           changeType = "rate_changed";
         }
 
@@ -181,9 +242,8 @@ export const calculateStockDeltas = (originalItems, updatedItems) => {
     }
   });
 
-  // 2) Items removed (in original but not in updated)
-  originalItems.forEach((originalItem) => {
-    const itemId = originalItem.item.toString();
+  // 2) Removed
+  originalMap.forEach((originalItem, itemId) => {
     if (!updatedMap.has(itemId)) {
       deltas.push({
         item: originalItem.item,
@@ -200,7 +260,7 @@ export const calculateStockDeltas = (originalItems, updatedItems) => {
 
         oldRate: originalItem.rate,
         newRate: 0,
-        rateDelta: -originalItem.rate, // just informational
+        rateDelta: -originalItem.rate,
 
         changeType: "removed",
       });
@@ -209,6 +269,7 @@ export const calculateStockDeltas = (originalItems, updatedItems) => {
 
   return deltas;
 };
+
 
 
 /**
@@ -226,7 +287,10 @@ export const calculateFundTransactionDeltas = (originalTx, updateData) => {
   };
 
   // Check amount change
-  if (updateData.amount !== undefined && updateData.amount !== originalTx.amount) {
+  if (
+    updateData.amount !== undefined &&
+    updateData.amount !== originalTx.amount
+  ) {
     deltas.amountChanged = true;
     deltas.amountDelta = updateData.amount - originalTx.amount;
     deltas.newAmount = updateData.amount;
@@ -260,5 +324,3 @@ export const calculateFundTransactionDeltas = (originalTx, updateData) => {
 
   return deltas;
 };
-
-

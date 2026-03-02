@@ -271,7 +271,7 @@ AccountMasterSchema.statics.searchAccounts = async function (
                   $and: [
                     { $eq: ["$account", "$$accountId"] },
                     { $eq: ["$company", companyObjId] },
-                    { $eq: ["$branch", branchObjId] },
+                    // { $eq: ["$branch", branchObjId] },
                   ],
                 },
               },

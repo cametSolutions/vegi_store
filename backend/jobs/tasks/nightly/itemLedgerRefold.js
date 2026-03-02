@@ -204,6 +204,7 @@ export const findDirtyItems = async () => {
   // Query all monthly balance records that need recalculation
   const dirtyRecords = await ItemMonthlyBalance.find({
     needsRecalculation: true,
+
   })
     .select("item branch year month itemName itemCode") // Include branch
     .lean(); // Return plain JS objects (faster)
@@ -597,7 +598,7 @@ export const refoldMonth = async (
           baseAmount: update.baseAmount,
           taxAmount: update.taxAmount,
           amountAfterTax: update.amountAfterTax,
-          rate: update.rate,
+          rate: update.amountAfterTax / Math.abs(update.quantity || 1), // Recalculate rate based on new amount and quantity
           account: update.account,
           accountName: update.accountName,
         },
@@ -699,23 +700,32 @@ function buildAdjustmentDeltaMap(adjustments, itemId) {
   adjustments.forEach((adjustment) => {
     const txId = adjustment.originalTransaction.toString();
 
-    // Check for itemAdjustments for quantity/rate changes for this item
-    const itemAdjustment = adjustment.itemAdjustments
-      ? adjustment.itemAdjustments.find((ia) => ia.item.toString() === itemId)
-      : null;
+    const itemAdjustments = adjustment.itemAdjustments
+      ? adjustment.itemAdjustments.filter(
+          (ia) => ia.item.toString() === itemId
+        )
+      : [];
 
-    if (itemAdjustment && itemAdjustment.quantityDelta) {
-      if (!deltaMap.quantityDeltaMap[txId]) {
-        deltaMap.quantityDeltaMap[txId] = 0;
-      }
-      deltaMap.quantityDeltaMap[txId] += itemAdjustment.quantityDelta;
+    if (itemAdjustments.length > 0) {
+      itemAdjustments.forEach((ia) => {
+
+        if (typeof ia.quantityDelta === "number") {
+          if (!deltaMap.quantityDeltaMap[txId]) {
+            deltaMap.quantityDeltaMap[txId] = 0;
+          }
+          deltaMap.quantityDeltaMap[txId] += ia.quantityDelta;
+        }
+
+        if (typeof ia.rateDelta === "number") {
+          if (!deltaMap.rateDeltaMap[txId]) {
+            deltaMap.rateDeltaMap[txId] = 0;
+          }
+          deltaMap.rateDeltaMap[txId] += ia.rateDelta;
+        }
+      });
     }
 
-    if (itemAdjustment && typeof itemAdjustment.rateDelta === "number") {
-      deltaMap.rateDeltaMap[txId] = itemAdjustment.rateDelta;
-    }
-
-    // ALWAYS track account change if present, even if no itemAdjustments!
+    // Account change
     if (adjustment.newAccount) {
       deltaMap.accountMap[txId] = adjustment.newAccount;
     }
@@ -726,3 +736,4 @@ function buildAdjustmentDeltaMap(adjustments, itemId) {
 
   return deltaMap;
 }
+

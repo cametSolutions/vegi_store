@@ -17,13 +17,13 @@ const TransactionList = ({ onEditTransaction, selectedTransaction }) => {
   const location = useLocation();
   const currentTransactionType = useMemo(
     () => getTransactionType(location),
-    [location]
+    [location],
   );
   const companyId = useSelector(
-    (state) => state.companyBranch?.selectedCompany?._id
+    (state) => state.companyBranch?.selectedCompany?._id,
   );
   const branchId = useSelector(
-    (state) => state.companyBranch?.selectedBranch?._id
+    (state) => state.companyBranch?.selectedBranch?._id,
   );
 
   const DEBOUNCE_DELAY = 500;
@@ -41,6 +41,17 @@ const TransactionList = ({ onEditTransaction, selectedTransaction }) => {
   } = useTransactionListActions();
 
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY);
+  const todayRange = useMemo(() => {
+    const now = new Date();
+
+    const startDate = new Date(now);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(now);
+    endDate.setHours(23, 59, 59, 999);
+
+    return { startDate, endDate };
+  }, []);
 
   const {
     data,
@@ -60,8 +71,10 @@ const TransactionList = ({ onEditTransaction, selectedTransaction }) => {
       30, // pageSize
       "transactionDate", /// sort by date
       "desc", // sortOrder  for MongoDB
-      { refetchOnWindowFocus: false, retry: 2 }
-    )
+      todayRange.startDate, // ✅ ADD: Pass start date
+      todayRange.endDate, // ✅ ADD: Pass end date
+      { refetchOnWindowFocus: false, retry: 2 },
+    ),
   );
   const allTransactions = useMemo(() => {
     if (!data?.pages) return [];
@@ -96,8 +109,6 @@ const TransactionList = ({ onEditTransaction, selectedTransaction }) => {
           isFetchingNextPage={isFetchingNextPage}
           onEditTransaction={onEditTransaction} // Pass to ListTable
           editTransactionId={selectedTransaction?._id}
-      
-    
         />
       </div>
 

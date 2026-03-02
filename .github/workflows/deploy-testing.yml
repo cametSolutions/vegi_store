@@ -1,0 +1,30 @@
+name: Deploy Testing Branch
+
+on:
+  push:
+    branches:
+      - testing
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 89.116.21.238
+          username: root
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          script: |
+            cd /root/vegi_store_testing
+            git pull origin testing
+            source ~/.nvm/nvm.sh
+            nvm use 22.12.0
+            cd frontend
+            npm install
+            npm run build:test
+            cd ../backend
+            npm install
+            pm2 restart vegetable-billing-api-test
+            pm2 restart report-worker-test

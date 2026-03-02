@@ -60,12 +60,14 @@ const TransactionAccountSelector = ({
   const [searchTerm, setSearchTerm] = useState(accountName || "");
   const [showDropdown, setShowDropdown] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   // ============================================================================
   // REFS
   // ============================================================================
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
+  const highlightedItemRef = useRef(null);
 
   // ============================================================================
   // COMPUTED VALUES
@@ -159,6 +161,18 @@ const TransactionAccountSelector = ({
     setSearchTerm(accountName || "");
   }, [accountName]);
 
+  // Reset highlighted index when accounts list changes
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [accounts]);
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightedItemRef.current) {
+      highlightedItemRef.current.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlightedIndex]);
+
   /**
    * Set initial price level when price levels are fetched
    */
@@ -248,15 +262,6 @@ const TransactionAccountSelector = ({
    * Handle search input changes
    * Clears selected account when user types
    */
-  // const handleInputChange = useCallback(
-  //   (e) => {
-  //     const value = e.target.value;
-  //     setSearchTerm(value);
-  //     setShowDropdown(true);
-  //   },
-  //   [updateTransactionData]
-  // );
-
   const handleInputChange = (e) => {
     if (settlementCount > 0) {
       setShowWarning(true);
@@ -266,6 +271,36 @@ const TransactionAccountSelector = ({
     setSearchTerm(value);
     setShowDropdown(true);
   };
+
+  /**
+   * Handle keyboard navigation in dropdown
+   */
+  const handleKeyDown = useCallback(
+    (e) => {
+      if (!showDropdown || accounts.length === 0) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setHighlightedIndex((prev) =>
+          prev < accounts.length - 1 ? prev + 1 : 0,
+        );
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setHighlightedIndex((prev) =>
+          prev > 0 ? prev - 1 : accounts.length - 1,
+        );
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < accounts.length) {
+          handleSelectAccount(accounts[highlightedIndex]);
+        }
+      } else if (e.key === "Escape") {
+        setShowDropdown(false);
+        setHighlightedIndex(-1);
+      }
+    },
+    [showDropdown, accounts, highlightedIndex],
+  );
 
   /**
    * Handle account selection from dropdown
@@ -305,6 +340,7 @@ const TransactionAccountSelector = ({
       });
 
       setShowDropdown(false);
+      setHighlightedIndex(-1);
     },
     [updateTransactionData, priceLevels, priceLevel, priceLevelName],
   );
@@ -338,7 +374,7 @@ const TransactionAccountSelector = ({
       });
       setSearchTerm("");
     },
-    [updateTransactionData,settlementCount],
+    [updateTransactionData, settlementCount],
   );
 
   /**
@@ -460,11 +496,16 @@ const TransactionAccountSelector = ({
         )}
 
         {/* Account list */}
-        {accounts.map((account) => (
+        {accounts.map((account, index) => (
           <div
             key={account._id}
+            ref={index === highlightedIndex ? highlightedItemRef : null}
             onClick={() => handleSelectAccount(account)}
-            className="px-3 py-2 text-[11px] hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-b-0"
+            className={`px-3 py-2 text-[11px] cursor-pointer border-b border-slate-100 last:border-b-0 ${
+              index === highlightedIndex
+                ? "bg-blue-100 text-blue-800"
+                : "hover:bg-blue-50"
+            }`}
           >
             <div className="font-medium text-slate-700">
               {truncate(account.accountName, TRUNCATE_LENGTH)}
@@ -547,6 +588,7 @@ const TransactionAccountSelector = ({
               value={searchTerm}
               onChange={handleInputChange}
               onFocus={handleInputFocus}
+              onKeyDown={handleKeyDown}
               disabled={accountType === "cash"}
               placeholder={`Search ${partyLabel.toLowerCase()} name`}
               className={`  ${accountType === "cash" ? "bg-slate-200" : ""}   w-full px-2 py-1 pr-7 border border-slate-300 rounded-xs text-[11px] focus:ring-1 focus:ring-blue-500`}

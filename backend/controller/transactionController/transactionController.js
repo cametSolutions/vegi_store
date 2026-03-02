@@ -41,10 +41,25 @@ import { validateAccountChangeOnEdit } from "../../helpers/FundTransactionHelper
 import { reverseOutstandingSettlements } from "../../helpers/FundTransactionHelper/OutstandingSettlementHelper.js";
 import CashBankLedgerModel from "../../model/CashBankLedgerModel.js";
 import AdjustmentEntryModel from "../../model/AdjustmentEntryModel.js";
+import {
+  lockFinancialYearFormat,
+  unlockFinancialYearFormatIfNoTransactions,
+} from "../companyController/companyController.js";
+import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
+import PriceLevelModel from "../../model/masters/PricelevelModel.js";
+
+const toId = (value) => {
+  if (!value) return "";
+  if (typeof value === "object")
+    return value?._id?.toString?.() || value.toString();
+  return value.toString();
+};
 
 /**
  * get transactions (handles sales, purchase, sales_return, purchase_return)
  */
+
+
 
 export const getTransactions = async (req, res) => {
   try {
@@ -60,17 +75,17 @@ export const getTransactions = async (req, res) => {
 
     const transactionModel = getTransactionModel(transactionType);
 
-    // Get query parameters
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const searchTerm = req.query.searchTerm || "";
-    const companyId = req.query.companyId;
-    const branchId = req.query.branchId;
-    const sortBy = req.query.sortBy || "transactionDate";
-    const sortOrder = req.query.sortOrder || "desc";
-
-    const startDate = req.query.startDate;
-    const endDate = req.query.endDate;
+    const {
+      page = 1,
+      limit = 20,
+      searchTerm = "",
+      companyId,
+      branchId,
+      sortBy = "transactionDate",
+      sortOrder = "desc",
+      startDate,
+      endDate,
+    } = req.query;
 
     // Convert 'desc' to -1, 'asc' to 1
     const sortDirection = sortOrder === "desc" ? -1 : 1;
@@ -92,12 +107,12 @@ export const getTransactions = async (req, res) => {
     if (companyId) filter.company = companyId;
     if (branchId) filter.branch = branchId;
 
-    // if (startDate && endDate) {
-    //   filter.transactionDate = {
-    //     $gte: new Date(startDate),
-    //     $lte: new Date(endDate),
-    //   };
-    // }
+    if (startDate && endDate) {
+      filter.transactionDate = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
+    }
 
     // Use the static method for pagination
     const result = await transactionModel.getPaginatedTransactions(
@@ -194,8 +209,6 @@ export const createTransaction = async (req, res) => {
 
       const { previousBalanceAmount, netAmount, paidAmount } = transactionData;
 
-      console.log("transactionData", transactionData);
-
       const totalAmountForReceipt = netAmount + previousBalanceAmount;
       const closingBalanceAmountForReceipt = totalAmountForReceipt - paidAmount;
 
@@ -222,14 +235,15 @@ export const createTransaction = async (req, res) => {
       );
     }
 
+    /// in the initial update lock the fy format if company is being updated
+    if (req.body.company) {
+      await lockFinancialYearFormat(transactionData.company, session);
+    }
+
     // Commit transaction
     await session.commitTransaction();
 
-    // Query using the same session
-    // const receiptInTransaction = await getTransactionModel("receipt").findById(
-    //   receiptResult.transaction._id
-    // ).session(session);
-    // console.log("Receipt visible in transaction:", receiptInTransaction);
+
 
     // Send success response
     res.status(201).json({
@@ -444,12 +458,14 @@ export const editTransaction = async (req, res) => {
       });
     }
 
+
+
     // ========================================
     // STEP 2: Calculate Deltas (Differences)
     // ========================================
     const deltas = calculateTransactionDeltas(originalTransaction, updatedData);
 
-    // console.log("deltas", deltas);
+    // console.log("");
 
     // ========================================
     // STEP 3: Update Stock with Delta Only
@@ -459,7 +475,7 @@ export const editTransaction = async (req, res) => {
         deltas.stockDelta,
         originalTransaction.branch,
         session,
-        originalTransaction.transactionType
+        originalTransaction.transactionType,
       );
     }
 
@@ -786,6 +802,13 @@ export const deleteTransaction = async (req, res) => {
       transaction, // updated (same)
       session,
       true, // forceRecalculate = true
+    );
+
+    // 🔓 Auto-unlock if last transaction
+    await unlockFinancialYearFormatIfNoTransactions(
+      company,
+      session,
+      transactionId,
     );
 
     await session.commitTransaction();

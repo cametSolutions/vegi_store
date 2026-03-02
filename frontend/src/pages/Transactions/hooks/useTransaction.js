@@ -5,11 +5,12 @@ import {
   calculateTransactionTotals,
   recalculateTransactionOnPriceLevelChange,
 } from "../utils/transactionUtils";
+import { set } from "zod";
 
 /**
  * Custom hook for managing transaction state and operations
  * Handles transaction data, items, calculations, and user interactions
- * 
+ *
  * @param {Object} initialData - Optional initial transaction data
  * @returns {Object} Transaction state and handler functions
  */
@@ -17,9 +18,9 @@ export const useTransaction = (initialData = null) => {
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
-  
+
   const [transactionData, setTransactionData] = useState(
-    initialData || createEmptyTransaction()
+    initialData || createEmptyTransaction(),
   );
 
   const [newItem, setNewItem] = useState({
@@ -32,10 +33,13 @@ export const useTransaction = (initialData = null) => {
 
   const [clickedItemInTable, setClickedItemInTable] = useState(null);
 
+  console.log("clickedItemInTable:", clickedItemInTable);
+  
+
   // ============================================================================
   // REFS FOR TRACKING COMPONENT LIFECYCLE & USER ACTIONS
   // ============================================================================
-  
+
   /**
    * Tracks if price level recalculation should be enabled
    * Starts as false, becomes true after initial data load completes
@@ -51,11 +55,15 @@ export const useTransaction = (initialData = null) => {
   // ITEM MANAGEMENT HANDLERS
   // ============================================================================
 
-  const handleItemClickInItemsTable = useCallback((item) => {
-    setClickedItemInTable(item);
+  const handleItemClickInItemsTable = useCallback((index) => {
+    console.log("Clicked item in table:", index);
+
+    setClickedItemInTable(index ?? null);
   }, []);
 
-  const addItem = (items, newItem) => {
+  const addItem = (items, newItem, index = null) => {
+    console.log(index);
+
     const quantity = parseFloat(newItem.quantity) || 0;
     const rate = parseFloat(newItem.rate) || 0;
     const baseAmount = quantity * rate;
@@ -69,17 +77,30 @@ export const useTransaction = (initialData = null) => {
       amountAfterTax: amountAfterTax.toString(),
     };
 
-    const existingItemIndex = items.findIndex(
-      (item) => item?.item === normalizedItem?.item
-    );
+    // const existingItemIndex = items.findIndex(
+    //   (item) => item?.item === normalizedItem?.item,
+    // );
 
-    if (existingItemIndex !== -1) {
+    // if (existingItemIndex !== -1) {
+    //   const updatedItems = [...items];
+    //   updatedItems.splice(existingItemIndex, 1);
+    //   // add updated item at the same index
+    //   return [...updatedItems, normalizedItem];
+    // } else {
+    //   // add to end
+
+    /// index is present update at index else add to end
+    if (index !== null) {
       const updatedItems = [...items];
-      updatedItems.splice(existingItemIndex, 1);
-      return [normalizedItem, ...updatedItems];
+      updatedItems.splice(index, 1, normalizedItem);
+      setClickedItemInTable(null);
+      return updatedItems;
     } else {
-      return [normalizedItem, ...items];
+      setClickedItemInTable(null);
+      return [...items, normalizedItem];
     }
+
+    // }
   };
 
   const updateItemQuantity = useCallback((index, qty) => {
@@ -88,7 +109,7 @@ export const useTransaction = (initialData = null) => {
       items: prev.items.map((item, i) =>
         i === index
           ? { ...item, qty, amount: calculateItemAmount(qty, item.rate) }
-          : item
+          : item,
       ),
     }));
   }, []);
@@ -131,12 +152,12 @@ export const useTransaction = (initialData = null) => {
 
   const handleDiscountChange = useCallback(
     (discount) => updateTransactionField("discount", discount),
-    [updateTransactionField]
+    [updateTransactionField],
   );
 
   const handlePaidAmountChange = useCallback(
     (paidAmount) => updateTransactionField("paidAmount", paidAmount),
-    [updateTransactionField]
+    [updateTransactionField],
   );
 
   // ============================================================================
@@ -150,11 +171,11 @@ export const useTransaction = (initialData = null) => {
 
   const resetTransactionData = useCallback((transactionType) => {
     console.log("Resetting transaction data for type:", transactionType);
-    
+
     // Reset tracking refs
     isPriceLevelRecalcEnabled.current = false;
     previousPriceLevel.current = null;
-    
+
     setTransactionData({
       ...createEmptyTransaction(),
       transactionType,
@@ -185,7 +206,7 @@ export const useTransaction = (initialData = null) => {
    * This happens when:
    * 1. In create mode: after initial empty transaction setup
    * 2. In edit mode: after fetched transaction data is populated
-   * 
+   *
    * We detect completion by checking if account is set (data is loaded)
    * Use a small delay to ensure all state updates are complete
    */
@@ -209,7 +230,11 @@ export const useTransaction = (initialData = null) => {
 
       return () => clearTimeout(timer);
     }
-  }, [transactionData.isEditMode, transactionData.account, transactionData.priceLevel]);
+  }, [
+    transactionData.isEditMode,
+    transactionData.account,
+    transactionData.priceLevel,
+  ]);
 
   // ============================================================================
   // PRICE LEVEL RECALCULATION (ONLY AFTER INITIALIZATION)
@@ -217,14 +242,14 @@ export const useTransaction = (initialData = null) => {
 
   /**
    * Recalculate item rates when price level changes
-   * 
+   *
    * CRITICAL: Only runs after isPriceLevelRecalcEnabled is true
-   * 
+   *
    * FLOW:
    * 1. Component mounts → isPriceLevelRecalcEnabled = false
    * 2. Data loads (create or edit) → isPriceLevelRecalcEnabled = true
    * 3. User changes price level → Recalculate ✅
-   * 
+   *
    * This prevents recalculation during initial data population
    */
   useEffect(() => {
@@ -235,17 +260,22 @@ export const useTransaction = (initialData = null) => {
     }
 
     const currentPriceLevel = transactionData.priceLevel;
-    
+
     // Check if price level actually changed
     if (previousPriceLevel.current !== currentPriceLevel) {
-      console.log("🔄 Price level changed:", previousPriceLevel.current, "→", currentPriceLevel);
-      
+      console.log(
+        "🔄 Price level changed:",
+        previousPriceLevel.current,
+        "→",
+        currentPriceLevel,
+      );
+
       // Update the reference
       previousPriceLevel.current = currentPriceLevel;
-      
+
       // ✅ Recalculate rates
       setTransactionData((prev) =>
-        recalculateTransactionOnPriceLevelChange(prev)
+        recalculateTransactionOnPriceLevelChange(prev),
       );
     }
   }, [transactionData.priceLevel]);
@@ -259,26 +289,27 @@ export const useTransaction = (initialData = null) => {
     transactionData,
     newItem,
     clickedItemInTable,
-    
+    setClickedItemInTable,
+
     // Transaction data updates
     updateTransactionData,
     updateTransactionField,
     setTransactionData,
-    
+
     // Item form updates
     updateNewItem,
     selectProduct,
-    
+
     // Item operations
     addItem,
     updateItemQuantity,
     removeItem,
     handleItemClickInItemsTable,
-    
+
     // Payment & discount
     handleDiscountChange,
     handlePaidAmountChange,
-    
+
     // Reset & clear
     clearForm,
     resetTransactionData,

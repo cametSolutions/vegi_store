@@ -29,14 +29,25 @@ import DownloadButton from "@/components/DownloadButton/DownloadButton";
 import { useReportDownload } from "@/hooks/downloadHooks/item/useItemSummaryDownload";
 
 const ItemSummaryPage = () => {
+  const normalizeDateForInput = (dateValue) => {
+    if (!dateValue) return "";
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const dispatch = useDispatch();
 
   const companyId = useSelector((state) => state.companyBranch?.selectedCompany._id);
   const branchId = useSelector((state) => state.companyBranch?.selectedBranch._id);
   const filters = useSelector((state) => state.filters);
+  const fy = useSelector((state) => state.fy);
 
   // Local state
-  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.THIS_MONTH);
+  const [dateFilter, setDateFilter] = useState(DATE_FILTERS.CUSTOM);
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const limit = 20;
@@ -50,11 +61,28 @@ const ItemSummaryPage = () => {
       dispatch(setFilter({ key: "transactionType", value: "sale" }));
     }
     if (!filters.startDate || !filters.endDate) {
-      const range = getDateRange(DATE_FILTERS.THIS_MONTH);
-      dispatch(setFilter({ key: "startDate", value: range.start }));
-      dispatch(setFilter({ key: "endDate", value: range.end }));
+      const fyStartDate = normalizeDateForInput(fy?.startDate);
+      const fyEndDate = normalizeDateForInput(fy?.endDate);
+
+      if (fyStartDate && fyEndDate) {
+        dispatch(setFilter({ key: "startDate", value: fyStartDate }));
+        dispatch(setFilter({ key: "endDate", value: fyEndDate }));
+        setDateFilter(DATE_FILTERS.CUSTOM);
+      } else {
+        const range = getDateRange(DATE_FILTERS.THIS_MONTH);
+        dispatch(setFilter({ key: "startDate", value: range.start }));
+        dispatch(setFilter({ key: "endDate", value: range.end }));
+        setDateFilter(DATE_FILTERS.THIS_MONTH);
+      }
     }
-  }, [filters.transactionType, filters.startDate, filters.endDate, dispatch]);
+  }, [
+    filters.transactionType,
+    filters.startDate,
+    filters.endDate,
+    fy?.startDate,
+    fy?.endDate,
+    dispatch,
+  ]);
 
   const transactionType = filters.transactionType || "sale";
   const debouncedSearchTerm = useDebounce(search, 500);

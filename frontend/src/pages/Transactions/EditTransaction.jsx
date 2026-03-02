@@ -49,6 +49,7 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit ,fromPath}) => 
     clickedItemInTable,
     handleItemClickInItemsTable,
     resetTransactionData,
+    setClickedItemInTable,
   } = useTransaction();
   const dispatch = useDispatch();
 
@@ -185,6 +186,8 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit ,fromPath}) => 
               clickedItemInTable={clickedItemInTable}
               transactionType={transactionData?.transactionType}
               account={transactionData?.account}
+              setClickedItemInTable={setClickedItemInTable}
+
 
             />
           </div>

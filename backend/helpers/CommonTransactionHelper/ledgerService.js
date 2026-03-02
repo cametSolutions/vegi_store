@@ -35,6 +35,10 @@ export const createAccountLedger = async (data, session) => {
       session
     );
 
+    // console.log("last Balance",lastBalance);
+    // console.log("ledgerSide",ledgerSide);
+    
+
     // Calculate new running balance
     let runningBalance;
     if (ledgerSide === "debit") {
@@ -44,6 +48,9 @@ export const createAccountLedger = async (data, session) => {
     } else {
       throw new Error(`Invalid ledger side: ${ledgerSide}`);
     }
+
+    // console.log("runningBalance",runningBalance);
+    
 
     // Create ledger entry
     const ledgerEntry = await AccountLedger.create(
@@ -90,65 +97,126 @@ export const createItemLedgers = async (data, session) => {
       transactionNumber,
       transactionDate,
       transactionType,
-      movementType, // "in" or "out"
+      movementType,
       account,
       accountName,
       createdBy,
     } = data;
 
+    /**
+     * STEP 1
+     * Convert mongoose subdocuments to plain objects
+     */
+    const plainItems = items.map((item) =>
+      typeof item.toObject === "function" ? item.toObject() : item
+    );
+
+    /**
+     * STEP 2
+     * Consolidate same items into single entry
+     */
+    const consolidatedMap = new Map();
+
+    for (const item of plainItems) {
+      const itemId = item.item.toString();
+
+      if (!consolidatedMap.has(itemId)) {
+        consolidatedMap.set(itemId, {
+          item: item.item,
+          itemName: item.itemName,
+          itemCode: item.itemCode,
+          unit: item.unit,
+
+          quantity: Number(item.quantity),
+          baseAmount: Number(item.baseAmount),
+          amountAfterTax: Number(item.amountAfterTax),
+          taxAmount: Number(item.taxAmount),
+          taxRate: Number(item.taxRate || 0),
+        });
+      } else {
+        const existing = consolidatedMap.get(itemId);
+
+        existing.quantity += Number(item.quantity);
+        existing.baseAmount += Number(item.baseAmount);
+        existing.amountAfterTax += Number(item.amountAfterTax);
+        existing.taxAmount += Number(item.taxAmount);
+      }
+    }
+
+    /**
+     * STEP 3
+     * Create ledger entries with running balance
+     */
     const ledgerEntries = [];
+    const runningBalanceMap = {};
 
-    for (const item of items) {
-      // Get last running stock balance for this item
-      const lastStockBalance = await ItemLedger.getLastStockBalance(
-        item.item,
-        company,
-        branch,
-        session
-      );
+    for (const item of consolidatedMap.values()) {
+      let previousBalance;
 
-      // Calculate new running stock balance
+      if (runningBalanceMap[item.item]) {
+        previousBalance = runningBalanceMap[item.item];
+      } else {
+        previousBalance = await ItemLedger.getLastStockBalance(
+          item.item,
+          company,
+          branch,
+          session
+        );
+      }
+
       let runningStockBalance;
+
       if (movementType === "in") {
-        runningStockBalance = lastStockBalance + item.quantity;
+        runningStockBalance = previousBalance + item.quantity;
       } else if (movementType === "out") {
-        runningStockBalance = lastStockBalance - item.quantity;
+        runningStockBalance = previousBalance - item.quantity;
       } else {
         throw new Error(`Invalid movement type: ${movementType}`);
       }
 
-      // Create item ledger entry
-      const ledgerEntry = {
+      runningBalanceMap[item.item] = runningStockBalance;
+
+      // 🔥 Average Rate Calculation
+      const avgRate =
+        item.quantity > 0
+          ? Number(item.baseAmount / item.quantity)
+          : 0;
+
+      ledgerEntries.push({
         company,
         branch,
         item: item.item,
         itemName: item.itemName,
         itemCode: item.itemCode,
         unit: item.unit,
+
         transactionId,
         transactionNumber,
         transactionDate,
         transactionType,
         movementType,
+
         quantity: item.quantity,
-        rate: item.rate,
+        rate: avgRate,
         baseAmount: item.baseAmount,
         amountAfterTax: item.amountAfterTax,
         taxRate: item.taxRate,
         taxAmount: item.taxAmount,
+
         runningStockBalance,
         account,
         accountName,
         createdBy,
-      };
-
-      ledgerEntries.push(ledgerEntry);
+      });
     }
 
-    // Bulk create all item ledger entries with ordered: true
+    /**
+     * STEP 4
+     * Insert ledger entries
+     */
     const createdEntries = await ItemLedger.create(ledgerEntries, {
       session,
-      ordered: true, // ← Add this option : With session: Mongoose requires explicit ordering to ensure transaction consistency
+      ordered: true,
     });
 
     return createdEntries;
@@ -156,3 +224,6 @@ export const createItemLedgers = async (data, session) => {
     throw error;
   }
 };
+
+
+

@@ -4,6 +4,8 @@ import LoaderReducer from "./slices/loaderSlice";
 import transactionSlice from "./slices/transactionSlice";
 import revaluationLoaderReducer from "./slices/revaluationLoaderSlice";
 import filtersSliceReducer from "./slices/filtersSlice";
+import fySlice from "./slices/fySlice";
+import recalculationDialogReducer from "./slices/recalculationDialogSlice";
 
 export const store = configureStore({
   reducer: {
@@ -12,5 +14,8 @@ export const store = configureStore({
     transaction: transactionSlice,
     revaluationLoader: revaluationLoaderReducer,
     filters: filtersSliceReducer,
+    fy: fySlice,
+    recalculationDialog: recalculationDialogReducer
+
   },
 });

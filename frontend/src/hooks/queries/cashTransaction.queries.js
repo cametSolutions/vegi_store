@@ -12,7 +12,9 @@ export const cashTransactionQueries = {
     limit = 25,
     sortBy,
     sortOrder,
-    options = {}
+    startDate,
+    endDate,
+    options = {},
   ) =>
     infiniteQueryOptions({
       queryKey: [
@@ -31,7 +33,9 @@ export const cashTransactionQueries = {
           companyId,
           branchId,
           sortBy,
-          sortOrder
+          sortOrder,
+          startDate,
+          endDate
         ),
       initialPageParam: 1,
       getNextPageParam: (lastPage) => {
@@ -39,9 +43,9 @@ export const cashTransactionQueries = {
         if (!lastPage?.pagination) {
           return undefined;
         }
-        
+
         const { hasMore, nextPage } = lastPage.pagination;
-        
+
         // If hasMore is true and nextPage exists, return it
         // Otherwise return undefined to stop fetching
         return hasMore && nextPage ? nextPage : undefined;
