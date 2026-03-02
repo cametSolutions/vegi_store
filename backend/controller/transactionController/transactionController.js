@@ -45,14 +45,19 @@ import {
   lockFinancialYearFormat,
   unlockFinancialYearFormatIfNoTransactions,
 } from "../companyController/companyController.js";
-import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
-import PriceLevelModel from "../../model/masters/PricelevelModel.js";
+import { createPastDateAdjustmentEntry } from "../../services/pastDateAdjustmentService.js";
 
 const toId = (value) => {
   if (!value) return "";
   if (typeof value === "object")
     return value?._id?.toString?.() || value.toString();
   return value.toString();
+};
+
+const startOfDay = (date) => {
+  const normalizedDate = new Date(date);
+  normalizedDate.setHours(0, 0, 0, 0);
+  return normalizedDate;
 };
 
 /**
@@ -141,6 +146,9 @@ export const createTransaction = async (req, res) => {
 
   try {
     const transactionData = req.body;
+    const today = startOfDay(new Date());
+    const txnDate = startOfDay(new Date(transactionData.transactionDate));
+    const isPastDated = txnDate < today;
     const userId = req.user.id;
 
     transactionData.createdBy = userId;
@@ -196,7 +204,22 @@ export const createTransaction = async (req, res) => {
     }
 
     // Process transaction using helper
-    const result = await processTransaction(transactionData, userId, session);
+    const result = await processTransaction(
+      transactionData,
+      userId,
+      session,
+      isPastDated,
+    );
+
+    if (isPastDated) {
+      await createPastDateAdjustmentEntry(result.transaction, userId, session);
+      await markMonthlyBalancesForRecalculation(
+        result.transaction,
+        result.transaction,
+        session,
+        true,
+      );
+    }
 
     // Create receipt if paid amount > 0
     let receiptResult = null;

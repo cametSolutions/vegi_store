@@ -52,6 +52,10 @@ export const adjustmentEntrySchema = new Schema(
       type: Date,
       required: true,
     },
+    newTransactionDate: {
+      type: Date,
+      default: null,
+    },
 
     // ========================================
     // ADJUSTMENT METADATA
@@ -71,12 +75,23 @@ export const adjustmentEntrySchema = new Schema(
       required: true,
       enum: [
         "amount_change",
+        "date_change",
+        "date_and_amount",
         "account_change",
         "item_change",
         "mixed",
         "cancellation", // ✅ NEW - For soft delete
       ],
       index: true,
+    },
+    adjustmentPurpose: {
+      type: String,
+      enum: ["standalone", "date_change_reversal", "date_change_repost"],
+      default: "standalone",
+    },
+    linkedAdjustmentId: {
+      type: Schema.Types.ObjectId,
+      ref: "AdjustmentEntry",
     },
 
     // ========================================
@@ -253,6 +268,7 @@ export const adjustmentEntrySchema = new Schema(
 adjustmentEntrySchema.index({ company: 1, branch: 1, adjustmentDate: -1 });
 adjustmentEntrySchema.index({ originalTransaction: 1, adjustmentDate: -1 });
 adjustmentEntrySchema.index({ affectedAccount: 1, adjustmentDate: -1 });
+adjustmentEntrySchema.index({ newTransactionDate: 1 });
 adjustmentEntrySchema.index({ adjustmentNumber: 1 }, { unique: true });
 adjustmentEntrySchema.index({
   oldAccount: 1,

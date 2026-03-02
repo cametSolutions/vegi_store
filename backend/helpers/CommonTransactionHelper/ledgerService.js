@@ -103,6 +103,9 @@ export const createItemLedgers = async (data, session) => {
       createdBy,
     } = data;
 
+    console.log("items", items);
+    
+
     /**
      * STEP 1
      * Convert mongoose subdocuments to plain objects

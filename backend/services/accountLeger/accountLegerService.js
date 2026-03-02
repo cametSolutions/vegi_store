@@ -1354,6 +1354,9 @@ export const refoldLedgersWithAdjustments = async (
     searchStage = [{ $match: { $or: [{ accountName: regex }] } }];
   }
 
+  console.log("baseMatch",baseMatch);
+  
+
   const itemFacet = await AccountLedger.aggregate([
     { $match: baseMatch },
     { $group: { _id: "$account", accountName: { $first: "$accountName" } } },
@@ -1366,6 +1369,9 @@ export const refoldLedgersWithAdjustments = async (
       },
     },
   ]);
+
+  console.log("itemFacet", JSON.stringify(itemFacet, null, 2));
+  
 
   const totalItems = itemFacet[0]?.meta[0]?.totalItems || 0;
   const accountsPage = itemFacet[0]?.data || [];
