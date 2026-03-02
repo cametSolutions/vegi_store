@@ -13,11 +13,11 @@ import {
 
 /**
  * Processes all accounts marked as "dirty" (needing recalculation) across all branches.
- * 
+ *
  * This is the main entry point for the account ledger recalculation system. It identifies
  * all account-branch combinations that have months flagged for recalculation, processes
  * each one sequentially, and returns a comprehensive summary of the operation.
- * 
+ *
  * @async
  * @returns {Promise<Object>} Summary object containing:
  *   - accountsProcessed {number} - Number of account-branch combinations successfully processed
@@ -25,7 +25,7 @@ import {
  *   - errors {Array<Object>} - Array of error objects for failed accounts
  *   - success {boolean} - True if no errors occurred
  *   - processedAdjustmentIds {Array<string>} - Array of adjustment IDs that were processed
- * 
+ *
  * @example
  * const result = await processAllDirtyAccounts();
  * console.log(`Processed ${result.accountsProcessed} accounts`);
@@ -39,7 +39,7 @@ export const processAllDirtyAccounts = async () => {
   const workKeys = Object.keys(workMap);
 
   console.log(
-    `📊 Found ${workKeys.length} account-branch combinations with dirty months`
+    `📊 Found ${workKeys.length} account-branch combinations with dirty months`,
   );
 
   if (workKeys.length === 0) {
@@ -65,11 +65,16 @@ export const processAllDirtyAccounts = async () => {
       console.log(
         `   Dirty months: ${months
           .map((m) => formatYearMonth(m.year, m.month))
-          .join(", ")}`
+          .join(", ")}`,
       );
 
       // Pass the Set so it can accumulate adjustment IDs from each call
-      const result = await processOneAccount(accountId, branchId, months, processedAdjustmentIdsSet);
+      const result = await processOneAccount(
+        accountId,
+        branchId,
+        months,
+        processedAdjustmentIdsSet,
+      );
 
       accountsProcessed++;
       monthsRefolded += result.monthsProcessed;
@@ -78,7 +83,7 @@ export const processAllDirtyAccounts = async () => {
     } catch (error) {
       console.error(
         `   ❌ Error processing ${accountName} (Branch: ${branchId}):`,
-        error.message
+        error.message,
       );
       errors.push({
         accountId,
@@ -115,11 +120,11 @@ export const processAllDirtyAccounts = async () => {
 
 /**
  * Finds all accounts with months flagged for recalculation and organizes them by account-branch combination.
- * 
+ *
  * Queries the AccountMonthlyBalance collection for records with needsRecalculation=true and
  * groups them by account and branch. This creates a work map that can be efficiently processed
  * without redundant queries.
- * 
+ *
  * @async
  * @returns {Promise<Object>} Work map object where:
  *   - Key: String in format "accountId_branchId"
@@ -128,7 +133,7 @@ export const processAllDirtyAccounts = async () => {
  *     - branchId {string} - MongoDB ObjectId of the branch
  *     - accountName {string} - Display name of the account
  *     - months {Array<Object>} - Array of {year, month} objects needing recalculation
- * 
+ *
  * @example
  * const workMap = await findDirtyAccounts();
  * // Returns: {
@@ -174,23 +179,23 @@ export const findDirtyAccounts = async () => {
 
 /**
  * Processes all dirty months for a single account-branch combination within a single transaction.
- * 
+ *
  * Handles the complete recalculation workflow for one account at a specific branch. Sorts the
  * dirty months chronologically and processes them sequentially to maintain proper balance carry-forward.
  * Uses a MongoDB session with transaction to ensure atomicity - either all months are successfully
  * recalculated or all changes are rolled back.
- * 
+ *
  * @async
  * @param {string|ObjectId} accountId - MongoDB ObjectId of the account to process
  * @param {string|ObjectId} branchId - MongoDB ObjectId of the branch
  * @param {Array<Object>} dirtyMonths - Array of month objects with {year, month} properties
  * @param {Set<string>} processedAdjustmentIdsSet - Set to accumulate adjustment IDs processed across all months
- * 
+ *
  * @returns {Promise<Object>} Result object containing:
  *   - monthsProcessed {number} - Count of months successfully recalculated
- * 
+ *
  * @throws {Error} If any month fails to process, rolls back entire transaction and throws error
- * 
+ *
  * @example
  * const adjustmentSet = new Set();
  * const result = await processOneAccount(
@@ -201,7 +206,12 @@ export const findDirtyAccounts = async () => {
  * );
  * console.log(`Processed ${result.monthsProcessed} months`);
  */
-export const processOneAccount = async (accountId, branchId, dirtyMonths, processedAdjustmentIdsSet) => {
+export const processOneAccount = async (
+  accountId,
+  branchId,
+  dirtyMonths,
+  processedAdjustmentIdsSet,
+) => {
   dirtyMonths.sort(sortMonthsChronologically);
 
   let monthsProcessed = 0;
@@ -216,7 +226,13 @@ export const processOneAccount = async (accountId, branchId, dirtyMonths, proces
 
       try {
         // Pass the Set down to accumulate adjustment IDs found during refold
-        const adjustmentsInMonth = await refoldAccountMonth(accountId, branchId, year, month, session);
+        const adjustmentsInMonth = await refoldAccountMonth(
+          accountId,
+          branchId,
+          year,
+          month,
+          session,
+        );
         adjustmentsInMonth.forEach((id) => processedAdjustmentIdsSet.add(id));
 
         monthsProcessed++;
@@ -242,7 +258,7 @@ export const processOneAccount = async (accountId, branchId, dirtyMonths, proces
 
 /**
  * Recalculates ledger balances and monthly summary for a specific account-branch-month combination.
- * 
+ *
  * This is the core recalculation function that:
  * 1. Determines opening balance from previous month or  from AccountMaster
  * 2. Fetches all ledger entries for the month
@@ -252,18 +268,18 @@ export const processOneAccount = async (accountId, branchId, dirtyMonths, proces
  * 6. Updates ledger entries with corrected amounts and balances
  * 7. Updates AccountMonthlyBalance with opening, closing, totals
  * 8. Marks next month as dirty if it exists (cascade effect)
- * 
+ *
  * @async
  * @param {string|ObjectId} accountId - MongoDB ObjectId of the account
  * @param {string|ObjectId} branchId - MongoDB ObjectId of the branch
  * @param {number} year - Year (e.g., 2025)
  * @param {number} month - Month (1-12)
  * @param {ClientSession} session - Mongoose session for transaction support
- * 
+ *
  * @returns {Promise<Array<string>>} Array of adjustment IDs that were processed for this month
- * 
+ *
  * @throws {Error} If database operations fail during update
- * 
+ *
  * @example
  * const session = await mongoose.startSession();
  * session.startTransaction();
@@ -281,7 +297,13 @@ export const processOneAccount = async (accountId, branchId, dirtyMonths, proces
  *   await session.abortTransaction();
  * }
  */
-export const refoldAccountMonth = async (accountId, branchId, year, month, session) => {
+export const refoldAccountMonth = async (
+  accountId,
+  branchId,
+  year,
+  month,
+  session,
+) => {
   const monthKey = formatYearMonth(year, month);
   const currentAccountIdStr = accountId.toString();
 
@@ -315,7 +337,7 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
       if (accountMaster?.openingBalance !== undefined) {
         openingBalance = accountMaster.openingBalance;
         console.log(
-          `     💰 Opening from AccountMaster (${accountMaster.accountName}): ${openingBalance}`
+          `     💰 Opening from AccountMaster (${accountMaster.accountName}): ${openingBalance}`,
         );
       } else {
         console.log(`     ⚠️  No opening balance in AccountMaster, using 0`);
@@ -364,8 +386,10 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
 
   const adjustmentMap = buildAccountAdjustmentDeltaMap(
     adjustments,
-    currentAccountIdStr
+    currentAccountIdStr,
   );
+
+  console.log(`🔧 Adjustment Map:`, adjustmentMap);
 
   if (
     Object.keys(adjustmentMap.amountDeltaMap).length > 0 ||
@@ -375,9 +399,11 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
       ` 📊 Adjustments affect ${
         Object.keys(adjustmentMap.amountDeltaMap).length +
         adjustmentMap.accountChanges.size
-      } transactions`
+      } transactions`,
     );
   }
+
+  // throw new Error("Deprecated: Use nightlyRecalculation.js instead.");
 
   // Recalculate running balances (your existing logic here) ...
   let runningBalance = openingBalance;
@@ -395,27 +421,27 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
     if (adjustmentMap.accountChanges.has(txId)) {
       effectiveAmount = 0;
       console.log(
-        `🔧 Tx ${entry.transactionNumber}: OLD ACCOUNT → SET TO 0 (removed)`
+        `🔧 Tx ${entry.transactionNumber}: OLD ACCOUNT → SET TO 0 (removed)`,
       );
     } else {
       if (adjustmentMap.amountDeltaMap[txId]) {
         effectiveAmount += adjustmentMap.amountDeltaMap[txId];
         console.log(
-          `🔧 Tx ${entry.transactionNumber}: amount ${entry.amount} + delta ${adjustmentMap.amountDeltaMap[txId]} = ${effectiveAmount}`
+          `🔧 Tx ${entry.transactionNumber}: amount ${entry.amount} + delta ${adjustmentMap.amountDeltaMap[txId]} = ${effectiveAmount}`,
         );
       }
 
       if (adjustmentMap.accountMap[txId]) {
         effectiveAccount = adjustmentMap.accountMap[txId];
         console.log(
-          `🔧 Tx ${entry.transactionNumber}: account changed to ${effectiveAccount}`
+          `🔧 Tx ${entry.transactionNumber}: account changed to ${effectiveAccount}`,
         );
       }
 
       if (adjustmentMap.accountNameMap[txId]) {
         effectiveAccountName = adjustmentMap.accountNameMap[txId];
         console.log(
-          `🔧 Tx ${entry.transactionNumber}: account name changed to ${effectiveAccountName}`
+          `🔧 Tx ${entry.transactionNumber}: account name changed to ${effectiveAccountName}`,
         );
       }
     }
@@ -440,8 +466,8 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
     if (amountDelta !== 0) {
       console.log(
         `         💰 Amount: ${entry.amount.toFixed(
-          2
-        )} → ${effectiveAmount.toFixed(2)} (Δ: ${amountDelta.toFixed(2)})`
+          2,
+        )} → ${effectiveAmount.toFixed(2)} (Δ: ${amountDelta.toFixed(2)})`,
       );
     }
   }
@@ -450,8 +476,8 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
 
   console.log(
     `     📊 Closing balance: ${closingBalance.toFixed(
-      2
-    )} (Dr: ${totalDebit.toFixed(2)}, Cr: ${totalCredit.toFixed(2)})`
+      2,
+    )} (Dr: ${totalDebit.toFixed(2)}, Cr: ${totalCredit.toFixed(2)})`,
   );
 
   try {
@@ -464,7 +490,7 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
           account: update.account,
           accountName: update.accountName,
         },
-        { session }
+        { session },
       );
     }
 
@@ -484,7 +510,7 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
         needsRecalculation: false,
         lastUpdated: new Date(),
       },
-      { session, upsert: true }
+      { session, upsert: true },
     );
 
     const nextMonth = getNextMonth(year, month);
@@ -505,13 +531,13 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
           month: nextMonth.month,
         },
         { needsRecalculation: true },
-        { session }
+        { session },
       );
       console.log(
         `     ⚠️  Marked ${formatYearMonth(
           nextMonth.year,
-          nextMonth.month
-        )} as dirty (cascade)`
+          nextMonth.month,
+        )} as dirty (cascade)`,
       );
     }
 
@@ -526,26 +552,26 @@ export const refoldAccountMonth = async (accountId, branchId, year, month, sessi
 
 /**
  * Builds a map of adjustments to apply to ledger entries for a specific account.
- * 
+ *
  * Processes all adjustments and categorizes them based on whether they affect the current account
  * as the OLD account (being changed FROM) or the NEW account (being changed TO). Handles two scenarios:
- * 
+ *
  * 1. **Account Change**: When oldAccount !== affectedAccount
  *    - For OLD account: Marks transaction for zeroing (removal)
  *    - For NEW account: Applies FULL newAmount (since ledger entry starts at 0)
- * 
+ *
  * 2. **Amount Change Only**: When account stays the same but amount changes
  *    - Applies delta (newAmount - oldAmount) to existing ledger entry
- * 
+ *
  * @param {Array<Object>} adjustments - Array of adjustment documents from Adjustment collection
  * @param {string} currentAccountIdStr - String representation of the current account's ObjectId
- * 
+ *
  * @returns {Object} Delta map object containing:
  *   - amountDeltaMap {Object} - Map of transactionId -> amount delta to apply
  *   - accountMap {Object} - Map of transactionId -> new account ObjectId
  *   - accountNameMap {Object} - Map of transactionId -> new account name
  *   - accountChanges {Set<string>} - Set of transaction IDs where account changed (to be zeroed)
- * 
+ *
  * @example
  * const adjustments = await Adjustment.find({...});
  * const deltaMap = buildAccountAdjustmentDeltaMap(adjustments, "507f1f77bcf86cd799439011");
@@ -576,35 +602,25 @@ function buildAccountAdjustmentDeltaMap(adjustments, currentAccountIdStr) {
     if (oldAccountId === currentAccountIdStr) {
       // OLD account - zero it out
       deltaMap.accountChanges.add(txId);
-      deltaMap.amountDeltaMap[txId] = -adjustment.oldAmount;
-      console.log(
-        `📤 OLD ACCOUNT MATCH: Tx ${txId} → SET TO 0 (removing ${adjustment.oldAmount})`
-      );
+      deltaMap.amountDeltaMap[txId] =
+        (deltaMap.amountDeltaMap[txId] || 0) + -adjustment.oldAmount; // ← accumulate
     } else if (affectedAccountId === currentAccountIdStr) {
-      // NEW/AFFECTED account
-      
       if (isAccountChange) {
-        // ACCOUNT CHANGED: Use FULL newAmount (ledger starts at 0)
-        deltaMap.amountDeltaMap[txId] = adjustment.newAmount;
-        console.log(
-          `📥 NEW ACCOUNT (ACCOUNT CHANGE): Tx ${txId} → ADD FULL AMOUNT ${adjustment.newAmount}`
-        );
+        deltaMap.amountDeltaMap[txId] =
+          (deltaMap.amountDeltaMap[txId] || 0) + adjustment.newAmount; // ← accumulate
       } else {
-        // SAME ACCOUNT: Use delta for amount-only changes
         const amountDelta = adjustment.newAmount - adjustment.oldAmount;
         if (amountDelta !== 0) {
-          deltaMap.amountDeltaMap[txId] = amountDelta;
-          console.log(
-            `📥 SAME ACCOUNT AMOUNT CHANGE: Tx ${txId} delta ${amountDelta} (old:${adjustment.oldAmount}→new:${adjustment.newAmount})`
-          );
+          deltaMap.amountDeltaMap[txId] =
+            (deltaMap.amountDeltaMap[txId] || 0) + amountDelta; // ← accumulate
         }
       }
 
       if (adjustment.newAccount) {
-        deltaMap.accountMap[txId] = adjustment.newAccount;
+        deltaMap.accountMap[txId] = adjustment.newAccount; // ← last one wins (correct for account ref)
       }
       if (adjustment.newAccountName) {
-        deltaMap.accountNameMap[txId] = adjustment.newAccountName;
+        deltaMap.accountNameMap[txId] = adjustment.newAccountName; // ← last one wins (correct for name)
       }
     }
   });

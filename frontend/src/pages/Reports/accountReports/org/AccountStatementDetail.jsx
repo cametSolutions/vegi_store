@@ -43,8 +43,8 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
   // 1. Get Filters from Redux
   const filters = useSelector((state) => state.filters);
   const fy = useSelector((state) => state.fy);
-  const { initiateDownload, isDownloading, progress, status } = useReportDownload();
-
+  const { initiateDownload, isDownloading, progress, status } =
+    useReportDownload();
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,7 +68,13 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
         setDateFilter(DATE_FILTERS.THIS_MONTH);
       }
     }
-  }, [filters.startDate, filters.endDate, fy?.startDate, fy?.endDate, dispatch]);
+  }, [
+    filters.startDate,
+    filters.endDate,
+    fy?.startDate,
+    fy?.endDate,
+    dispatch,
+  ]);
 
   // Reset page
   useEffect(() => {
@@ -94,7 +100,7 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
       null,
       currentPage,
       limit,
-      ""
+      "",
     ),
     enabled: !!companyId && !!branchId && !!accountId && !!filters.startDate,
     keepPreviousData: true,
@@ -128,12 +134,9 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
 
       let dr = 0;
       let cr = 0;
-      console.log(txn);
 
       const amount = Math.abs(txn.effectiveAmount || 0);
 
-      console.log(amount);
-      
       const type = txn.transactionType?.toLowerCase();
 
       const drTypes = ["sale", "purchase_return", "payment", "sales_payment"];
@@ -179,26 +182,24 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
     setCurrentPage(newPage);
   };
 
-
   const handleDownload = async (format) => {
-  if (!accountId) {
-    toast.error("No party selected");
-    return;
-  }
+    if (!accountId) {
+      toast.error("No party selected");
+      return;
+    }
 
-  const downloadFilters = {
-    startDate: filters.startDate,
-    endDate: filters.endDate,
-    company: companyId,
-    branch: branchId,
-    account: accountId, // ✅ Single account for statement
-    transactionType: filters.transactionType || null,
-    searchTerm: filters.searchTerm || null,
+    const downloadFilters = {
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+      company: companyId,
+      branch: branchId,
+      account: accountId, // ✅ Single account for statement
+      transactionType: filters.transactionType || null,
+      searchTerm: filters.searchTerm || null,
+    };
+
+    await initiateDownload(downloadFilters, format, "statement");
   };
-
-  await initiateDownload(downloadFilters, format,"statement");
-};
-
 
   if (!selectedParty) {
     return (
@@ -208,10 +209,6 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
       </div>
     );
   }
-
-
-
-
 
   return (
     <div className="flex flex-col h-full bg-slate-100 overflow-hidden font-sans text-sm">
@@ -310,7 +307,7 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                             (as on{" "}
                             {format(
                               new Date(filters.startDate || new Date()),
-                              "dd-MMM-yyyy"
+                              "dd-MMM-yyyy",
                             )}
                             )
                           </span>
@@ -346,16 +343,18 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                                   {txn.transactionType === "sale"
                                     ? "By Sales"
                                     : txn.transactionType === "receipt"
-                                    ? "By Receipt"
-                                    : txn.transactionType === "purchase"
-                                    ? "By Purchase"
-                                    : txn.transactionType === "payment"
-                                    ? "By Payment"
-                                    : txn.transactionType === "sales_return"
-                                    ? "By Sales Return"
-                                    : txn.transactionType === "purchase_return"
-                                    ? "By Purchase Return"
-                                    : txn.transactionType}
+                                      ? "By Receipt"
+                                      : txn.transactionType === "purchase"
+                                        ? "By Purchase"
+                                        : txn.transactionType === "payment"
+                                          ? "By Payment"
+                                          : txn.transactionType ===
+                                              "sales_return"
+                                            ? "By Sales Return"
+                                            : txn.transactionType ===
+                                                "purchase_return"
+                                              ? "By Purchase Return"
+                                              : txn.transactionType}
                                 </span>
                                 {txn.transactionNumber && (
                                   <span className="text-[10px] text-slate-400 font-mono bg-slate-50 px-1 rounded border border-slate-100">
@@ -398,7 +397,7 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                     <tfoot>
                       {/* 1. Total Dr/Cr Row - Fixed above the Closing Balance */}
                       {/* We use bottom-[45px] because the row below it is approx 45px tall */}
-                      {/* <tr>
+                      <tr>
                         <td
                           colSpan={2}
                           className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-600 uppercase tracking-tight border-r border-t-2 border-slate-300 bg-slate-50"
@@ -406,16 +405,24 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                           Total Amount
                         </td>
                         <td className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-700 font-mono tracking-tight border-r border-t-2 border-slate-300 bg-slate-50">
-                          {statementData.summary?.totalDebit+statementData.openingBalance > 0
+                          {/* {statementData.summary?.totalDebit+statementData.openingBalance > 0
                             ? formatINR(statementData.summary.totalDebit + statementData.openingBalance)
-                            : "0.00"}
+                            : "0.00"} */}
+
+                            {
+                              formatINR(Math.abs(statementData.summary?.totalDebit + (statementData.openingBalance>0 ? statementData.openingBalance : 0)))  || "0.00"
+                            }
                         </td>
                         <td className="sticky bottom-[45px] z-30 px-4 py-2 text-right text-xs font-bold text-slate-700 font-mono tracking-tight border-t-2 border-slate-300 bg-slate-50">
-                          {statementData.summary?.totalCredit+statementData.openingBalance > 0
+                          {/* {statementData.summary?.totalCredit+statementData.openingBalance > 0
                             ? formatINR(statementData.summary.totalCredit + statementData.openingBalance)
-                            : "0.00"}
+                            : "0.00"} */}
+
+                            {
+                              formatINR(Math.abs(statementData.summary?.totalCredit + (statementData.openingBalance<0 ? statementData.openingBalance : 0))) || "0.00"
+                            }
                         </td>
-                      </tr> */}
+                      </tr>
 
                       {/* 2. Total Closing Balance Row - Fixed at the very bottom */}
                       <tr>
@@ -428,14 +435,14 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                         <td className="sticky bottom-0 z-30 px-4 py-3 text-right text-sm font-bold text-indigo-700 font-mono tracking-tight border-r border-t border-slate-300 bg-indigo-50">
                           {statementData.summary?.closingBalance > 0
                             ? formatINR(
-                                Math.abs(statementData.summary.closingBalance)
+                                Math.abs(statementData.summary.closingBalance),
                               )
                             : "0.00"}
                         </td>
                         <td className="sticky bottom-0 z-30 px-4 py-3 text-right text-sm font-bold text-indigo-700 font-mono tracking-tight border-t border-slate-300 bg-indigo-50">
                           {statementData.summary?.closingBalance < 0
                             ? formatINR(
-                                Math.abs(statementData.summary.closingBalance)
+                                Math.abs(statementData.summary.closingBalance),
                               )
                             : "0.00"}
                         </td>

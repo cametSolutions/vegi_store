@@ -68,7 +68,7 @@ export const getBatchOpeningBalances = async (
     {
       $match: {
         company: companyId,
-            branch: branchId,
+        branch: branchId,
         account: { $in: accountIdObjs },
         needsRecalculation: false,
         $or: [
@@ -146,8 +146,20 @@ export const getBatchOpeningBalances = async (
     console.time("Step 2b - Account master query");
     masterBalances = await AccountMasterModel.aggregate([
       { $match: { _id: { $in: accountsNeedingFallback }, company: companyId } },
-      { $project: { _id: 1, openingBalance: 1 } },
+      {
+        $project: {
+          _id: 1,
+          openingBalance: {
+            $cond: [
+              { $eq: ["$openingBalanceType", "cr"] },
+              { $multiply: ["$openingBalance", -1] }, // ← negative if cr
+              { $ifNull: ["$openingBalance", 0] }, // ← positive if dr or null
+            ],
+          },
+        },
+      },
     ]);
+
     console.timeEnd("Step 2b - Account master query");
     console.log("Master balances found:", masterBalances.length);
   }
@@ -1118,7 +1130,7 @@ export const getHybridLedgerReport = async (
 
   const accountContacts = await AccountMasterModel.aggregate([
     { $match: { _id: { $in: accountIdObjs }, company: companyId } },
-    { $project: { _id: 1, email: 1,  accountName: 1, phoneNo: 1 } },
+    { $project: { _id: 1, email: 1, accountName: 1, phoneNo: 1 } },
   ]);
 
   const contactMap = {};
@@ -1280,7 +1292,7 @@ export const getHybridLedgerReport = async (
 
     return {
       accountId: row._id,
-       accountName: contact.accountName || row.accountName,
+      accountName: contact.accountName || row.accountName,
       email: contact.email,
       phoneNo: contact.phoneNo,
       openingBalance: data.openingBalance,
@@ -1354,8 +1366,7 @@ export const refoldLedgersWithAdjustments = async (
     searchStage = [{ $match: { $or: [{ accountName: regex }] } }];
   }
 
-  console.log("baseMatch",baseMatch);
-  
+  console.log("baseMatch", baseMatch);
 
   const itemFacet = await AccountLedger.aggregate([
     { $match: baseMatch },
@@ -1371,7 +1382,6 @@ export const refoldLedgersWithAdjustments = async (
   ]);
 
   console.log("itemFacet", JSON.stringify(itemFacet, null, 2));
-  
 
   const totalItems = itemFacet[0]?.meta[0]?.totalItems || 0;
   const accountsPage = itemFacet[0]?.data || [];
@@ -1398,13 +1408,13 @@ export const refoldLedgersWithAdjustments = async (
 
   const accountContacts = await AccountMasterModel.aggregate([
     { $match: { _id: { $in: accountIdObjs }, company: companyId } },
-    { $project: { _id: 1, email: 1,accountName: 1, phoneNo: 1 } },
+    { $project: { _id: 1, email: 1, accountName: 1, phoneNo: 1 } },
   ]);
 
   const contactMap = {};
   accountContacts.forEach((ac) => {
     contactMap[ac._id.toString()] = {
-       accountName: ac.accountName || null,
+      accountName: ac.accountName || null,
       email: ac.email || null,
       phoneNo: ac.phoneNo || null,
     };
