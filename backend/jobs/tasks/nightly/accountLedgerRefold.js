@@ -331,13 +331,25 @@ export const refoldAccountMonth = async (
         _id: accountId,
         branches: branchId,
       })
-        .select("accountName openingBalance")
+        .select("accountName openingBalance openingBalanceType")
         .lean();
 
       if (accountMaster?.openingBalance !== undefined) {
-        openingBalance = accountMaster.openingBalance;
+        const rawOpening = accountMaster.openingBalance || 0;
+        const type = accountMaster.openingBalanceType; // "DR" / "CR"
+
+        if (type === "cr") {
+          openingBalance = -Math.abs(rawOpening);
+        } else if (type === "dr") {
+          openingBalance = Math.abs(rawOpening);
+        } else {
+          // Fallback if type is missing/invalid
+          openingBalance = 0;
+        }
+
         console.log(
-          `     💰 Opening from AccountMaster (${accountMaster.accountName}): ${openingBalance}`,
+          `     💰 Opening from AccountMaster (${accountMaster.accountName}): ` +
+            `${rawOpening} ${type || ""} → signed ${openingBalance}`,
         );
       } else {
         console.log(`     ⚠️  No opening balance in AccountMaster, using 0`);
@@ -403,9 +415,7 @@ export const refoldAccountMonth = async (
     );
   }
 
-  // throw new Error("Deprecated: Use nightlyRecalculation.js instead.");
-
-  // Recalculate running balances (your existing logic here) ...
+  // Recalculate running balances ...
   let runningBalance = openingBalance;
   let totalDebit = 0;
   let totalCredit = 0;
@@ -596,31 +606,44 @@ function buildAccountAdjustmentDeltaMap(adjustments, currentAccountIdStr) {
     const oldAccountId = adjustment?.oldAccount?.toString();
     const affectedAccountId = adjustment.affectedAccount.toString();
 
-    // Check if this is an ACCOUNT CHANGE scenario
     const isAccountChange = oldAccountId && oldAccountId !== affectedAccountId;
 
     if (oldAccountId === currentAccountIdStr) {
-      // OLD account - zero it out
+      // 🔹 OLD account - zero it out (subtract oldAmount)
       deltaMap.accountChanges.add(txId);
-      deltaMap.amountDeltaMap[txId] =
-        (deltaMap.amountDeltaMap[txId] || 0) + -adjustment.oldAmount; // ← accumulate
+      const prev = deltaMap.amountDeltaMap[txId] || 0;
+      deltaMap.amountDeltaMap[txId] = prev - (adjustment.oldAmount || 0);
+      console.log(
+        `📤 OLD ACCOUNT MATCH: Tx ${txId} → SET TO 0 (removing ${adjustment.oldAmount})`,
+      );
     } else if (affectedAccountId === currentAccountIdStr) {
+      // 🔹 NEW/AFFECTED account
       if (isAccountChange) {
-        deltaMap.amountDeltaMap[txId] =
-          (deltaMap.amountDeltaMap[txId] || 0) + adjustment.newAmount; // ← accumulate
+        // ACCOUNT CHANGED: use FULL newAmount (ledger starts at 0)
+        const prev = deltaMap.amountDeltaMap[txId] || 0;
+        deltaMap.amountDeltaMap[txId] = prev + (adjustment.newAmount || 0);
+        console.log(
+          `📥 NEW ACCOUNT (ACCOUNT CHANGE): Tx ${txId} → ADD FULL AMOUNT ${adjustment.newAmount}`,
+        );
       } else {
-        const amountDelta = adjustment.newAmount - adjustment.oldAmount;
+        // SAME ACCOUNT: use delta for amount-only (or creation) changes
+        const amountDelta =
+          (adjustment.newAmount || 0) - (adjustment.oldAmount || 0);
         if (amountDelta !== 0) {
-          deltaMap.amountDeltaMap[txId] =
-            (deltaMap.amountDeltaMap[txId] || 0) + amountDelta; // ← accumulate
+          const prev = deltaMap.amountDeltaMap[txId] || 0;
+          deltaMap.amountDeltaMap[txId] = prev + amountDelta;
+          console.log(
+            `📥 SAME ACCOUNT AMOUNT CHANGE: Tx ${txId} delta ${amountDelta} (old:${adjustment.oldAmount}→new:${adjustment.newAmount})`,
+          );
         }
       }
 
+      // For account/name, last one wins (correct behavior)
       if (adjustment.newAccount) {
-        deltaMap.accountMap[txId] = adjustment.newAccount; // ← last one wins (correct for account ref)
+        deltaMap.accountMap[txId] = adjustment.newAccount;
       }
       if (adjustment.newAccountName) {
-        deltaMap.accountNameMap[txId] = adjustment.newAccountName; // ← last one wins (correct for name)
+        deltaMap.accountNameMap[txId] = adjustment.newAccountName;
       }
     }
   });
