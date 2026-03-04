@@ -18,15 +18,20 @@ const generatePastDateAdjustmentNumber = async (
   const dateKey = formatDateKey(transactionDate);
   const prefix = `ADJ-${dateKey}`;
 
-  const lastEntry = await AdjustmentEntryModel.findOne({
+  let query = AdjustmentEntryModel.findOne({
     company,
     branch,
     adjustmentNumber: { $regex: new RegExp(`^${prefix}-\\d+$`) },
   })
     .sort({ adjustmentNumber: -1 })
     .select("adjustmentNumber")
-    .session(session)
     .lean();
+
+  if (session) {
+    query = query.session(session);
+  }
+
+  const lastEntry = await query;
 
   const lastSequence = lastEntry?.adjustmentNumber
     ? parseInt(lastEntry.adjustmentNumber.split("-").pop(), 10)
@@ -40,6 +45,7 @@ export const createPastDateAdjustmentEntry = async (
   createdTransaction,
   userId,
   session,
+  isFundTns=false,
 ) => {
   const adjustmentNumber = await generatePastDateAdjustmentNumber(
     createdTransaction.company,
@@ -61,36 +67,39 @@ export const createPastDateAdjustmentEntry = async (
     rateDelta: item.rate,
   }));
 
-  const [adjustmentEntry] = await AdjustmentEntryModel.create(
-    [
-      {
-        company: createdTransaction.company,
-        branch: createdTransaction.branch,
-        originalTransaction: createdTransaction._id,
-        originalTransactionModel: transactionTypeToModelName(
-          createdTransaction.transactionType,
-        ),
-        originalTransactionNumber: createdTransaction.transactionNumber,
-        originalTransactionDate: createdTransaction.transactionDate,
-        newTransactionDate: null,
-        affectedAccount: createdTransaction.account,
-        affectedAccountName: createdTransaction.accountName,
-        adjustmentNumber,
-        adjustmentDate: new Date(),
-        adjustmentType: "item_change",
-        adjustmentPurpose: "standalone",
-        amountDelta: createdTransaction.netAmount,
-        oldAmount: 0,
-        newAmount: createdTransaction.netAmount,
-        itemAdjustments,
-        reason: "Transaction created on past date",
-        editedBy: userId,
-        isSystemGenerated: true,
-        status: "active",
-      },
-    ],
-    { session },
-  );
+  const payload = [
+    {
+      company: createdTransaction.company,
+      branch: createdTransaction.branch,
+      originalTransaction: createdTransaction._id,
+      originalTransactionModel: transactionTypeToModelName(
+        createdTransaction.transactionType,
+      ),
+      originalTransactionNumber: createdTransaction.transactionNumber,
+      originalTransactionDate: createdTransaction.transactionDate,
+      newTransactionDate: null,
+      affectedAccount: createdTransaction.account,
+      affectedAccountName: createdTransaction.accountName,
+      adjustmentNumber,
+      adjustmentDate: new Date(),
+      adjustmentType: "item_change",
+      adjustmentPurpose: "standalone",
+      amountDelta: isFundTns ? createdTransaction.amount : createdTransaction.netAmount,
+      oldAmount: 0,
+      newAmount: isFundTns ? createdTransaction.amount : createdTransaction.netAmount,
+      itemAdjustments,
+      reason: "Transaction created on past date",
+      editedBy: userId,
+      isSystemGenerated: true,
+      status: "active",
+    },
+  ];
+
+  const options = session ? { session } : {};
+  const [adjustmentEntry] = await AdjustmentEntryModel.create(payload, options);
+
+  console.log("Created adjustment entry:", adjustmentEntry);
+  
 
   return adjustmentEntry;
 };

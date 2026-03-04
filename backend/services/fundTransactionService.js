@@ -40,8 +40,6 @@ import { lockFinancialYearFormat } from "../controller/companyController/company
  * @returns {Promise<Object>} Transaction result
  */
 export const createFundTransaction = async (data, session = null) => {
-  
-
   // Determine if we need to manage session lifecycle
   const shouldManageSession = !session;
   const activeSession = session || (await mongoose.startSession());
@@ -51,7 +49,7 @@ export const createFundTransaction = async (data, session = null) => {
   }
 
   try {
-    const { transactionType, user, ...requestData } = data;
+    const { transactionType, user, isPastDated, ...requestData } = data;
 
     // Validate transaction type
     if (
@@ -173,7 +171,7 @@ export const createFundTransaction = async (data, session = null) => {
         transactionDate: newTransaction.transactionDate,
         transactionType: transactionType.toLowerCase(),
         ledgerSide: partyLedgerSide,
-        amount: amount,
+        amount: isPastDated ? 0 : amount,
         narration:
           transactionData.narration || `${transactionType} transaction`,
         createdBy: user._id,
@@ -190,7 +188,7 @@ export const createFundTransaction = async (data, session = null) => {
         accountName: partyAccount.accountName,
         transactionDate: newTransaction.transactionDate,
         ledgerSide: partyLedgerSide,
-        amount: amount,
+        amount: isPastDated ? 0 : amount,
       },
       activeSession,
     );

@@ -419,7 +419,7 @@ const AccountStatementDetail = ({ companyId, branchId, selectedParty }) => {
                             : "0.00"} */}
 
                             {
-                              formatINR(Math.abs(statementData.summary?.totalCredit + (statementData.openingBalance<0 ? statementData.openingBalance : 0))) || "0.00"
+                              formatINR(Math.abs(statementData.summary?.totalCredit + (statementData.openingBalance<0 ?Math.abs( statementData.openingBalance) : 0))) || "0.00"
                             }
                         </td>
                       </tr>

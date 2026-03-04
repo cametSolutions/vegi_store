@@ -7,6 +7,9 @@ import {
 } from "../../services/fundTransactionService.js";
 import { markMonthlyBalanceDirtyForFundTransaction } from "../../helpers/CommonTransactionHelper/monthlyBalanceService.js";
 import { unlockFinancialYearFormatIfNoTransactions } from "../companyController/companyController.js";
+import { startOfDay } from "../../../shared/utils/date.js";
+import { createPastDateAdjustmentEntry } from "../../services/pastDateAdjustmentService.js";
+import { markMonthlyBalancesForRecalculation } from "../../helpers/transactionHelpers/transactionEditHelper.js";
 
 /**
  * Create a new cash transaction (Receipt or Payment)
@@ -18,38 +21,77 @@ import { unlockFinancialYearFormatIfNoTransactions } from "../companyController/
  * 5. Get Cash/Bank account from AccountMaster
  * 6. Create Cash/Bank ledger entry
  */
-export const createFundTransactionController = async (req, res) => {
-  try {
-    const { transactionType } = req.params;
+export const createStandaloneFundTransaction = async (req, res) => {
+  const session = await mongoose.startSession();
 
-    if (!req.user?._id) {
-      return res.status(401).json({
-        success: false,
-        message: "User ID not found in token. Please login again.",
-      });
+  try {
+    // MAIN FUND TRANSACTION
+    session.startTransaction();
+
+    const data = req.body;
+    const today = startOfDay(new Date());
+    const txnDate = startOfDay(new Date(data.transactionDate));
+    const isPastDated = txnDate < today;
+
+    const result = await createFundTransaction(
+      {
+        ...data,
+        transactionType: data.transactionType,
+        user: req.user,
+        isPastDated,
+      },
+      session,
+    );
+
+    await session.commitTransaction();
+    session.endSession(); // main session is finished here
+
+    // PAST-DATED HANDLING
+    if (isPastDated) {
+      const userId = req.user.id;
+
+      // 1) Adjustment entry - no transaction needed, or use its own session if you want
+      await createPastDateAdjustmentEntry(result.transaction, userId, null,true);
+
+      // 2) Heavy recalculation in its own session
+      const reCalcSession = await mongoose.startSession();
+      try {
+        reCalcSession.startTransaction();
+
+        await markMonthlyBalancesForRecalculation(
+          result.transaction,
+          result.transaction,
+          reCalcSession,
+          true,
+        );
+
+        await reCalcSession.commitTransaction();
+      } catch (e) {
+        // ONLY abort reCalcSession here
+        await reCalcSession.abortTransaction();
+        throw e; // let it bubble out, but do NOT abort any other session again
+      } finally {
+        reCalcSession.endSession();
+      }
     }
 
-    const result = await createFundTransaction({
-      ...req.body,
-      transactionType: transactionType.toLowerCase(),
-      user: req.user,
-    });
-
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
-      message: `${
-        transactionType.charAt(0).toUpperCase() + transactionType.slice(1)
-      } created successfully`,
-      data: result,
+      data: result.transaction,
     });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to create transaction",
-      error: error.message,
-    });
+  } catch (err) {
+    // This catch is ONLY for the main session
+    try {
+      await session.abortTransaction();
+    } catch (_) {
+      // ignore if already aborted or not started
+    }
+    session.endSession();
+
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 /**
  * Get transaction by ID
@@ -391,7 +433,11 @@ export const deleteFundTransactionController = async (req, res) => {
     console.log("✅ Monthly balances marked for recalculation");
 
     // 🔓 Auto-unlock if last transaction
-    await unlockFinancialYearFormatIfNoTransactions(transaction.company,session,transactionId);
+    await unlockFinancialYearFormatIfNoTransactions(
+      transaction.company,
+      session,
+      transactionId,
+    );
 
     // ==================== STEP 5: COMMIT ====================
     await session.commitTransaction();

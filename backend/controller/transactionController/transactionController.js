@@ -46,6 +46,7 @@ import {
   unlockFinancialYearFormatIfNoTransactions,
 } from "../companyController/companyController.js";
 import { createPastDateAdjustmentEntry } from "../../services/pastDateAdjustmentService.js";
+import { startOfDay } from "../../../shared/utils/date.js";
 
 const toId = (value) => {
   if (!value) return "";
@@ -54,11 +55,7 @@ const toId = (value) => {
   return value.toString();
 };
 
-const startOfDay = (date) => {
-  const normalizedDate = new Date(date);
-  normalizedDate.setHours(0, 0, 0, 0);
-  return normalizedDate;
-};
+
 
 /**
  * get transactions (handles sales, purchase, sales_return, purchase_return)
