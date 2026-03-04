@@ -51,6 +51,9 @@ export const createFundTransaction = async (data, session = null) => {
   try {
     const { transactionType, user, isPastDated = false, ...requestData } = data;
 
+    console.log("Fund Transaction Data:", requestData);
+    
+
     // Validate transaction type
     if (
       !transactionType ||
@@ -105,6 +108,9 @@ export const createFundTransaction = async (data, session = null) => {
     // Step 5: Create transaction record
     const newTransaction = new TransactionModel(preparedData);
     await newTransaction.save({ session: activeSession });
+
+    console.log("New Transaction:", newTransaction);
+    
 
     // Step 6: Settle outstanding records using FIFO
     const settlementDetails = await settleOutstandingFIFO({

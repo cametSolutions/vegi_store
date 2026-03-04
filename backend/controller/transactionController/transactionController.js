@@ -245,7 +245,7 @@ export const createTransaction = async (req, res) => {
             transactionTypeToModelName[transactionData.transactionType] ||
             "Sale",
           referenceType: transactionData.transactionType,
-          date: transactionData.transactionDate || new Date(), // ✅ fixed: transactionDate not date
+          transactionDate: transactionData.transactionDate || new Date(), // ✅ fixed: transactionDate not date
           isPastDated, // ✅ passed correctly
           user: req.user,
         },
@@ -553,34 +553,34 @@ export const editTransaction = async (req, res) => {
     const oldPaidAmount = originalTransaction.paidAmount || 0;
     const newPaidAmount = updatedData.paidAmount || 0;
 
-    // if (oldPaidAmount !== newPaidAmount) {
-    //   console.log("\n💰 Paid amount changed, handling receipt/payment...");
+    if (oldPaidAmount !== newPaidAmount) {
+      console.log("\n💰 Paid amount changed, handling receipt/payment...");
 
-    //   receiptHandlingResult = await handleReceiptOnEdit({
-    //     transactionId: originalTransaction._id,
-    //     transactionType: updatedData.transactionType,
-    //     oldPaidAmount,
-    //     newPaidAmount,
-    //     accountId: updatedData.account,
-    //     accountName: updatedData.accountName,
-    //     company: updatedData.company,
-    //     branch: updatedData.branch,
-    //     transactionDate: updatedData.transactionDate,
-    //     netAmount: updatedData.netAmount,
-    //     previousBalanceAmount: updatedData.previousBalanceAmount,
-    //     user: req.user,
-    //     session,
-    //   });
+      receiptHandlingResult = await handleReceiptOnEdit({
+        transactionId: originalTransaction._id,
+        transactionType: updatedData.transactionType,
+        oldPaidAmount,
+        newPaidAmount,
+        accountId: updatedData.account,
+        accountName: updatedData.accountName,
+        company: updatedData.company,
+        branch: updatedData.branch,
+        transactionDate: updatedData.transactionDate,
+        netAmount: updatedData.netAmount,
+        previousBalanceAmount: updatedData.previousBalanceAmount,
+        user: req.user,
+        session,
+      });
 
-    //   console.log(
-    //     "✅ Receipt/payment handling completed:",
-    //     receiptHandlingResult.action,
-    //   );
-    // } else {
-    //   console.log("⏭️ Paid amount unchanged, skipping receipt handling");
-    // }
+      console.log(
+        "✅ Receipt/payment handling completed:",
+        receiptHandlingResult.action,
+      );
+    } else {
+      console.log("⏭️ Paid amount unchanged, skipping receipt handling");
+    }
 
-    // console.log("deltas",deltas);
+    console.log("deltas",deltas);
 
     // ========================================
     // STEP 8: Update Original Transaction Document

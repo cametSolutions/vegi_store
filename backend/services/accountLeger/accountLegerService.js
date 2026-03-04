@@ -695,7 +695,7 @@ export const getBatchAdjustedLedgers = async (
     const accountKey = item._id.toString();
     const openingQty = openingBalances[accountKey] || 0;
     const closingQty =
-      openingQty + (item.totalDebit || 0) - (item.totalCredit || 0);
+      openingQty + (Math.abs(item.totalDebit || 0)) - (Math.abs(item.totalCredit || 0));
 
     ledgerMap[accountKey] = {
       openingBalance: openingQty,
