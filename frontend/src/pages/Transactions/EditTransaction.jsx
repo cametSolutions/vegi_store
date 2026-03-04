@@ -205,6 +205,7 @@ const EditTransaction = ({ editTransactionData, handleCancelEdit ,fromPath}) => 
               netAmount={transactionData.netAmount}
               discount={transactionData.discount}
               paidAmount={transactionData.paidAmount}
+              effectivePaidAmount={transactionData.effectivePaidAmount|| null} 
               balanceAmount={transactionData.balanceAmount}
               totalDue={transactionData.totalDue}
               onDiscountChange={handleDiscountChange}

@@ -358,15 +358,15 @@ export const getTransactionDetail = async (req, res) => {
           (sum, outstanding) => sum + (outstanding.closingBalanceAmount || 0),
           0,
         );
-        console.log("outstandings", outstandings);
+        // console.log("outstandings", outstandings);
 
         // console.log("sumOfClosingBalance", sumOfClosingBalance);
-        console.log({
-          account: transaction.account,
-          company: companyId,
-          branch: branchId,
-          status: "pending",
-        });
+        // console.log({
+        //   account: transaction.account,
+        //   company: companyId,
+        //   branch: branchId,
+        //   status: "pending",
+        // });
 
         if (transactionType === "payment") {
           // Tweak previousBalanceAmount
@@ -388,7 +388,7 @@ export const getTransactionDetail = async (req, res) => {
 
         if (outstanding) {
           // Tweak paidAmount
-          transaction.paidAmount = outstanding.paidAmount || 0;
+          transaction.effectivePaidAmount = outstanding.paidAmount || 0;
         }
       }
     }
@@ -526,6 +526,7 @@ export const editTransaction = async (req, res) => {
     // ========================================
     // 5. Handle Outstanding & Cash/Bank Changes
     // ========================================
+    
     const accountTypeResult = await handleAccountTypeChangeOnEdit(
       originalTransaction,
       updatedData,
