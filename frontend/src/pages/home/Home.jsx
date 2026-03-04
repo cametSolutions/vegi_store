@@ -72,7 +72,7 @@ function Home() {
       <div className="pointer-events-none absolute -right-24 top-28 h-80 w-80 rounded-full bg-cyan-300/35 blur-3xl" />
       <div className="pointer-events-none absolute left-1/3 top-1/2 h-72 w-72 rounded-full bg-amber-200/20 blur-3xl" />
 
-      <section className="relative z-10 overflow-hidden rounded-sm border border-white/70 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 p-5 text-white shadow-xl shadow-emerald-900/15 sm:p-6">
+      {/* <section className="relative z-10 overflow-hidden rounded-sm border border-white/70 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 p-5 text-white shadow-xl shadow-emerald-900/15 sm:p-6">
         <div className="absolute right-4 top-4 rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur">
           Live Preview
         </div>
@@ -105,9 +105,9 @@ function Home() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
-      <section className="relative z-10 mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="relative z-10 mt-2 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((item, index) => (
           <article
             key={item.title}
