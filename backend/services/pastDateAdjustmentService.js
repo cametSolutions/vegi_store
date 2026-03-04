@@ -67,6 +67,10 @@ export const createPastDateAdjustmentEntry = async (
     rateDelta: item.rate,
   }));
 
+  const crTnsTypes = ["receipt", "sales_return","purchase"];
+
+  const multiplier = crTnsTypes.includes(createdTransaction.transactionType) ? -1 : 1;
+
   const payload = [
     {
       company: createdTransaction.company,
@@ -84,7 +88,7 @@ export const createPastDateAdjustmentEntry = async (
       adjustmentDate: new Date(),
       adjustmentType: "item_change",
       adjustmentPurpose: "standalone",
-      amountDelta: isFundTns ? createdTransaction.amount : createdTransaction.netAmount,
+      amountDelta: isFundTns ? multiplier * createdTransaction.amount : multiplier * createdTransaction.netAmount,
       oldAmount: 0,
       newAmount: isFundTns ? createdTransaction.amount : createdTransaction.netAmount,
       itemAdjustments,

@@ -326,6 +326,10 @@ export const getBatchOpeningBalances = async (
   console.timeEnd("Step 4 - Adjustment movements query");
   console.log("Adjustment movements found:", adjustmentMovements.length);
 
+  console.log("ledgerMovements", ledgerMovements);
+  console.log("adjustmentMovements", adjustmentMovements);
+  console.log("baseBalances", baseBalances);
+
   // STEP 7: Combine all data
   console.log("Step 5: Combining all data");
   const finalBalances = {};

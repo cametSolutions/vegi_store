@@ -29,6 +29,7 @@ import {
 import { transactionTypeToModelName } from "../helpers/transactionHelpers/transactionMappers.js";
 import CashBankLedgerModel from "../model/CashBankLedgerModel.js";
 import { lockFinancialYearFormat } from "../controller/companyController/companyController.js";
+import { createPastDateAdjustmentEntry } from "./pastDateAdjustmentService.js";
 // import { createFundTransactionAdjustmentEntry } from "../helpers/transactionHelpers/adjustmentEntryHelper.js";
 
 /**
@@ -40,7 +41,6 @@ import { lockFinancialYearFormat } from "../controller/companyController/company
  * @returns {Promise<Object>} Transaction result
  */
 export const createFundTransaction = async (data, session = null) => {
-  // Determine if we need to manage session lifecycle
   const shouldManageSession = !session;
   const activeSession = session || (await mongoose.startSession());
 
@@ -49,7 +49,7 @@ export const createFundTransaction = async (data, session = null) => {
   }
 
   try {
-    const { transactionType, user, isPastDated, ...requestData } = data;
+    const { transactionType, user, isPastDated = false, ...requestData } = data;
 
     // Validate transaction type
     if (
@@ -101,8 +101,6 @@ export const createFundTransaction = async (data, session = null) => {
 
     // Step 4: Prepare transaction data
     const preparedData = prepareTransactionData(transactionData, user);
-
-    console.log("TransactionModel", TransactionModel);
 
     // Step 5: Create transaction record
     const newTransaction = new TransactionModel(preparedData);
@@ -171,7 +169,7 @@ export const createFundTransaction = async (data, session = null) => {
         transactionDate: newTransaction.transactionDate,
         transactionType: transactionType.toLowerCase(),
         ledgerSide: partyLedgerSide,
-        amount: isPastDated ? 0 : amount,
+        amount: isPastDated ? 0 : amount, // ✅ zero for past-dated
         narration:
           transactionData.narration || `${transactionType} transaction`,
         createdBy: user._id,
@@ -188,19 +186,25 @@ export const createFundTransaction = async (data, session = null) => {
         accountName: partyAccount.accountName,
         transactionDate: newTransaction.transactionDate,
         ledgerSide: partyLedgerSide,
-        amount: isPastDated ? 0 : amount,
+        amount: isPastDated ? 0 : amount, // ✅ zero for past-dated
       },
       activeSession,
     );
 
-    /// in the initial update lock the fy format if company is being updated
+    // Lock FY format
     if (transactionData.company) {
       await lockFinancialYearFormat(transactionData.company, activeSession);
     }
 
-    // Commit transaction if we manage the session
+    // Commit only if this function owns the session
     if (shouldManageSession) {
       await activeSession.commitTransaction();
+
+      // ✅ Adjustment entry only for standalone (shouldManageSession = true)
+      // When called from sale controller, parent handles this after its own commit
+      if (isPastDated) {
+        await createPastDateAdjustmentEntry(newTransaction, user._id, null, true);
+      }
     }
 
     return {

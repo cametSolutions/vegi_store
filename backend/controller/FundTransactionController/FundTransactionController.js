@@ -23,9 +23,9 @@ import { markMonthlyBalancesForRecalculation } from "../../helpers/transactionHe
  */
 export const createStandaloneFundTransaction = async (req, res) => {
   const session = await mongoose.startSession();
+  let sessionEnded = false; // ✅ track session state
 
   try {
-    // MAIN FUND TRANSACTION
     session.startTransaction();
 
     const data = req.body;
@@ -33,6 +33,10 @@ export const createStandaloneFundTransaction = async (req, res) => {
     const txnDate = startOfDay(new Date(data.transactionDate));
     const isPastDated = txnDate < today;
 
+    // createFundTransaction manages its own adjustment entry
+    // when shouldManageSession = true (no session passed from outside)
+    // BUT here we are passing session, so shouldManageSession = false inside
+    // So we handle isPastDated adjustment + recalc here after commit
     const result = await createFundTransaction(
       {
         ...data,
@@ -44,16 +48,17 @@ export const createStandaloneFundTransaction = async (req, res) => {
     );
 
     await session.commitTransaction();
-    session.endSession(); // main session is finished here
+    session.endSession();
+    sessionEnded = true; // ✅ mark as ended
 
-    // PAST-DATED HANDLING
+    // PAST-DATED HANDLING (after commit, safe to run outside session)
     if (isPastDated) {
       const userId = req.user.id;
 
-      // 1) Adjustment entry - no transaction needed, or use its own session if you want
-      await createPastDateAdjustmentEntry(result.transaction, userId, null,true);
+      // 1) Adjustment entry for this receipt/payment
+      await createPastDateAdjustmentEntry(result.transaction, userId, null, true);
 
-      // 2) Heavy recalculation in its own session
+      // 2) Heavy recalculation in its own dedicated session
       const reCalcSession = await mongoose.startSession();
       try {
         reCalcSession.startTransaction();
@@ -67,9 +72,8 @@ export const createStandaloneFundTransaction = async (req, res) => {
 
         await reCalcSession.commitTransaction();
       } catch (e) {
-        // ONLY abort reCalcSession here
         await reCalcSession.abortTransaction();
-        throw e; // let it bubble out, but do NOT abort any other session again
+        throw e;
       } finally {
         reCalcSession.endSession();
       }
@@ -80,13 +84,15 @@ export const createStandaloneFundTransaction = async (req, res) => {
       data: result.transaction,
     });
   } catch (err) {
-    // This catch is ONLY for the main session
-    try {
-      await session.abortTransaction();
-    } catch (_) {
-      // ignore if already aborted or not started
+    // Only abort/end if session is still active
+    if (!sessionEnded) {
+      try {
+        await session.abortTransaction();
+      } catch (_) {
+        // ignore if already aborted
+      }
+      session.endSession();
     }
-    session.endSession();
 
     return res.status(500).json({ success: false, message: err.message });
   }

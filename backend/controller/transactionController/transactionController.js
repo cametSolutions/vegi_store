@@ -188,19 +188,16 @@ export const createTransaction = async (req, res) => {
     // Calculate and validate totals
     const { netAmount, paidAmount } = transactionData;
     const paymentStatus = determinePaymentStatus(netAmount, paidAmount);
-
     transactionData.paymentStatus = paymentStatus;
 
     // Determine payment method
     if (paidAmount >= netAmount) {
       transactionData.paymentMethod = "cash";
-    } else if (paidAmount > 0) {
-      transactionData.paymentMethod = "credit";
     } else {
       transactionData.paymentMethod = "credit";
     }
 
-    // Process transaction using helper
+    // Process main transaction (sale/purchase etc.)
     const result = await processTransaction(
       transactionData,
       userId,
@@ -208,6 +205,7 @@ export const createTransaction = async (req, res) => {
       isPastDated,
     );
 
+    // Handle past-dated for main transaction (inside session, before commit)
     if (isPastDated) {
       await createPastDateAdjustmentEntry(result.transaction, userId, session);
       await markMonthlyBalancesForRecalculation(
@@ -218,7 +216,7 @@ export const createTransaction = async (req, res) => {
       );
     }
 
-    // Create receipt if paid amount > 0
+    // Create receipt/payment if paid amount > 0
     let receiptResult = null;
     if (paidAmount > 0) {
       const receiptType =
@@ -228,7 +226,6 @@ export const createTransaction = async (req, res) => {
           : "payment";
 
       const { previousBalanceAmount, netAmount, paidAmount } = transactionData;
-
       const totalAmountForReceipt = netAmount + previousBalanceAmount;
       const closingBalanceAmountForReceipt = totalAmountForReceipt - paidAmount;
 
@@ -248,25 +245,34 @@ export const createTransaction = async (req, res) => {
             transactionTypeToModelName[transactionData.transactionType] ||
             "Sale",
           referenceType: transactionData.transactionType,
-          date: transactionData.date || new Date(),
+          date: transactionData.transactionDate || new Date(), // ✅ fixed: transactionDate not date
+          isPastDated, // ✅ passed correctly
           user: req.user,
         },
-        session,
+        session, // ✅ parent session passed, shouldManageSession = false inside
       );
     }
 
-    /// in the initial update lock the fy format if company is being updated
+    // Lock FY format
     if (req.body.company) {
       await lockFinancialYearFormat(transactionData.company, session);
     }
 
-    // Commit transaction
+    // Commit main session
     await session.commitTransaction();
 
+    // After commit: create adjustment entry for receipt if past-dated
+    // (cannot do inside session since session is now committed)
+    if (isPastDated && receiptResult) {
+      await createPastDateAdjustmentEntry(
+        receiptResult.transaction,
+        userId,
+        null, // ✅ no session needed, main transaction already committed
+        true,
+      );
+    }
 
-
-    // Send success response
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Transaction created successfully",
       data: {
@@ -303,7 +309,7 @@ export const createTransaction = async (req, res) => {
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to create transaction",
       error: error.message,
@@ -312,6 +318,7 @@ export const createTransaction = async (req, res) => {
     session.endSession();
   }
 };
+
 
 /**
  * get transaction details (handles sales, purchase, sales_return, purchase_return)
@@ -546,32 +553,32 @@ export const editTransaction = async (req, res) => {
     const oldPaidAmount = originalTransaction.paidAmount || 0;
     const newPaidAmount = updatedData.paidAmount || 0;
 
-    if (oldPaidAmount !== newPaidAmount) {
-      console.log("\n💰 Paid amount changed, handling receipt/payment...");
+    // if (oldPaidAmount !== newPaidAmount) {
+    //   console.log("\n💰 Paid amount changed, handling receipt/payment...");
 
-      receiptHandlingResult = await handleReceiptOnEdit({
-        transactionId: originalTransaction._id,
-        transactionType: updatedData.transactionType,
-        oldPaidAmount,
-        newPaidAmount,
-        accountId: updatedData.account,
-        accountName: updatedData.accountName,
-        company: updatedData.company,
-        branch: updatedData.branch,
-        transactionDate: updatedData.transactionDate,
-        netAmount: updatedData.netAmount,
-        previousBalanceAmount: updatedData.previousBalanceAmount,
-        user: req.user,
-        session,
-      });
+    //   receiptHandlingResult = await handleReceiptOnEdit({
+    //     transactionId: originalTransaction._id,
+    //     transactionType: updatedData.transactionType,
+    //     oldPaidAmount,
+    //     newPaidAmount,
+    //     accountId: updatedData.account,
+    //     accountName: updatedData.accountName,
+    //     company: updatedData.company,
+    //     branch: updatedData.branch,
+    //     transactionDate: updatedData.transactionDate,
+    //     netAmount: updatedData.netAmount,
+    //     previousBalanceAmount: updatedData.previousBalanceAmount,
+    //     user: req.user,
+    //     session,
+    //   });
 
-      console.log(
-        "✅ Receipt/payment handling completed:",
-        receiptHandlingResult.action,
-      );
-    } else {
-      console.log("⏭️ Paid amount unchanged, skipping receipt handling");
-    }
+    //   console.log(
+    //     "✅ Receipt/payment handling completed:",
+    //     receiptHandlingResult.action,
+    //   );
+    // } else {
+    //   console.log("⏭️ Paid amount unchanged, skipping receipt handling");
+    // }
 
     // console.log("deltas",deltas);
 
