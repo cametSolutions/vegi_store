@@ -127,6 +127,7 @@ export const calculateTransactionDeltas = (original, updated) => {
     newAccountName: updated.accountName,
     stockDelta,
     itemsChanged: stockDelta.length > 0,
+    dateChanged,
 
     // NEW: date change info
     dateChange: {

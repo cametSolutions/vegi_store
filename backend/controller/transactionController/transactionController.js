@@ -47,6 +47,9 @@ import {
 } from "../companyController/companyController.js";
 import { createPastDateAdjustmentEntry } from "../../services/pastDateAdjustmentService.js";
 import { startOfDay } from "../../../shared/utils/date.js";
+import AccountLedger from "../../model/AccountLedgerModel.js";
+import ItemLedger from "../../model/ItemsLedgerModel.js";
+import { updateLedgerDates } from "../../helpers/CommonTransactionHelper/ledgerService.js";
 
 const toId = (value) => {
   if (!value) return "";
@@ -55,13 +58,9 @@ const toId = (value) => {
   return value.toString();
 };
 
-
-
 /**
  * get transactions (handles sales, purchase, sales_return, purchase_return)
  */
-
-
 
 export const getTransactions = async (req, res) => {
   try {
@@ -319,7 +318,6 @@ export const createTransaction = async (req, res) => {
   }
 };
 
-
 /**
  * get transaction details (handles sales, purchase, sales_return, purchase_return)
  */
@@ -485,8 +483,6 @@ export const editTransaction = async (req, res) => {
       });
     }
 
-
-
     // ========================================
     // STEP 2: Calculate Deltas (Differences)
     // ========================================
@@ -526,7 +522,7 @@ export const editTransaction = async (req, res) => {
     // ========================================
     // 5. Handle Outstanding & Cash/Bank Changes
     // ========================================
-    
+
     const accountTypeResult = await handleAccountTypeChangeOnEdit(
       originalTransaction,
       updatedData,
@@ -581,7 +577,7 @@ export const editTransaction = async (req, res) => {
       console.log("⏭️ Paid amount unchanged, skipping receipt handling");
     }
 
-    console.log("deltas",deltas);
+    console.log("deltas", deltas);
 
     // ========================================
     // STEP 8: Update Original Transaction Document
@@ -592,6 +588,22 @@ export const editTransaction = async (req, res) => {
       userId,
       session,
     );
+
+    // ========================================
+    // STEP 8,5: Update the ledger dates if date is changed
+    // ========================================
+    /// if date is changed then we need to update the date in account ledger and item ledger as well as it will affect the monthly balance and also the stock report and outstanding report
+
+
+    if (deltas.dateChanged) {
+      const updateLedgers = await updateLedgerDates(
+        updatedTransaction.company,
+        updatedTransaction.branch,
+        updatedTransaction._id,
+        updatedTransaction.transactionDate,
+        session,
+      );
+    }
 
     // Step 9: ✅ ADD THIS - Trigger offset after edit
     await triggerOffsetAfterEdit(
