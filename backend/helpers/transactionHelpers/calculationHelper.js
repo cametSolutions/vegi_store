@@ -106,11 +106,14 @@ export const calculateTransactionDeltas = (original, updated) => {
   // Amount delta
   const netAmountDelta = updated.netAmount - original.netAmount;
 
-
-
   // Account changed?
   const accountChanged =
     original.account.toString() !== updated.account.toString();
+
+  // Date changed?
+  const originalDate = new Date(original.transactionDate);
+  const updatedDate = new Date(updated.transactionDate);
+  const dateChanged = originalDate.getTime() !== updatedDate.getTime();
 
   // Item deltas
   const stockDelta = calculateStockDeltas(original.items, updated.items);
@@ -124,8 +127,16 @@ export const calculateTransactionDeltas = (original, updated) => {
     newAccountName: updated.accountName,
     stockDelta,
     itemsChanged: stockDelta.length > 0,
+
+    // NEW: date change info
+    dateChange: {
+      hasChange: dateChanged,
+      oldDate: originalDate,
+      newDate: updatedDate,
+    },
   };
 };
+
 
 /**
  * Calculate stock deltas for items

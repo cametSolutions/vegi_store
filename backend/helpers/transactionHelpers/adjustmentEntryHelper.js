@@ -28,7 +28,8 @@ export const createAdjustmentEntries = async (
     !deltas.accountChanged &&
     !deltas.itemsChanged &&
     deltas.netAmountDelta === 0 &&
-    (!deltas.stockDelta || deltas.stockDelta.length === 0);
+    (!deltas.stockDelta || deltas.stockDelta.length === 0) &&
+    !(deltas.dateChange && deltas.dateChange.hasChange);
 
   if (hasNoChanges) {
     console.log("⏭️ No changes detected - skipping adjustment entry creation");
@@ -57,12 +58,15 @@ export const createAdjustmentEntries = async (
   // 2. Determine Adjustment Type
   // ========================================
   let adjustmentType = "amount_change";
+
   if (deltas.accountChanged && deltas.itemsChanged) {
     adjustmentType = "mixed";
   } else if (deltas.accountChanged) {
     adjustmentType = "account_change";
   } else if (deltas.itemsChanged) {
     adjustmentType = "item_change";
+  } else if (deltas.dateChange && deltas.dateChange.hasChange) {
+    adjustmentType = "date_change";
   }
 
   // ========================================
@@ -79,6 +83,10 @@ export const createAdjustmentEntries = async (
         ),
         originalTransactionNumber: original.transactionNumber,
         originalTransactionDate: original.transactionDate,
+        newTransactionDate:
+          deltas.dateChange && deltas.dateChange.hasChange
+            ? deltas.dateChange.newDate
+            : null,
         adjustmentNumber,
         adjustmentDate: new Date(),
         adjustmentType,
@@ -161,8 +169,6 @@ export const createAdjustmentEntries = async (
     ],
     { session },
   );
-
-
 
   console.log("✅ Adjustment created:", {
     adjustmentNumber,
