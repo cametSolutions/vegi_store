@@ -93,6 +93,11 @@ export const markMonthlyBalancesForRecalculation = async (
   session,
   forceRecalculate = false, // ✅ Renamed for clarity
 ) => {
+  console.log("updating monthly balances");
+  console.log("original", original);
+  console.log("updated", updated);
+
+
   const { company, branch } = updated;
 
   const originalDate = new Date(original.transactionDate);
@@ -103,6 +108,9 @@ export const markMonthlyBalancesForRecalculation = async (
     originalDate.getTime() <= updatedDate.getTime()
       ? originalDate
       : updatedDate;
+
+  console.log("earliestDate", earliestDate);
+
 
   const { year, month } = getMonthYear(earliestDate); // use earliest date
   const periodKey = generatePeriodKey(earliestDate);

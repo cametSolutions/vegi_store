@@ -442,6 +442,9 @@ export const editTransaction = async (req, res) => {
       session,
     );
 
+    console.log("originalTransaction",originalTransaction);
+    
+
     const oldAccount = originalTransaction.account;
 
     // ========================================
@@ -593,7 +596,6 @@ export const editTransaction = async (req, res) => {
     // STEP 8,5: Update the ledger dates if date is changed
     // ========================================
     /// if date is changed then we need to update the date in account ledger and item ledger as well as it will affect the monthly balance and also the stock report and outstanding report
-
 
     if (deltas.dateChanged) {
       const updateLedgers = await updateLedgerDates(

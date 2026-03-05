@@ -242,6 +242,8 @@ export const createCashAccountAdjustment = async (
 
 // services/adjustmentService.js
 
+// services/adjustmentService.js
+
 export const createFundTransactionAdjustmentEntry = async ({
   originalTransaction,
   transactionType,
@@ -256,9 +258,7 @@ export const createFundTransactionAdjustmentEntry = async ({
 }) => {
   console.log("\n📋 ===== CREATING ADJUSTMENT ENTRY =====");
 
-  console.log({
-    reversedSettlements,
-  });
+  console.log({ reversedSettlements });
 
   const adjustmentNumber = await AdjustmentEntry.generateAdjustmentNumber(
     originalTransaction.company,
@@ -274,6 +274,18 @@ export const createFundTransactionAdjustmentEntry = async ({
     deltas.narrationChanged
   ) {
     adjustmentType = deltas.amountChanged ? "mixed" : "amount_change";
+  }
+
+  // If it's a pure date change (no other changes), mark as date_change
+  if (
+    deltas.dateChange &&
+    deltas.dateChange.hasChange &&
+    !deltas.amountChanged &&
+    !deltas.paymentModeChanged &&
+    !deltas.chequeDetailsChanged &&
+    !deltas.narrationChanged
+  ) {
+    adjustmentType = "date_change";
   }
 
   // Prepare settlements summary
@@ -300,6 +312,15 @@ export const createFundTransactionAdjustmentEntry = async ({
   if (deltas.paymentModeChanged) {
     reason += " - Payment mode changed";
   }
+  if (deltas.dateChange && deltas.dateChange.hasChange) {
+    const oldD = deltas.dateChange.oldDate
+      ? deltas.dateChange.oldDate.toISOString().slice(0, 10)
+      : "";
+    const newD = deltas.dateChange.newDate
+      ? deltas.dateChange.newDate.toISOString().slice(0, 10)
+      : "";
+    reason += ` - Date changed from ${oldD} to ${newD}`;
+  }
 
   const adjustmentEntry = new AdjustmentEntry({
     company: originalTransaction.company,
@@ -308,15 +329,24 @@ export const createFundTransactionAdjustmentEntry = async ({
     originalTransactionModel:
       transactionType.charAt(0).toUpperCase() + transactionType.slice(1),
     originalTransactionNumber: originalTransaction.transactionNumber,
+
     originalTransactionDate: originalTransaction.transactionDate,
+    // NEW: store newTransactionDate for audit if date changed
+    newTransactionDate:
+      deltas.dateChange && deltas.dateChange.hasChange
+        ? deltas.dateChange.newDate
+        : null,
+
     adjustmentNumber,
     adjustmentDate: new Date(),
     adjustmentType,
     affectedAccount: originalTransaction.account,
     affectedAccountName: originalTransaction.accountName,
+
     amountDelta: deltas.amountDelta,
     oldAmount: deltas.oldAmount,
     newAmount: deltas.newAmount,
+
     cashBankImpact,
     settlementsSummary,
     reason,
@@ -332,6 +362,7 @@ export const createFundTransactionAdjustmentEntry = async ({
 
   return adjustmentEntry;
 };
+
 
 /**
  * Create adjustment entry when a fund transaction (Receipt/Payment) is cancelled

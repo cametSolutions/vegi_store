@@ -10,10 +10,9 @@ export const cashtransactionMutations = {
 
     onSuccess: (response, variables) => {
       // The response structure based on your logs shows the transaction is directly in response
-      const transaction = response?.data.transaction;
+      const transaction = response?.data;
 
-      const company = transaction?.company;
-      const branch = transaction?.branch;
+
       const transactionType = transaction?.transactionType;
 
       // Invalidate the transaction list query

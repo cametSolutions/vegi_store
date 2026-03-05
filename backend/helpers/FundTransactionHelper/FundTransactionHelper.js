@@ -334,17 +334,17 @@ export const validateEditRequest = async (
     );
   }
 
-  // Check if trying to change transaction date (not allowed for now)
-  if (updateData.transactionDate) {
-    const originalDate = new Date(originalTx.transactionDate).toDateString();
-    const newDate = new Date(updateData.transactionDate).toDateString();
+  // // Check if trying to change transaction date (not allowed for now)
+  // if (updateData.transactionDate) {
+  //   const originalDate = new Date(originalTx.transactionDate).toDateString();
+  //   const newDate = new Date(updateData.transactionDate).toDateString();
 
-    if (originalDate !== newDate) {
-      throw new Error(
-        "Transaction date editing is currently restricted. Please contact administrator.",
-      );
-    }
-  }
+  //   if (originalDate !== newDate) {
+  //     throw new Error(
+  //       "Transaction date editing is currently restricted. Please contact administrator.",
+  //     );
+  //   }
+  // }
 
   // Validate amount if provided
   if (updateData.amount !== undefined) {

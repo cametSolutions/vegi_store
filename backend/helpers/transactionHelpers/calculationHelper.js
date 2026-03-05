@@ -138,7 +138,6 @@ export const calculateTransactionDeltas = (original, updated) => {
   };
 };
 
-
 /**
  * Calculate stock deltas for items
  * Returns array of items with quantity changes
@@ -180,10 +179,7 @@ export const calculateStockDeltas = (originalItems, updatedItems) => {
 
     // Convert totalAmount → avgRate
     map.forEach((v) => {
-      v.rate =
-        v.quantity > 0
-          ? Number((v.totalAmount / v.quantity))
-          : 0;
+      v.rate = v.quantity > 0 ? Number(v.totalAmount / v.quantity) : 0;
     });
 
     return map;
@@ -214,11 +210,9 @@ export const calculateStockDeltas = (originalItems, updatedItems) => {
         changeType: "added",
       });
     } else {
-      const quantityDelta =
-        updatedItem.quantity - originalItem.quantity;
+      const quantityDelta = updatedItem.quantity - originalItem.quantity;
 
-      const rateDelta =
-        updatedItem.rate - originalItem.rate;
+      const rateDelta = updatedItem.rate - originalItem.rate;
 
       if (quantityDelta !== 0 || rateDelta !== 0) {
         let changeType = null;
@@ -282,8 +276,9 @@ export const calculateStockDeltas = (originalItems, updatedItems) => {
   return deltas;
 };
 
-
-
+/**
+ * Calculate what changed between original and updated data for receipt/payment transactions
+ */
 /**
  * Calculate what changed between original and updated data for receipt/payment transactions
  */
@@ -293,9 +288,22 @@ export const calculateFundTransactionDeltas = (originalTx, updateData) => {
     amountDelta: 0,
     oldAmount: originalTx.amount,
     newAmount: originalTx.amount,
+
     paymentModeChanged: false,
     chequeDetailsChanged: false,
     narrationChanged: false,
+    dateChanged: false,
+
+    // NEW: date change
+    dateChange: {
+      hasChange: false,
+      oldDate: originalTx.transactionDate
+        ? new Date(originalTx.transactionDate)
+        : null,
+      newDate: updateData.transactionDate
+        ? new Date(updateData.transactionDate)
+        : null,
+    },
   };
 
   // Check amount change
@@ -332,6 +340,20 @@ export const calculateFundTransactionDeltas = (originalTx, updateData) => {
     updateData.narration !== originalTx.narration
   ) {
     deltas.narrationChanged = true;
+  }
+
+  // NEW: finalize date change flag
+  if (updateData.transactionDate !== undefined) {
+    const oldDate = originalTx.transactionDate
+      ? new Date(originalTx.transactionDate)
+      : null;
+    const newDate = new Date(updateData.transactionDate);
+
+    deltas.dateChange.oldDate = oldDate;
+    deltas.dateChange.newDate = newDate;
+    deltas.dateChange.hasChange =
+      !oldDate || oldDate.getTime() !== newDate.getTime();
+    deltas.dateChanged = true;
   }
 
   return deltas;
