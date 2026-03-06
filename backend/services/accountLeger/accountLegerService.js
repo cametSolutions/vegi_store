@@ -391,6 +391,9 @@ export const checkIfDirtyPeriodExists = async (
     needsRecalculation: false,
   });
 
+  console.log("cleanMonthlyBalance",cleanMonthlyBalances);
+  
+
   if (cleanMonthlyBalances !== accountIds.length) {
     return {
       isDirty: true,
