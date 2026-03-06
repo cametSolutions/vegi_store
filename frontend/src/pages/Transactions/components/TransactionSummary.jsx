@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { NumericFormat } from "react-number-format";
 
 const TransactionSummaryComponent = ({
@@ -11,11 +11,8 @@ const TransactionSummaryComponent = ({
   onPaidAmountChange,
   transactionType,
   accountType,
-  effectivePaidAmount=null,
+  settledAmount = null,
 }) => {
-
-
-  
 
   // UPDATED: Added 'focus:outline-none' to explicitly override browser default focus states
   const baseInputClass =
@@ -94,7 +91,29 @@ const TransactionSummaryComponent = ({
         {/* Spacer */}
         <div className="flex-1"></div>
 
-        {/* 4. Payment Received / Paid */}
+         {/* 4. Settled Amount (edit view, read-only) */}
+        {settledAmount !== null && settledAmount !== undefined && (
+          <div className="flex flex-col w-32">
+            <label className="text-[10px] text-amber-700 font-medium mb-0.5 ml-1">
+              Settled
+            </label>
+            <div className={`${wrapperClass} bg-amber-50 border-amber-200`}>
+              <span className="text-amber-400 text-[10px] mr-1">₹</span>
+              <NumericFormat
+                value={settledAmount}
+                displayType="input"
+                readOnly
+                thousandSeparator=","
+                decimalScale={2}
+                fixedDecimalScale
+                className={`${baseInputClass} text-amber-700 font-semibold cursor-default`}
+              />
+            </div>
+          </div>
+        )}
+
+
+        {/* 5. Payment Received / Paid */}
         {transactionType === "sale" && accountType === "customer" && (
           <div className="flex flex-col w-32">
             <label className="text-[10px] text-blue-600 font-medium mb-0.5 ml-1">
@@ -121,6 +140,7 @@ const TransactionSummaryComponent = ({
           </div>
         )}
 
+       
         {/* 5. Balance Due */}
         <div className="flex flex-col w-36">
           <label className="text-[10px] text-slate-500 font-bold mb-0.5 text-right mr-1">

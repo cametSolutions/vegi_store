@@ -384,9 +384,42 @@ export const getTransactionDetail = async (req, res) => {
           sourceTransaction: transactionId,
         }).lean();
 
-        if (outstanding) {
-          // Tweak paidAmount
-          transaction.effectivePaidAmount = outstanding.paidAmount || 0;
+        transaction.settledAmount = 0;
+
+        if (outstanding?._id) {
+          const ReceiptModel = getTransactionModel("receipt");
+
+          // Receipts auto-created from this sale (reference = sale transaction id)
+          const receipts = await ReceiptModel.find({
+            reference: transactionId,
+            company: companyId,
+            branch: branchId,
+            status: "active",
+            isCancelled: { $ne: true },
+          })
+            .select("_id")
+            .lean();
+
+          const receiptIds = receipts.map((r) => r._id.toString());
+
+          // Sum all active settlements for this outstanding, excluding settlements
+          // that were created by the sale's own auto-receipts.
+          const settlements = await OutstandingSettlementModel.find({
+            outstanding: outstanding._id,
+            settlementStatus: "active",
+          })
+            .select("transaction settledAmount")
+            .lean();
+
+          const settledAmount = settlements.reduce((sum, settlement) => {
+            const settlementTransactionId = settlement?.transaction?.toString?.();
+            if (settlementTransactionId && receiptIds.includes(settlementTransactionId)) {
+              return sum;
+            }
+            return sum + (settlement?.settledAmount || 0);
+          }, 0);
+
+          transaction.settledAmount = settledAmount;
         }
       }
     }

@@ -194,6 +194,7 @@ export const useTransaction = (initialData = null) => {
     transactionData.discountType,
     transactionData.openingBalance,
     transactionData.paidAmount,
+    transactionData.settledAmount,
     transactionData.taxRate,
   ]);
 
