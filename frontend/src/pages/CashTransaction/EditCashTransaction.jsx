@@ -11,7 +11,7 @@ import { useCashTransactionActions } from "./hooks/useCashTransactionAction";
 import CustomMoonLoader from "../../components/loaders/CustomMoonLoader";
 import { transactionQueries } from "@/hooks/queries/transaction.queries";
 import { addTransactionDataToStore, removeTransactionDataFromStore } from "@/store/slices/transactionSlice";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import AmountEditWarningDialog from "@/components/modals/AmountEditWarningDialog";
 
 const TransactionHeader = React.memo(CashTransactionHeaderComponent);
@@ -37,11 +37,8 @@ const EditCashTransaction = ({
     resetCashTransactionData,
     updateCashtransactionData,
     updateTransactionField,
-    setCashtransactionData,
   } = useCashTransaction();
   const dispatch = useDispatch();
-
-  console.log(editTransactionData);
 
   const selectedCompanyFromStore = useSelector(
     (state) => state.companyBranch?.selectedCompany,
@@ -61,14 +58,14 @@ const EditCashTransaction = ({
       editTransactionId: editTransactionData?._id,
       transactionType: currentTransactionType,
     });
-  }, [currentTransactionType, updateTransactionField]);
+  }, [currentTransactionType, resetCashTransactionData, updateCashtransactionData, editTransactionData?._id]);
 
   // Reset transaction data when navigating away from this page
   useEffect(() => {
     return () => {
       resetCashTransactionData(currentTransactionType);
     };
-  }, [resetCashTransactionData]);
+  }, [resetCashTransactionData, currentTransactionType]);
 
   // Fetch transaction details - queryKey includes fetchWithLatest for proper refetch
   const {
@@ -92,7 +89,23 @@ const EditCashTransaction = ({
       currentTransactionType,
       fetchWithLatest ? "latest" : "original",
     ],
+    placeholderData: keepPreviousData,
   });
+
+  // Keep global edit flag active for this screen lifecycle only
+  useEffect(() => {
+    dispatch(
+      addTransactionDataToStore({
+        isEditMode: true,
+        editTransactionId: editTransactionData?._id,
+        transactionType: currentTransactionType,
+      }),
+    );
+
+    return () => {
+      dispatch(removeTransactionDataFromStore());
+    };
+  }, [dispatch, editTransactionData?._id, currentTransactionType]);
 
   // Update transaction data when response changes
   useEffect(() => {
@@ -103,30 +116,14 @@ const EditCashTransaction = ({
 
       updateCashtransactionData(dataToUpdate);
 
-      // Prevent navigation in nav bar when in edit mode
-      dispatch(
-        addTransactionDataToStore({
-          isEditMode: true,
-          editTransactionId: editTransactionData?._id,
-          transactionType: currentTransactionType,
-        }),
-      );
-
       // Enable amount field after fetching with latest data
       if (fetchWithLatest) {
         setIsAmountEditable(true);
       }
-
-      return () => {
-        dispatch(removeTransactionDataFromStore());
-      };
     }
   }, [
     transactionResponse,
     updateCashtransactionData,
-    dispatch,
-    editTransactionData?._id,
-    currentTransactionType,
     fetchWithLatest,
   ]);
 
