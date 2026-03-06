@@ -191,3 +191,10 @@ export const getFilterLabel = (filterType) => {
       return "Date Filter";
   }
 };
+
+
+export const startOfDay = (date) => {
+  const normalizedDate = new Date(date);
+  normalizedDate.setHours(0, 0, 0, 0);
+  return normalizedDate;
+};

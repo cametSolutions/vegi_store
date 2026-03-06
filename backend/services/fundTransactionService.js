@@ -15,7 +15,10 @@ import {
   deleteCashBankLedger,
 } from "../helpers/CommonTransactionHelper/CashBankLedgerHelper.js";
 import { getCashBankAccountForPayment } from "../helpers/CommonTransactionHelper/CashBankAccountHelper.js";
-import { createAccountLedger } from "../helpers/CommonTransactionHelper/ledgerService.js";
+import {
+  createAccountLedger,
+  updateLedgerDates,
+} from "../helpers/CommonTransactionHelper/ledgerService.js";
 import {
   markMonthlyBalanceDirtyForFundTransaction,
   updateAccountMonthlyBalance,
@@ -29,6 +32,8 @@ import {
 import { transactionTypeToModelName } from "../helpers/transactionHelpers/transactionMappers.js";
 import CashBankLedgerModel from "../model/CashBankLedgerModel.js";
 import { lockFinancialYearFormat } from "../controller/companyController/companyController.js";
+import { createPastDateAdjustmentEntry } from "./pastDateAdjustmentService.js";
+import { markMonthlyBalancesForRecalculation } from "../helpers/transactionHelpers/transactionEditHelper.js";
 // import { createFundTransactionAdjustmentEntry } from "../helpers/transactionHelpers/adjustmentEntryHelper.js";
 
 /**
@@ -40,9 +45,6 @@ import { lockFinancialYearFormat } from "../controller/companyController/company
  * @returns {Promise<Object>} Transaction result
  */
 export const createFundTransaction = async (data, session = null) => {
-  
-
-  // Determine if we need to manage session lifecycle
   const shouldManageSession = !session;
   const activeSession = session || (await mongoose.startSession());
 
@@ -51,7 +53,9 @@ export const createFundTransaction = async (data, session = null) => {
   }
 
   try {
-    const { transactionType, user, ...requestData } = data;
+    const { transactionType, user, isPastDated = false, ...requestData } = data;
+
+    console.log("Fund Transaction Data:", requestData);
 
     // Validate transaction type
     if (
@@ -104,11 +108,11 @@ export const createFundTransaction = async (data, session = null) => {
     // Step 4: Prepare transaction data
     const preparedData = prepareTransactionData(transactionData, user);
 
-    console.log("TransactionModel", TransactionModel);
-
     // Step 5: Create transaction record
     const newTransaction = new TransactionModel(preparedData);
     await newTransaction.save({ session: activeSession });
+
+    console.log("New Transaction:", newTransaction);
 
     // Step 6: Settle outstanding records using FIFO
     const settlementDetails = await settleOutstandingFIFO({
@@ -173,7 +177,7 @@ export const createFundTransaction = async (data, session = null) => {
         transactionDate: newTransaction.transactionDate,
         transactionType: transactionType.toLowerCase(),
         ledgerSide: partyLedgerSide,
-        amount: amount,
+        amount: isPastDated ? 0 : amount, // ✅ zero for past-dated
         narration:
           transactionData.narration || `${transactionType} transaction`,
         createdBy: user._id,
@@ -190,19 +194,30 @@ export const createFundTransaction = async (data, session = null) => {
         accountName: partyAccount.accountName,
         transactionDate: newTransaction.transactionDate,
         ledgerSide: partyLedgerSide,
-        amount: amount,
+        amount: isPastDated ? 0 : amount, // ✅ zero for past-dated
       },
       activeSession,
     );
 
-    /// in the initial update lock the fy format if company is being updated
+    // Lock FY format
     if (transactionData.company) {
       await lockFinancialYearFormat(transactionData.company, activeSession);
     }
 
-    // Commit transaction if we manage the session
+    // Commit only if this function owns the session
     if (shouldManageSession) {
       await activeSession.commitTransaction();
+
+      // ✅ Adjustment entry only for standalone (shouldManageSession = true)
+      // When called from sale controller, parent handles this after its own commit
+      if (isPastDated) {
+        await createPastDateAdjustmentEntry(
+          newTransaction,
+          user._id,
+          null,
+          true,
+        );
+      }
     }
 
     return {
@@ -269,6 +284,8 @@ export const editFundTransaction = async ({
     const TransactionModel = getTransactionModel(transactionType);
     const originalTx =
       await TransactionModel.findById(transactionId).session(session);
+
+      const originalTnsCopy= JSON.parse(JSON.stringify(originalTx));
 
     if (!originalTx) {
       throw new Error("Transaction not found");
@@ -349,6 +366,9 @@ export const editFundTransaction = async ({
     }
     if (updateData.description !== undefined) {
       originalTx.description = updateData.description;
+    }
+    if (updateData.transactionDate !== undefined) {
+      originalTx.transactionDate = updateData.transactionDate;
     }
 
     if (updateData.closingBalanceAmount !== undefined) {
@@ -440,13 +460,21 @@ export const editFundTransaction = async ({
       // ✅ NEW check
       console.log("\n📅 STEP 11: Marking monthly balance as dirty...");
       const dirtyTaggingResult =
-        await markMonthlyBalanceDirtyForFundTransaction({
-          accountId: originalTx.account,
-          transactionDate: originalTx.transactionDate,
-          company: originalTx.company,
-          branch: originalTx.branch,
+        // await markMonthlyBalanceDirtyForFundTransaction({
+        //   accountId: originalTx.account,
+        //   transactionDate: originalTx.transactionDate,
+        //   company: originalTx.company,
+        //   branch: originalTx.branch,
+        //   session,
+        // });
+
+        await markMonthlyBalancesForRecalculation(
+          originalTnsCopy,
+          updateData,
           session,
-        });
+          true, /// NEW PARAM TO MARK ITEM WITH OUT CHECK IF IT IS CHANGED OR NOT
+        );
+
       console.log("✅ Monthly balance marked for recalculation");
     } else {
       console.log(
@@ -471,6 +499,21 @@ export const editFundTransaction = async ({
       session,
     });
     console.log("✅ Adjustment entry created");
+
+    // ========================================
+    // STEP 13: Update the ledger dates if date is changed
+    // ========================================
+    /// if date is changed then we need to update the date in account ledger and item ledger as well as it will affect the monthly balance and also the stock report and outstanding report
+
+    if (deltas.dateChanged) {
+      const updateLedgers = await updateLedgerDates(
+        updateData.company,
+        updateData.branch,
+        updateData._id,
+        updateData.transactionDate,
+        session,
+      );
+    }
 
     // ========================================
     // COMMIT TRANSACTION

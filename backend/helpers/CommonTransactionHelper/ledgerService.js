@@ -18,26 +18,24 @@ export const createAccountLedger = async (data, session) => {
       transactionDate,
       transactionType,
       ledgerSide, // "debit" or "credit"
-      
+
       amount,
       narration,
       createdBy,
     } = data;
 
     console.log("call came herr");
-    
 
     // Get last running balance for this account
     const lastBalance = await AccountLedger.getLastBalance(
       account,
       company,
       branch,
-      session
+      session,
     );
 
     // console.log("last Balance",lastBalance);
     // console.log("ledgerSide",ledgerSide);
-    
 
     // Calculate new running balance
     let runningBalance;
@@ -50,7 +48,6 @@ export const createAccountLedger = async (data, session) => {
     }
 
     // console.log("runningBalance",runningBalance);
-    
 
     // Create ledger entry
     const ledgerEntry = await AccountLedger.create(
@@ -71,12 +68,10 @@ export const createAccountLedger = async (data, session) => {
           createdBy,
         },
       ],
-      { session }
+      { session },
     );
 
-
-    console.log('leger entry ',ledgerEntry);
-    
+    console.log("leger entry ", ledgerEntry);
 
     return ledgerEntry[0];
   } catch (error) {
@@ -103,12 +98,14 @@ export const createItemLedgers = async (data, session) => {
       createdBy,
     } = data;
 
+    console.log("items", items);
+
     /**
      * STEP 1
      * Convert mongoose subdocuments to plain objects
      */
     const plainItems = items.map((item) =>
-      typeof item.toObject === "function" ? item.toObject() : item
+      typeof item.toObject === "function" ? item.toObject() : item,
     );
 
     /**
@@ -160,7 +157,7 @@ export const createItemLedgers = async (data, session) => {
           item.item,
           company,
           branch,
-          session
+          session,
         );
       }
 
@@ -178,9 +175,7 @@ export const createItemLedgers = async (data, session) => {
 
       // 🔥 Average Rate Calculation
       const avgRate =
-        item.quantity > 0
-          ? Number(item.baseAmount / item.quantity)
-          : 0;
+        item.quantity > 0 ? Number(item.baseAmount / item.quantity) : 0;
 
       ledgerEntries.push({
         company,
@@ -225,5 +220,42 @@ export const createItemLedgers = async (data, session) => {
   }
 };
 
+/**
+ * update ledger dates
+ */
 
-
+export const updateLedgerDates = async (
+  company,
+  branch,
+  transactionId,
+  newTransactionDate,
+  session,
+) => {
+  await AccountLedger.updateOne(
+    {
+      company: company,
+      branch: branch,
+      transactionId: transactionId,
+    },
+    {
+      $set: {
+        transactionDate: newTransactionDate,
+      },
+    },
+    { session },
+  );
+  // STEP 8.6: Update ItemLedger date (and amount if needed)
+  await ItemLedger.updateOne(
+    {
+      company: company,
+      branch: branch,
+      transactionId: transactionId,
+    },
+    {
+      $set: {
+        transactionDate: newTransactionDate,
+      },
+    },
+    { session },
+  );
+};

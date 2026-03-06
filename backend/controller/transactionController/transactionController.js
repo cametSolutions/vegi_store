@@ -45,8 +45,11 @@ import {
   lockFinancialYearFormat,
   unlockFinancialYearFormatIfNoTransactions,
 } from "../companyController/companyController.js";
-import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
-import PriceLevelModel from "../../model/masters/PricelevelModel.js";
+import { createPastDateAdjustmentEntry } from "../../services/pastDateAdjustmentService.js";
+import { startOfDay } from "../../../shared/utils/date.js";
+import AccountLedger from "../../model/AccountLedgerModel.js";
+import ItemLedger from "../../model/ItemsLedgerModel.js";
+import { updateLedgerDates } from "../../helpers/CommonTransactionHelper/ledgerService.js";
 
 const toId = (value) => {
   if (!value) return "";
@@ -58,8 +61,6 @@ const toId = (value) => {
 /**
  * get transactions (handles sales, purchase, sales_return, purchase_return)
  */
-
-
 
 export const getTransactions = async (req, res) => {
   try {
@@ -141,6 +142,9 @@ export const createTransaction = async (req, res) => {
 
   try {
     const transactionData = req.body;
+    const today = startOfDay(new Date());
+    const txnDate = startOfDay(new Date(transactionData.transactionDate));
+    const isPastDated = txnDate < today;
     const userId = req.user.id;
 
     transactionData.createdBy = userId;
@@ -183,22 +187,35 @@ export const createTransaction = async (req, res) => {
     // Calculate and validate totals
     const { netAmount, paidAmount } = transactionData;
     const paymentStatus = determinePaymentStatus(netAmount, paidAmount);
-
     transactionData.paymentStatus = paymentStatus;
 
     // Determine payment method
     if (paidAmount >= netAmount) {
       transactionData.paymentMethod = "cash";
-    } else if (paidAmount > 0) {
-      transactionData.paymentMethod = "credit";
     } else {
       transactionData.paymentMethod = "credit";
     }
 
-    // Process transaction using helper
-    const result = await processTransaction(transactionData, userId, session);
+    // Process main transaction (sale/purchase etc.)
+    const result = await processTransaction(
+      transactionData,
+      userId,
+      session,
+      isPastDated,
+    );
 
-    // Create receipt if paid amount > 0
+    // Handle past-dated for main transaction (inside session, before commit)
+    if (isPastDated) {
+      await createPastDateAdjustmentEntry(result.transaction, userId, session);
+      await markMonthlyBalancesForRecalculation(
+        result.transaction,
+        result.transaction,
+        session,
+        true,
+      );
+    }
+
+    // Create receipt/payment if paid amount > 0
     let receiptResult = null;
     if (paidAmount > 0) {
       const receiptType =
@@ -208,7 +225,6 @@ export const createTransaction = async (req, res) => {
           : "payment";
 
       const { previousBalanceAmount, netAmount, paidAmount } = transactionData;
-
       const totalAmountForReceipt = netAmount + previousBalanceAmount;
       const closingBalanceAmountForReceipt = totalAmountForReceipt - paidAmount;
 
@@ -228,25 +244,34 @@ export const createTransaction = async (req, res) => {
             transactionTypeToModelName[transactionData.transactionType] ||
             "Sale",
           referenceType: transactionData.transactionType,
-          date: transactionData.date || new Date(),
+          transactionDate: transactionData.transactionDate || new Date(), // ✅ fixed: transactionDate not date
+          isPastDated, // ✅ passed correctly
           user: req.user,
         },
-        session,
+        session, // ✅ parent session passed, shouldManageSession = false inside
       );
     }
 
-    /// in the initial update lock the fy format if company is being updated
+    // Lock FY format
     if (req.body.company) {
       await lockFinancialYearFormat(transactionData.company, session);
     }
 
-    // Commit transaction
+    // Commit main session
     await session.commitTransaction();
 
+    // After commit: create adjustment entry for receipt if past-dated
+    // (cannot do inside session since session is now committed)
+    if (isPastDated && receiptResult) {
+      await createPastDateAdjustmentEntry(
+        receiptResult.transaction,
+        userId,
+        null, // ✅ no session needed, main transaction already committed
+        true,
+      );
+    }
 
-
-    // Send success response
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Transaction created successfully",
       data: {
@@ -283,7 +308,7 @@ export const createTransaction = async (req, res) => {
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to create transaction",
       error: error.message,
@@ -331,15 +356,15 @@ export const getTransactionDetail = async (req, res) => {
           (sum, outstanding) => sum + (outstanding.closingBalanceAmount || 0),
           0,
         );
-        console.log("outstandings", outstandings);
+        // console.log("outstandings", outstandings);
 
         // console.log("sumOfClosingBalance", sumOfClosingBalance);
-        console.log({
-          account: transaction.account,
-          company: companyId,
-          branch: branchId,
-          status: "pending",
-        });
+        // console.log({
+        //   account: transaction.account,
+        //   company: companyId,
+        //   branch: branchId,
+        //   status: "pending",
+        // });
 
         if (transactionType === "payment") {
           // Tweak previousBalanceAmount
@@ -361,7 +386,7 @@ export const getTransactionDetail = async (req, res) => {
 
         if (outstanding) {
           // Tweak paidAmount
-          transaction.paidAmount = outstanding.paidAmount || 0;
+          transaction.effectivePaidAmount = outstanding.paidAmount || 0;
         }
       }
     }
@@ -417,6 +442,9 @@ export const editTransaction = async (req, res) => {
       session,
     );
 
+    console.log("originalTransaction",originalTransaction);
+    
+
     const oldAccount = originalTransaction.account;
 
     // ========================================
@@ -458,8 +486,6 @@ export const editTransaction = async (req, res) => {
       });
     }
 
-
-
     // ========================================
     // STEP 2: Calculate Deltas (Differences)
     // ========================================
@@ -499,6 +525,7 @@ export const editTransaction = async (req, res) => {
     // ========================================
     // 5. Handle Outstanding & Cash/Bank Changes
     // ========================================
+
     const accountTypeResult = await handleAccountTypeChangeOnEdit(
       originalTransaction,
       updatedData,
@@ -553,7 +580,7 @@ export const editTransaction = async (req, res) => {
       console.log("⏭️ Paid amount unchanged, skipping receipt handling");
     }
 
-    // console.log("deltas",deltas);
+    console.log("deltas", deltas);
 
     // ========================================
     // STEP 8: Update Original Transaction Document
@@ -564,6 +591,21 @@ export const editTransaction = async (req, res) => {
       userId,
       session,
     );
+
+    // ========================================
+    // STEP 8,5: Update the ledger dates if date is changed
+    // ========================================
+    /// if date is changed then we need to update the date in account ledger and item ledger as well as it will affect the monthly balance and also the stock report and outstanding report
+
+    if (deltas.dateChanged) {
+      const updateLedgers = await updateLedgerDates(
+        updatedTransaction.company,
+        updatedTransaction.branch,
+        updatedTransaction._id,
+        updatedTransaction.transactionDate,
+        session,
+      );
+    }
 
     // Step 9: ✅ ADD THIS - Trigger offset after edit
     await triggerOffsetAfterEdit(

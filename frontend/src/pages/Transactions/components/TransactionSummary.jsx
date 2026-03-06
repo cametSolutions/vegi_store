@@ -11,6 +11,7 @@ const TransactionSummaryComponent = ({
   onPaidAmountChange,
   transactionType,
   accountType,
+  effectivePaidAmount=null,
 }) => {
 
 

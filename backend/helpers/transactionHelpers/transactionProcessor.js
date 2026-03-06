@@ -19,7 +19,12 @@ import { triggerOffsetAfterCreate } from "./offsetTriggerHooks.js";
 /**
  * Main transaction processor - orchestrates all steps
  */
-export const processTransaction = async (transactionData, userId, session) => {
+export const processTransaction = async (
+  transactionData,
+  userId,
+  session,
+  isPastDated = false,
+) => {
   try {
     const { transactionType, branch, items, createdBy, company } =
       transactionData;
@@ -28,7 +33,13 @@ export const processTransaction = async (transactionData, userId, session) => {
     const behavior = await determineTransactionBehavior(transactionType);
 
     // // Step 2: Update stock
-    await updateStock(items, behavior.stockDirection, branch, session, transactionType);
+    await updateStock(
+      items,
+      behavior.stockDirection,
+      branch,
+      session,
+      transactionType,
+    );
 
     const transactionModel = getTransactionModel(transactionType);
 
@@ -84,7 +95,7 @@ export const processTransaction = async (transactionData, userId, session) => {
           accountName: createdTransaction.accountName,
           accountType: createdTransaction.accountType,
           transactionModel: transactionTypeToModelName(
-            createdTransaction.transactionType
+            createdTransaction.transactionType,
           ),
           sourceTransaction: createdTransaction._id,
           transactionType: createdTransaction.transactionType,
@@ -98,7 +109,7 @@ export const processTransaction = async (transactionData, userId, session) => {
           notes: createdTransaction.notes,
           createdBy: createdBy,
         },
-        session
+        session,
       );
     }
 
@@ -114,19 +125,31 @@ export const processTransaction = async (transactionData, userId, session) => {
         transactionDate: createdTransaction.transactionDate,
         transactionType: createdTransaction.transactionType,
         ledgerSide: behavior.ledgerSide,
-        amount: createdTransaction.netAmount,
+        amount: isPastDated ? 0 : createdTransaction.netAmount,
         narration: `${transactionType} - ${createdTransaction.transactionNumber}`,
         createdBy: createdBy,
       },
-      session
+      session,
     );
 
     // Step 6: Create item ledger entries
+
+    const zeroedItems = createdTransaction.items.map((i) => {
+      const item = typeof i.toObject === "function" ? i.toObject() : i;
+      return {
+        ...item,
+        quantity: 0,
+        baseAmount: 0,
+        amountAfterTax: 0,
+        taxAmount: 0,
+      };
+    });
+
     const itemLedgers = await createItemLedgers(
       {
         company: createdTransaction.company,
         branch: createdTransaction.branch,
-        items: createdTransaction.items,
+        items: isPastDated ? zeroedItems : createdTransaction.items,
         transactionId: createdTransaction._id,
         transactionNumber: createdTransaction.transactionNumber,
         transactionDate: createdTransaction.transactionDate,
@@ -136,7 +159,7 @@ export const processTransaction = async (transactionData, userId, session) => {
         accountName: createdTransaction.accountName,
         createdBy: createdBy,
       },
-      session
+      session,
     );
 
     // // Step 7: Update monthly balances (real-time)
@@ -149,9 +172,9 @@ export const processTransaction = async (transactionData, userId, session) => {
         accountName: createdTransaction.accountName,
         transactionDate: createdTransaction.transactionDate,
         ledgerSide: behavior.ledgerSide,
-        amount: createdTransaction.netAmount,
+        amount: isPastDated ? 0 : createdTransaction.netAmount,
       },
-      session
+      session,
     );
 
     // // Item monthly balances
@@ -159,11 +182,11 @@ export const processTransaction = async (transactionData, userId, session) => {
       {
         company: createdTransaction.company,
         branch: createdTransaction.branch,
-        items: createdTransaction.items,
+        items: isPastDated ? zeroedItems : createdTransaction.items,
         transactionDate: createdTransaction.transactionDate,
         movementType: behavior.stockDirection === "out" ? "out" : "in",
       },
-      session
+      session,
     );
 
     console.log("Triggering offset after create");
