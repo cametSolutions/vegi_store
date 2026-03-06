@@ -95,7 +95,7 @@ export const processAllDirtyItems = async () => {
   const workKeys = Object.keys(workMap);
 
   console.log(
-    `📊 Found ${workKeys.length} item-branch combinations with dirty months`
+    `📊 Found ${workKeys.length} item-branch combinations with dirty months`,
   );
 
   // ADD THIS LINE - Track all processed adjustments
@@ -118,19 +118,19 @@ export const processAllDirtyItems = async () => {
 
     try {
       console.log(
-        `\n🔧 Processing: ${itemName} (${itemCode}) - Branch: ${branchId}`
+        `\n🔧 Processing: ${itemName} (${itemCode}) - Branch: ${branchId}`,
       );
       console.log(
         `   Dirty months: ${months
           .map((m) => formatYearMonth(m.year, m.month))
-          .join(", ")}`
+          .join(", ")}`,
       );
 
       const result = await processOneItem(
         itemId,
         branchId,
         months,
-        allProcessedAdjustmentIds
+        allProcessedAdjustmentIds,
       );
 
       itemsProcessed++;
@@ -140,7 +140,7 @@ export const processAllDirtyItems = async () => {
     } catch (error) {
       console.error(
         `   ❌ Error processing ${itemName} (Branch: ${branchId}):`,
-        error.message
+        error.message,
       );
       errors.push({
         itemId,
@@ -165,7 +165,7 @@ export const processAllDirtyItems = async () => {
     console.log("\n⚠️  ERROR DETAILS:");
     errors.forEach((e) => {
       console.log(
-        `   ${e.itemName} (${e.itemCode}) - Branch ${e.branchId}: ${e.error}`
+        `   ${e.itemName} (${e.itemCode}) - Branch ${e.branchId}: ${e.error}`,
       );
     });
   }
@@ -204,7 +204,6 @@ export const findDirtyItems = async () => {
   // Query all monthly balance records that need recalculation
   const dirtyRecords = await ItemMonthlyBalance.find({
     needsRecalculation: true,
-
   })
     .select("item branch year month itemName itemCode") // Include branch
     .lean(); // Return plain JS objects (faster)
@@ -263,7 +262,7 @@ export const processOneItem = async (
   itemId,
   branchId,
   dirtyMonths,
-  allProcessedAdjustmentIds
+  allProcessedAdjustmentIds,
 ) => {
   // Sort months chronologically (oldest first)
   // This is CRITICAL - we must process Jan before Feb, Feb before Mar, etc.
@@ -292,7 +291,7 @@ export const processOneItem = async (
           year,
           month,
           session,
-          allProcessedAdjustmentIds
+          allProcessedAdjustmentIds,
         );
         monthsProcessed++;
         console.log(`      ✓ ${monthKey} completed`);
@@ -365,7 +364,7 @@ export const refoldMonth = async (
   year,
   month,
   session,
-  processedAdjustmentIds
+  processedAdjustmentIds,
 ) => {
   const monthKey = formatYearMonth(year, month);
 
@@ -373,14 +372,15 @@ export const refoldMonth = async (
   // STEP 3.1: Get opening balance (previous month's closing OR Item Master)
   // =========================================================================
   const prevMonth = getPreviousMonth(year, month);
+  // Find the most recent monthly balance BEFORE current month (any year)
   const prevMonthRecord = await ItemMonthlyBalance.findOne({
     item: itemId,
     branch: branchId,
-    year: prevMonth.year,
-    month: prevMonth.month,
+    $or: [{ year: { $lt: year } }, { year: year, month: { $lt: month } }],
   })
-    .select("closingStock")
-    .session(session) // ✨ Read within transaction to get latest data
+    .select("closingStock year month")
+    .sort({ year: -1, month: -1 }) // most recent first
+    .session(session)
     .lean();
 
   let openingStock = 0; // Default fallback
@@ -404,22 +404,22 @@ export const refoldMonth = async (
 
       if (itemMaster && itemMaster.stock) {
         const branchStock = itemMaster.stock.find(
-          (s) => s.branch.toString() === branchId.toString()
+          (s) => s.branch.toString() === branchId.toString(),
         );
 
         if (branchStock && branchStock.openingStock !== undefined) {
           openingStock = branchStock.openingStock;
           console.log(
-            `      📦 Opening from Item Master (${itemMaster.itemName}): ${openingStock}`
+            `      📦 Opening from Item Master (${itemMaster.itemName}): ${openingStock}`,
           );
         } else {
           console.log(
-            `      ⚠️  Branch not found in Item Master stock array, using 0`
+            `      ⚠️  Branch not found in Item Master stock array, using 0`,
           );
         }
       } else {
         console.log(
-          `      ⚠️  Item not found in Item Master or no stock data, using 0`
+          `      ⚠️  Item not found in Item Master or no stock data, using 0`,
         );
       }
     } catch (error) {
@@ -484,7 +484,7 @@ export const refoldMonth = async (
     console.log(
       `      📊 Adjustments affect ${
         Object.keys(adjustmentMap.quantityDeltaMap).length
-      } transactions`
+      } transactions`,
     );
   }
 
@@ -509,7 +509,7 @@ export const refoldMonth = async (
     if (adjustmentMap.quantityDeltaMap[txId]) {
       effectiveQuantity += adjustmentMap.quantityDeltaMap[txId];
       console.log(
-        `🔧 Tx ${entry.transactionNumber}: quantity ${entry.quantity} + delta ${adjustmentMap.quantityDeltaMap[txId]} = ${effectiveQuantity}`
+        `🔧 Tx ${entry.transactionNumber}: quantity ${entry.quantity} + delta ${adjustmentMap.quantityDeltaMap[txId]} = ${effectiveQuantity}`,
       );
     }
 
@@ -517,7 +517,7 @@ export const refoldMonth = async (
     if (adjustmentMap.rateDeltaMap[txId] !== undefined) {
       effectiveRate = entry.rate + adjustmentMap.rateDeltaMap[txId];
       console.log(
-        `🔧 Tx ${entry.transactionNumber}: rate ${entry.rate} + delta ${adjustmentMap.rateDeltaMap[txId]} = ${effectiveRate}`
+        `🔧 Tx ${entry.transactionNumber}: rate ${entry.rate} + delta ${adjustmentMap.rateDeltaMap[txId]} = ${effectiveRate}`,
       );
     }
 
@@ -525,7 +525,7 @@ export const refoldMonth = async (
     if (adjustmentMap.accountMap[txId]) {
       effectiveAccount = adjustmentMap.accountMap[txId];
       console.log(
-        `🔧 Tx ${entry.transactionNumber}: account changed to ${effectiveAccount}`
+        `🔧 Tx ${entry.transactionNumber}: account changed to ${effectiveAccount}`,
       );
     }
 
@@ -533,7 +533,7 @@ export const refoldMonth = async (
     if (adjustmentMap.accountNameMap[txId]) {
       effectiveAccountName = adjustmentMap.accountNameMap[txId];
       console.log(
-        `🔧 Tx ${entry.transactionNumber}: account name changed to ${effectiveAccountName}`
+        `🔧 Tx ${entry.transactionNumber}: account name changed to ${effectiveAccountName}`,
       );
     }
 
@@ -571,10 +571,10 @@ export const refoldMonth = async (
     if (baseAmountDelta !== 0) {
       console.log(
         `        💰 Amount: ${entry.baseAmount.toFixed(
-          2
+          2,
         )} → ${recalculatedBaseAmount.toFixed(2)} (Δ: ${baseAmountDelta.toFixed(
-          2
-        )})`
+          2,
+        )})`,
       );
     }
   }
@@ -582,7 +582,7 @@ export const refoldMonth = async (
   const closingStock = runningBalance;
 
   console.log(
-    `      📊 Closing balance: ${closingStock} (In: ${totalStockIn}, Out: ${totalStockOut})`
+    `      📊 Closing balance: ${closingStock} (In: ${totalStockIn}, Out: ${totalStockOut})`,
   );
 
   // =========================================================================
@@ -602,7 +602,7 @@ export const refoldMonth = async (
           account: update.account,
           accountName: update.accountName,
         },
-        { session }
+        { session },
       );
     }
 
@@ -621,7 +621,7 @@ export const refoldMonth = async (
         needsRecalculation: false,
         lastUpdated: new Date(),
       },
-      { session }
+      { session },
     );
 
     // =========================================================================
@@ -645,18 +645,17 @@ export const refoldMonth = async (
           month: nextMonth.month,
         },
         { needsRecalculation: true },
-        { session }
+        { session },
       );
       console.log(
         `      ⚠️  Marked ${formatYearMonth(
           nextMonth.year,
-          nextMonth.month
-        )} as dirty (cascade)`
+          nextMonth.month,
+        )} as dirty (cascade)`,
       );
     }
 
     console.log(`      ✅ Month data updated`);
-
   } catch (error) {
     console.error(`      ❌ Update failed:`, error.message);
     throw error;
@@ -701,14 +700,11 @@ function buildAdjustmentDeltaMap(adjustments, itemId) {
     const txId = adjustment.originalTransaction.toString();
 
     const itemAdjustments = adjustment.itemAdjustments
-      ? adjustment.itemAdjustments.filter(
-          (ia) => ia.item.toString() === itemId
-        )
+      ? adjustment.itemAdjustments.filter((ia) => ia.item.toString() === itemId)
       : [];
 
     if (itemAdjustments.length > 0) {
       itemAdjustments.forEach((ia) => {
-
         if (typeof ia.quantityDelta === "number") {
           if (!deltaMap.quantityDeltaMap[txId]) {
             deltaMap.quantityDeltaMap[txId] = 0;
@@ -736,4 +732,3 @@ function buildAdjustmentDeltaMap(adjustments, itemId) {
 
   return deltaMap;
 }
-

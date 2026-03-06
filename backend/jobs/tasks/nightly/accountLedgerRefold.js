@@ -308,13 +308,14 @@ export const refoldAccountMonth = async (
   const currentAccountIdStr = accountId.toString();
 
   const prevMonth = getPreviousMonth(year, month);
+  // Find the most recent monthly balance BEFORE current month (any year)
   const prevMonthRecord = await AccountMonthlyBalance.findOne({
     account: accountId,
     branch: branchId,
-    year: prevMonth.year,
-    month: prevMonth.month,
+    $or: [{ year: { $lt: year } }, { year: year, month: { $lt: month } }],
   })
-    .select("closingBalance")
+    .select("closingBalance year month")
+    .sort({ year: -1, month: -1 }) // most recent first
     .session(session)
     .lean();
 
