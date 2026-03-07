@@ -382,29 +382,31 @@ export const checkIfDirtyPeriodExists = async (
   const prevYear = prevMonthDate.getFullYear();
   const prevMonthNum = prevMonthDate.getMonth() + 1;
 
-  const cleanMonthlyBalances = await AccountMonthlyBalance.countDocuments({
+  // ✅ CHANGED: Only check for DIRTY balances (needsRecalculation: true)
+  // Previously checked for clean count and compared to accountIds.length
+  // That caused new accounts (no monthly balance yet) to be forced into Full Refold
+  const dirtyMonthlyBalances = await AccountMonthlyBalance.countDocuments({
     company: companyId,
-    //     // branch: branchId,,
+    // branch: branchId,
     account: { $in: accountIdObjs },
     year: prevYear,
     month: prevMonthNum,
-    needsRecalculation: false,
+    needsRecalculation: true,
   });
 
-  console.log("cleanMonthlyBalance",cleanMonthlyBalances);
-  
+  console.log("dirtyMonthlyBalances", dirtyMonthlyBalances);
 
-  if (cleanMonthlyBalances !== accountIds.length) {
+  if (dirtyMonthlyBalances > 0) {
     return {
       isDirty: true,
       needsFullRefold: true,
-      reason: "Missing or dirty monthly balances",
+      reason: "Dirty monthly balances",
     };
   }
 
   const adjustmentsInPeriod = await AdjustmentEntry.countDocuments({
     company: companyId,
-    //     // branch: branchId,,
+    // branch: branchId,
     originalTransactionDate: {
       $gte: new Date(startDate),
       $lte: new Date(endDate),
@@ -698,7 +700,9 @@ export const getBatchAdjustedLedgers = async (
     const accountKey = item._id.toString();
     const openingQty = openingBalances[accountKey] || 0;
     const closingQty =
-      openingQty + (Math.abs(item.totalDebit || 0)) - (Math.abs(item.totalCredit || 0));
+      openingQty +
+      Math.abs(item.totalDebit || 0) -
+      Math.abs(item.totalCredit || 0);
 
     ledgerMap[accountKey] = {
       openingBalance: openingQty,
@@ -865,13 +869,51 @@ export const getSimpleLedgerReport = async (
     { $project: { _id: 0, account: "$account", closingBalance: 1 } },
   ]);
 
+  // NEW ✅
   const openingBalances = {};
   monthlyBalances.forEach((mb) => {
     openingBalances[mb.account.toString()] = mb.closingBalance || 0;
   });
+
+  // Find accounts with NO monthly balance record
+  const accountsWithoutBalance = accountIdObjs.filter(
+    (id) => !openingBalances[id.toString()],
+  );
+
+  // Fall back to AccountMaster opening balance for those accounts
+  if (accountsWithoutBalance.length > 0) {
+    const masterBalances = await AccountMasterModel.aggregate([
+      {
+        $match: {
+          _id: { $in: accountsWithoutBalance },
+          company: companyId,
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          openingBalance: {
+            $cond: [
+              { $eq: ["$openingBalanceType", "cr"] },
+              { $multiply: ["$openingBalance", -1] },
+              { $ifNull: ["$openingBalance", 0] },
+            ],
+          },
+        },
+      },
+    ]);
+
+    masterBalances.forEach((master) => {
+      openingBalances[master._id.toString()] = master.openingBalance || 0;
+    });
+  }
+
+  // Any remaining accounts (not in master either) → default 0
   accountIdObjs.forEach((id) => {
     const accountKey = id.toString();
-    if (!openingBalances[accountKey]) openingBalances[accountKey] = 0;
+    if (openingBalances[accountKey] === undefined) {
+      openingBalances[accountKey] = 0;
+    }
   });
 
   const ledgers = await AccountLedger.aggregate([
@@ -1214,7 +1256,7 @@ export const getHybridLedgerReport = async (
                       ["sale", "purchase_return", "payment"],
                     ],
                   },
-              "$effectiveAmount",
+              "$amount",
               0,
             ],
           },
@@ -1230,7 +1272,7 @@ export const getHybridLedgerReport = async (
                       ["purchase", "sales_return", "receipt"],
                     ],
                   },
-              "$effectiveAmount",
+              "$amount",
               0,
             ],
           },
@@ -1240,12 +1282,21 @@ export const getHybridLedgerReport = async (
     },
   ]);
 
+  // HYBRID PATH - add effectiveAmount mapping
   const ledgerMap = {};
   ledgers.forEach((item) => {
     const accountKey = item._id.toString();
     const openingQty = openingBalances[accountKey] || 0;
     const closingQty =
       openingQty + (item.totalDebit || 0) - (item.totalCredit || 0);
+
+    // ✅ Add effectiveAmount = amount for each transaction
+    const transactionsWithEffectiveAmount = summaryOnly
+      ? undefined
+      : item.transactions.map((txn) => ({
+          ...txn,
+          effectiveAmount: txn.amount,
+        }));
 
     ledgerMap[accountKey] = {
       openingBalance: openingQty,
@@ -1263,7 +1314,7 @@ export const getHybridLedgerReport = async (
           receipt: item.totalReceipt || 0,
         },
       },
-      ...(summaryOnly ? {} : { transactions: item.transactions }),
+      ...(summaryOnly ? {} : { transactions: transactionsWithEffectiveAmount }),
     };
   });
 
