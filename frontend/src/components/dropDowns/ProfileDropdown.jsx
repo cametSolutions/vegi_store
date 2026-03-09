@@ -283,34 +283,26 @@ const ProfileDropdown = () => {
   ]);
 
   useEffect(() => {
+    if (!loggedUser) return; // wait until user loads
+
     const firstAccess = loggedUser?.access?.[0];
     const activeCompany =
-      selectedCompanyFromStore  || firstAccess?.company || null;
+      selectedCompanyFromStore || firstAccess?.company || null;
 
-      
+    if (!activeCompany?.settings) return; // wait until settings exists
 
-    // 4) Push FY to Redux if available
-    //    If later you attach settings, change to activeCompany.settings?.financialYear
+    const fySettings = activeCompany.settings;
+    console.log(fySettings);
+    
 
-    if (activeCompany?.financialYear) {
-      const fySettings = activeCompany.settings;
-      dispatch(
-        setCurrentFY({
-          currentFY: fySettings?.currentFY, // e.g. "2025-26" or "2025-2026"
-          startDate: fySettings?.startDate, // ISO string from backend
-          endDate: fySettings?.endDate,
-        }),
-      );
-    } else {
-      dispatch(
-        setCurrentFY({
-          currentFY: null,
-          startDate: null,
-          endDate: null,
-        }),
-      );
-    }
-  }, [selectedCompanyFromStore]);
+    dispatch(
+      setCurrentFY({
+        currentFY: fySettings?.currentFY ?? null,
+        startDate: fySettings?.startDate ?? null,
+        endDate: fySettings?.endDate ?? null,
+      }),
+    );
+  }, [selectedCompanyFromStore, loggedUser]);
 
   useEffect(() => {
     if (selectedCompanyFromStore) setSelectedCompany(selectedCompanyFromStore);
@@ -534,6 +526,14 @@ const ProfileDropdown = () => {
             >
               <UserCircle className="w-4 h-4 mr-2 text-slate-500" />
               Personal Info
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              onClick={() => handleNavigate("/settings/user-access")}
+              className="cursor-pointer text-xs py-2 rounded-md focus:bg-slate-50 text-slate-700"
+            >
+              <User className="w-4 h-4 mr-2 text-slate-500" />
+              User Management
             </DropdownMenuItem>
 
             <DropdownMenuItem

@@ -85,7 +85,7 @@ export const deleteData = async (req, res) => {
       "PurchaseReturn",
       "StockAdjustment",
       "OutstandingOffset",
-      "YearOpeningAdjustment"
+      "YearOpeningAdjustment",
     ];
 
     const baseFilter = {};
@@ -102,27 +102,64 @@ export const deleteData = async (req, res) => {
     }
 
     let totalDeleted = 0;
+    let totalReset = 0;
     const results = {};
 
     for (const modelName of modelNames) {
       try {
         const Model = mongoose.model(modelName);
 
-        // Clone base filter
-        let filter = { ...baseFilter };
-
-        // 🚨 Ignore opening balance in Outstanding
         if (modelName === "Outstanding") {
-          filter.transactionType = { $ne: "opening_balance" };
+          // ── 1. Delete all non-opening_balance records ──────────────────
+          const deleteResult = await Model.deleteMany({
+            ...baseFilter,
+            transactionType: { $ne: "opening_balance" },
+          });
+          totalDeleted += deleteResult.deletedCount;
+
+          // ── 2. Reset opening_balance records instead of deleting ────────
+          const resetResult = await Model.updateMany(
+            {
+              ...baseFilter,
+              transactionType: "opening_balance",
+            },
+            [
+              {
+                $set: {
+                  paidAmount: 0,
+                  closingBalanceAmount: {
+                    $cond: {
+                      if: { $eq: ["$outstandingType", "cr"] },
+                      then: { $multiply: ["$totalAmount", -1] }, // negative for cr
+                      else: "$totalAmount",                       // positive for dr
+                    },
+                  },
+                  status: "pending",
+                },
+              },
+            ]
+          );
+
+          totalReset += resetResult.modifiedCount;
+
+          results[modelName] = {
+            deleted: deleteResult.deletedCount,
+            reset: resetResult.modifiedCount,
+          };
+
+          console.log(
+            `✓ Outstanding — Deleted: ${deleteResult.deletedCount}, Reset opening_balance: ${resetResult.modifiedCount}`
+          );
+        } else {
+          // ── Default: delete everything matching baseFilter ──────────────
+          const result = await Model.deleteMany({ ...baseFilter });
+          totalDeleted += result.deletedCount;
+          results[modelName] = result.deletedCount;
+
+          console.log(`✓ Deleted ${result.deletedCount} from ${modelName}`);
         }
-
-        const result = await Model.deleteMany(filter);
-        totalDeleted += result.deletedCount;
-        results[modelName] = result.deletedCount;
-
-        console.log(`✓ Deleted ${result.deletedCount} from ${modelName}`);
       } catch (err) {
-        console.log(`✗ Error deleting from ${modelName}:`, err.message);
+        console.log(`✗ Error processing ${modelName}:`, err.message);
         results[modelName] = `Error: ${err.message}`;
       }
     }
@@ -134,6 +171,7 @@ export const deleteData = async (req, res) => {
         account: account || undefined,
       },
       totalDeleted,
+      totalReset,
       details: results,
     });
   } catch (error) {
@@ -144,6 +182,8 @@ export const deleteData = async (req, res) => {
     });
   }
 };
+
+
 
 
 

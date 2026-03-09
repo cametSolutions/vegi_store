@@ -7,6 +7,9 @@ import {
 } from "../../services/fundTransactionService.js";
 import { markMonthlyBalanceDirtyForFundTransaction } from "../../helpers/CommonTransactionHelper/monthlyBalanceService.js";
 import { unlockFinancialYearFormatIfNoTransactions } from "../companyController/companyController.js";
+import { startOfDay } from "../../../shared/utils/date.js";
+import { createPastDateAdjustmentEntry } from "../../services/pastDateAdjustmentService.js";
+import { markMonthlyBalancesForRecalculation } from "../../helpers/transactionHelpers/transactionEditHelper.js";
 
 /**
  * Create a new cash transaction (Receipt or Payment)
@@ -18,38 +21,83 @@ import { unlockFinancialYearFormatIfNoTransactions } from "../companyController/
  * 5. Get Cash/Bank account from AccountMaster
  * 6. Create Cash/Bank ledger entry
  */
-export const createFundTransactionController = async (req, res) => {
-  try {
-    const { transactionType } = req.params;
+export const createStandaloneFundTransaction = async (req, res) => {
+  const session = await mongoose.startSession();
+  let sessionEnded = false; // ✅ track session state
 
-    if (!req.user?._id) {
-      return res.status(401).json({
-        success: false,
-        message: "User ID not found in token. Please login again.",
-      });
+  try {
+    session.startTransaction();
+
+    const data = req.body;
+    const today = startOfDay(new Date());
+    const txnDate = startOfDay(new Date(data.transactionDate));
+    const isPastDated = txnDate < today;
+
+    // createFundTransaction manages its own adjustment entry
+    // when shouldManageSession = true (no session passed from outside)
+    // BUT here we are passing session, so shouldManageSession = false inside
+    // So we handle isPastDated adjustment + recalc here after commit
+    const result = await createFundTransaction(
+      {
+        ...data,
+        transactionType: data.transactionType,
+        user: req.user,
+        isPastDated,
+      },
+      session,
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+    sessionEnded = true; // ✅ mark as ended
+
+    // PAST-DATED HANDLING (after commit, safe to run outside session)
+    if (isPastDated) {
+      const userId = req.user.id;
+
+      // 1) Adjustment entry for this receipt/payment
+      await createPastDateAdjustmentEntry(result.transaction, userId, null, true);
+
+      // 2) Heavy recalculation in its own dedicated session
+      const reCalcSession = await mongoose.startSession();
+      try {
+        reCalcSession.startTransaction();
+
+        await markMonthlyBalancesForRecalculation(
+          result.transaction,
+          result.transaction,
+          reCalcSession,
+          true,
+        );
+
+        await reCalcSession.commitTransaction();
+      } catch (e) {
+        await reCalcSession.abortTransaction();
+        throw e;
+      } finally {
+        reCalcSession.endSession();
+      }
     }
 
-    const result = await createFundTransaction({
-      ...req.body,
-      transactionType: transactionType.toLowerCase(),
-      user: req.user,
-    });
-
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
-      message: `${
-        transactionType.charAt(0).toUpperCase() + transactionType.slice(1)
-      } created successfully`,
-      data: result,
+      data: result.transaction,
     });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to create transaction",
-      error: error.message,
-    });
+  } catch (err) {
+    // Only abort/end if session is still active
+    if (!sessionEnded) {
+      try {
+        await session.abortTransaction();
+      } catch (_) {
+        // ignore if already aborted
+      }
+      session.endSession();
+    }
+
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 /**
  * Get transaction by ID
@@ -391,7 +439,11 @@ export const deleteFundTransactionController = async (req, res) => {
     console.log("✅ Monthly balances marked for recalculation");
 
     // 🔓 Auto-unlock if last transaction
-    await unlockFinancialYearFormatIfNoTransactions(transaction.company,session,transactionId);
+    await unlockFinancialYearFormatIfNoTransactions(
+      transaction.company,
+      session,
+      transactionId,
+    );
 
     // ==================== STEP 5: COMMIT ====================
     await session.commitTransaction();

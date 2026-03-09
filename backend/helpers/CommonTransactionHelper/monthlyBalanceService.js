@@ -5,7 +5,7 @@
 import {  generatePeriodKey, getMonthYear } from "../../../shared/utils/date.js";
 import AccountMonthlyBalance from "../../model/AccountMonthlyBalanceModel.js";
 import ItemMonthlyBalance from "../../model/ItemMonthlyBalanceModel.js";
-import ItemMasterModel from "../../model/masters/ItemMasterModel.js";
+
 
 /**
  * Update account monthly balance (real-time)
@@ -97,61 +97,78 @@ export const updateItemMonthlyBalances = async (data, session) => {
       branch,
       items,
       transactionDate,
-      movementType, // "in" or "out"
+      movementType,
     } = data;
 
     const periodKey = generatePeriodKey(transactionDate);
     const { month, year } = getMonthYear(transactionDate);
 
-    const updatedBalances = [];
-
+    // STEP 1: Consolidate
+    const consolidatedMap = new Map();
     for (const item of items) {
-      // Get opening stock using the static method
-      const openingStock = await ItemMonthlyBalance.getOpeningStock(
-        item.item,
-        branch,
-        company,
-        year,
-        month,
-        session
-      );
-
-
-      // console.log("opening stock",openingStock);
-      
-
-      // Prepare update operations
-      const updateOps = {
-        $inc: {
-          transactionCount: 1,
-        },
-        $set: {
-          company,
-          branch,
+      const itemId = item.item.toString();
+      if (!consolidatedMap.has(itemId)) {
+        consolidatedMap.set(itemId, {
+          item: item.item,
           itemName: item.itemName,
           itemCode: item.itemCode,
-          month,
-          year,
-          lastUpdated: new Date(),
-        },
-        $setOnInsert: {
-          openingStock: openingStock, // Set opening stock only on initial creation
-          periodKey,
-          item: item.item,
-        },
-      };
-
-      // Increment stock in or out
-      if (movementType === "in") {
-        updateOps.$inc.totalStockIn = item.quantity;
-      } else if (movementType === "out") {
-        updateOps.$inc.totalStockOut = item.quantity;
+          quantity: Number(item.quantity),
+        });
+      } else {
+        consolidatedMap.get(itemId).quantity += Number(item.quantity);
       }
+    }
 
-      // Find and update or create new
-      const monthlyBalance = await ItemMonthlyBalance.findOneAndUpdate(
+    const consolidatedItems = [...consolidatedMap.values()];
+
+    // STEP 2: Fetch all opening stocks IN PARALLEL
+    const openingStocks = await Promise.all(
+      consolidatedItems.map((item) =>
+        ItemMonthlyBalance.getOpeningStock(
+          item.item,
+          branch,
+          company,
+          year,
+          month,
+          session
+        )
+      )
+    );
+
+    // STEP 3: Sequential writes (session constraint)
+    const updatedBalances = [];
+
+    for (let i = 0; i < consolidatedItems.length; i++) {
+      const item = consolidatedItems[i];
+      const openingStock = openingStocks[i];
+
+      const incField = movementType === "in" ? "totalStockIn" : "totalStockOut";
+      const closingStockDelta = movementType === "in" ? item.quantity : -item.quantity;
+
+      // ── UPSERT: create doc if not exists, increment counters ──────────
+      await ItemMonthlyBalance.findOneAndUpdate(
         { item: item.item, branch, periodKey },
-        updateOps,
+        {
+          $inc: {
+            transactionCount: 1,
+            [incField]: item.quantity,
+          },
+          $set: {
+            company,
+            branch,
+            itemName: item.itemName,
+            itemCode: item.itemCode,
+            month,
+            year,
+            lastUpdated: new Date(),
+          },
+          $setOnInsert: {
+            item: item.item,
+            periodKey,
+            openingStock,             // ✅ only set on first creation
+            closingStock: openingStock, // ✅ initial closing = opening (no conflict here)
+          },
+        },
         {
           upsert: true,
           new: true,
@@ -160,10 +177,15 @@ export const updateItemMonthlyBalances = async (data, session) => {
         }
       );
 
+      // ── SEPARATE $inc for closingStock (avoids $inc + $setOnInsert conflict) ──
+      const monthlyBalance = await ItemMonthlyBalance.findOneAndUpdate(
+        { item: item.item, branch, periodKey },
+        {
+          $inc: { closingStock: closingStockDelta }, // ✅ now in its own update
+        },
+        { new: true, session }
+      );
 
-      // Calculate closing stock and total value
-      monthlyBalance.calculateClosingStock();
-      await monthlyBalance.save({ session });
       updatedBalances.push(monthlyBalance);
     }
 
@@ -172,8 +194,6 @@ export const updateItemMonthlyBalances = async (data, session) => {
     throw error;
   }
 };
-
-
 
 
 

@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button"; 
 import {
   DATE_FILTERS,
+  formatDate,
   getDateRange,
   getFilterLabel,
 } from "../../../../../shared/utils/date";
@@ -136,14 +137,22 @@ const DateFilter = ({
   };
 
   const isCustom = selectedFilter === DATE_FILTERS.CUSTOM;
+  const formatDisplayDate = (dateValue) => {
+    if (!dateValue) return "";
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return "";
+    return formatDate(date);
+  };
 
   // Helper to render consistent menu items
   const renderMenuItem = (filterKey, label) => {
     const range = getDateRange(filterKey);
     const isActive = selectedFilter === filterKey;
-    const displayDate = range.displayEnd 
-      ? `${range.displayStart} - ${range.displayEnd}`
-      : range.displayStart;
+    const displayStart = formatDisplayDate(range.start);
+    const displayEnd = formatDisplayDate(range.end);
+    const displayDate = displayEnd
+      ? `${displayStart} - ${displayEnd}`
+      : displayStart;
 
     return (
       <DropdownMenuItem
@@ -172,7 +181,9 @@ const DateFilter = ({
         >
           <CalendarIcon className="w-3.5 h-3.5 mr-2 text-slate-400" />
           {isCustom && (localStart || localEnd)
-            ? `${localStart || "Start"} - ${localEnd || "End"}`
+            ? `${formatDisplayDate(localStart) || "Start"} - ${
+                formatDisplayDate(localEnd) || "End"
+              }`
             : getFilterLabel(selectedFilter)}
         </Button>
       </DropdownMenuTrigger>

@@ -931,15 +931,13 @@ export const checkIfDirtyPeriodExists = async ({
   startDate,
   endDate,
 }) => {
-  console.log("=== Checking dirty period status ===");
+  console.log("Checking dirty period status");
 
   const companyId = toObjectId(company);
   const branchId = toObjectId(branch);
   const itemIdObjs = itemIds.map((id) => toObjectId(id));
 
   const reportStartDate = new Date(startDate);
-
-  // Calculate previous month details
   const prevMonthDate = new Date(
     reportStartDate.getFullYear(),
     reportStartDate.getMonth() - 1,
@@ -948,41 +946,41 @@ export const checkIfDirtyPeriodExists = async ({
   const prevYear = prevMonthDate.getFullYear();
   const prevMonthNum = prevMonthDate.getMonth() + 1;
 
-  console.log("Checking for clean monthly balances:", {
-    prevYear,
-    prevMonthNum,
-  });
+  console.log("Checking for clean monthly balances", prevYear, prevMonthNum);
 
   /* -----------------------------------------------------------------------
-     CHECK 1: Do ALL items have clean monthly balance for previous month?
-     If not, we need full refold (missing base data)
-     ----------------------------------------------------------------------- */
-  const cleanMonthlyBalances = await ItemMonthlyBalance.countDocuments({
+     CHECK 1: Are any items explicitly DIRTY for previous month?
+     Previously checked if clean count === itemIds.length, which caused
+     new items (no monthly balance record yet) to be forced into Full Refold.
+     Fix: Only force Full Refold if a record EXISTS and is dirty.
+     New items with no record at all → passes through to Fast/Hybrid path.
+  ----------------------------------------------------------------------- */
+  const dirtyMonthlyBalances = await ItemMonthlyBalance.countDocuments({
     company: companyId,
     branch: branchId,
     item: { $in: itemIdObjs },
     year: prevYear,
     month: prevMonthNum,
-    needsRecalculation: false,
+    needsRecalculation: true, // ✅ exists but dirty
   });
 
-  if (cleanMonthlyBalances !== itemIds.length) {
-    console.log(
-      `❌ Only ${cleanMonthlyBalances}/${itemIds.length} items have clean monthly balance`,
-    );
+  console.log("dirtyMonthlyBalances", dirtyMonthlyBalances);
+
+  if (dirtyMonthlyBalances > 0) {
+    console.log(`${dirtyMonthlyBalances} items have dirty monthly balance`);
     return {
       isDirty: true,
       needsFullRefold: true,
-      reason: "Missing or dirty monthly balances",
+      reason: "Dirty monthly balances",
     };
   }
 
-  console.log(`✅ All ${itemIds.length} items have clean monthly balance`);
+  console.log("No dirty monthly balances found");
 
   /* -----------------------------------------------------------------------
      CHECK 2: Are there adjustments in the REPORT period?
-     If yes, we need full refold (must apply adjustment deltas)
-     ----------------------------------------------------------------------- */
+     If yes, we need full refold — must apply adjustment deltas
+  ----------------------------------------------------------------------- */
   const adjustmentsInPeriod = await AdjustmentEntry.countDocuments({
     company: companyId,
     branch: branchId,
@@ -995,7 +993,7 @@ export const checkIfDirtyPeriodExists = async ({
   });
 
   if (adjustmentsInPeriod > 0) {
-    console.log(`❌ Found ${adjustmentsInPeriod} adjustments in report period`);
+    console.log(`Found ${adjustmentsInPeriod} adjustments in report period`);
     return {
       isDirty: true,
       needsFullRefold: true,
@@ -1003,25 +1001,25 @@ export const checkIfDirtyPeriodExists = async ({
     };
   }
 
-  console.log("✅ No adjustments in report period");
+  console.log("No adjustments in report period");
 
   /* -----------------------------------------------------------------------
      CHECK 3: Does report start mid-month?
-     If yes, use hybrid path (calculate opening, but simple ledger)
-     ----------------------------------------------------------------------- */
+     If yes, use hybrid path — calculate opening, but simple ledger
+  ----------------------------------------------------------------------- */
   if (reportStartDate.getDate() !== 1) {
-    console.log("⚠️  Report starts mid-month, opening needs calculation");
+    console.log("Report starts mid-month, opening needs calculation");
     return {
       isDirty: true,
       needsFullRefold: false,
-      reason: "Mid-month start (hybrid path eligible)",
+      reason: "Mid-month start - hybrid path eligible",
     };
   }
 
   /* -----------------------------------------------------------------------
-     All checks passed: Pure fast path!
-     ----------------------------------------------------------------------- */
-  console.log("🚀 Pure fast path - everything is clean!");
+     All checks passed — Pure fast path!
+  ----------------------------------------------------------------------- */
+  console.log("Pure fast path - everything is clean!");
   return {
     isDirty: false,
     needsFullRefold: false,
@@ -1194,17 +1192,35 @@ export const getSimpleLedgerReport = async ({
   console.timeEnd("Query 2: Opening balances from monthly balance");
 
   // Build opening balances map
+  // ✅ NEW
   const openingBalances = {};
   monthlyBalances.forEach((mb) => {
     openingBalances[mb.item.toString()] = mb.closingStock || 0;
   });
 
-  // Ensure all items have opening balance
+  // Find items with NO monthly balance record (new items)
+  const itemsWithoutBalance = itemIdObjs.filter(
+    (id) => !openingBalances[id.toString()],
+  );
+
+  // Fall back to ItemMaster opening stock for new items
+  if (itemsWithoutBalance.length > 0) {
+    const masterBalances = await ItemMasterModel.aggregate([
+      { $match: { _id: { $in: itemsWithoutBalance }, company: companyId } },
+      { $unwind: "$stock" },
+      { $match: { "stock.branch": branchId } },
+      { $project: { _id: 1, openingStock: "$stock.openingStock" } },
+    ]);
+
+    masterBalances.forEach((master) => {
+      openingBalances[master._id.toString()] = master.openingStock || 0;
+    });
+  }
+
+  // Remaining items not in master either → default 0
   itemIdObjs.forEach((id) => {
     const itemKey = id.toString();
-    if (!openingBalances[itemKey]) {
-      openingBalances[itemKey] = 0;
-    }
+    if (openingBalances[itemKey] === undefined) openingBalances[itemKey] = 0;
   });
 
   console.log(

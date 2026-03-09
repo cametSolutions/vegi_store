@@ -68,7 +68,7 @@ export const getBatchOpeningBalances = async (
     {
       $match: {
         company: companyId,
-            branch: branchId,
+        branch: branchId,
         account: { $in: accountIdObjs },
         needsRecalculation: false,
         $or: [
@@ -146,8 +146,20 @@ export const getBatchOpeningBalances = async (
     console.time("Step 2b - Account master query");
     masterBalances = await AccountMasterModel.aggregate([
       { $match: { _id: { $in: accountsNeedingFallback }, company: companyId } },
-      { $project: { _id: 1, openingBalance: 1 } },
+      {
+        $project: {
+          _id: 1,
+          openingBalance: {
+            $cond: [
+              { $eq: ["$openingBalanceType", "cr"] },
+              { $multiply: ["$openingBalance", -1] }, // ← negative if cr
+              { $ifNull: ["$openingBalance", 0] }, // ← positive if dr or null
+            ],
+          },
+        },
+      },
     ]);
+
     console.timeEnd("Step 2b - Account master query");
     console.log("Master balances found:", masterBalances.length);
   }
@@ -298,21 +310,49 @@ export const getBatchOpeningBalances = async (
     {
       $match: {
         company: companyId,
-        // branch: branchId,,
         $or: adjustmentMatchConditions,
         status: "active",
         isReversed: false,
       },
     },
     {
+      $addFields: {
+        effectiveDelta: {
+          $cond: [
+            // SHORT-CIRCUIT: pastDateAdjustmentEntry — use amountDelta as-is (no sign reversal)
+            { $eq: ["$adjustmentPurpose", "pastDateAdjustmentEntry"] },
+            "$amountDelta",
+            // For all other purposes, reverse sign for Purchase & SalesReturn
+            {
+              $cond: [
+                {
+                  $in: [
+                    "$originalTransactionModel",
+                    ["Purchase", "SalesReturn"],
+                  ],
+                },
+                { $multiply: ["$amountDelta", -1] },
+                "$amountDelta",
+              ],
+            },
+          ],
+        },
+      },
+    },
+    {
       $group: {
         _id: "$affectedAccount",
-        totalAmountDelta: { $sum: "$amountDelta" },
+        totalAmountDelta: { $sum: "$effectiveDelta" },
       },
     },
   ]);
+
   console.timeEnd("Step 4 - Adjustment movements query");
   console.log("Adjustment movements found:", adjustmentMovements.length);
+
+  console.log("ledgerMovements", ledgerMovements);
+  console.log("adjustmentMovements", adjustmentMovements);
+  console.log("baseBalances", baseBalances);
 
   // STEP 7: Combine all data
   console.log("Step 5: Combining all data");
@@ -334,6 +374,8 @@ export const getBatchOpeningBalances = async (
 
     finalBalances[accountKey] = balance;
   });
+
+  console.log("finalBalances", finalBalances);
 
   console.log("Final balances computed:", Object.keys(finalBalances).length);
   console.log("getBatchOpeningBalances END");
@@ -366,26 +408,31 @@ export const checkIfDirtyPeriodExists = async (
   const prevYear = prevMonthDate.getFullYear();
   const prevMonthNum = prevMonthDate.getMonth() + 1;
 
-  const cleanMonthlyBalances = await AccountMonthlyBalance.countDocuments({
+  // ✅ CHANGED: Only check for DIRTY balances (needsRecalculation: true)
+  // Previously checked for clean count and compared to accountIds.length
+  // That caused new accounts (no monthly balance yet) to be forced into Full Refold
+  const dirtyMonthlyBalances = await AccountMonthlyBalance.countDocuments({
     company: companyId,
-    //     // branch: branchId,,
+    // branch: branchId,
     account: { $in: accountIdObjs },
     year: prevYear,
     month: prevMonthNum,
-    needsRecalculation: false,
+    needsRecalculation: true,
   });
 
-  if (cleanMonthlyBalances !== accountIds.length) {
+  console.log("dirtyMonthlyBalances", dirtyMonthlyBalances);
+
+  if (dirtyMonthlyBalances > 0) {
     return {
       isDirty: true,
       needsFullRefold: true,
-      reason: "Missing or dirty monthly balances",
+      reason: "Dirty monthly balances",
     };
   }
 
   const adjustmentsInPeriod = await AdjustmentEntry.countDocuments({
     company: companyId,
-    //     // branch: branchId,,
+    // branch: branchId,
     originalTransactionDate: {
       $gte: new Date(startDate),
       $lte: new Date(endDate),
@@ -426,7 +473,6 @@ export const getBatchAdjustedLedgers = async (
 
   const baseMatch = {
     company: companyId,
-    // branch: branchId,,
     account: { $in: accountIdObjs },
     transactionDate: { $gte: startDate, $lte: endDate },
   };
@@ -445,7 +491,6 @@ export const getBatchAdjustedLedgers = async (
         let: {
           txnNum: "$transactionNumber",
           company: "$company",
-          // branch: "$branch",
           currentAccount: "$account",
         },
         pipeline: [
@@ -454,7 +499,6 @@ export const getBatchAdjustedLedgers = async (
               $expr: {
                 $and: [
                   { $eq: ["$company", "$$company"] },
-                  // { $eq: ["$branch", "$$branch"] },
                   { $eq: ["$originalTransactionNumber", "$$txnNum"] },
                   { $eq: ["$status", "active"] },
                   { $eq: ["$isReversed", false] },
@@ -464,7 +508,6 @@ export const getBatchAdjustedLedgers = async (
           },
           {
             $addFields: {
-              // Properly check if oldAccount exists
               hasOldAccount: {
                 $cond: [{ $ifNull: ["$oldAccount", false] }, true, false],
               },
@@ -480,7 +523,6 @@ export const getBatchAdjustedLedgers = async (
             $addFields: {
               adjustmentType: {
                 $cond: [
-                  // Case 1: OLD account being zeroed out
                   {
                     $and: [
                       "$hasOldAccount",
@@ -491,7 +533,6 @@ export const getBatchAdjustedLedgers = async (
                   "ZERO_OUT_OLD",
                   {
                     $cond: [
-                      // Case 2: AFFECTED account
                       { $eq: ["$affectedAccount", "$$currentAccount"] },
                       {
                         $cond: [
@@ -507,27 +548,35 @@ export const getBatchAdjustedLedgers = async (
               },
               adjustmentValue: {
                 $cond: [
-                  // Case 1: Zero out old account
-                  {
-                    $and: [
-                      "$hasOldAccount",
-                      { $eq: ["$oldAccount", "$$currentAccount"] },
-                      "$isAccountChange",
-                    ],
-                  },
-                  { $multiply: ["$oldAmount", -1] },
+                  // SHORT-CIRCUIT: pastDateAdjustmentEntry always uses raw positive amountDelta
+                  { $eq: ["$adjustmentPurpose", "pastDateAdjustmentEntry"] },
+                  { $abs: "$amountDelta" },
+                  // Existing logic for all other adjustment purposes
                   {
                     $cond: [
-                      // Case 2: Affected account
-                      { $eq: ["$affectedAccount", "$$currentAccount"] },
+                      // Case 1: Zero out old account
                       {
-                        $cond: [
+                        $and: [
+                          "$hasOldAccount",
+                          { $eq: ["$oldAccount", "$$currentAccount"] },
                           "$isAccountChange",
-                          "$newAmount",
-                          "$amountDelta",
                         ],
                       },
-                      0,
+                      { $multiply: ["$oldAmount", -1] },
+                      {
+                        $cond: [
+                          // Case 2: Affected account
+                          { $eq: ["$affectedAccount", "$$currentAccount"] },
+                          {
+                            $cond: [
+                              "$isAccountChange",
+                              "$newAmount",
+                              "$amountDelta",
+                            ],
+                          },
+                          0,
+                        ],
+                      },
                     ],
                   },
                 ],
@@ -543,6 +592,7 @@ export const getBatchAdjustedLedgers = async (
               newAmount: 1,
               adjustmentType: 1,
               adjustmentValue: 1,
+              adjustmentPurpose: 1,
               hasOldAccount: 1,
               isAccountChange: 1,
             },
@@ -679,7 +729,9 @@ export const getBatchAdjustedLedgers = async (
     const accountKey = item._id.toString();
     const openingQty = openingBalances[accountKey] || 0;
     const closingQty =
-      openingQty + (item.totalDebit || 0) - (item.totalCredit || 0);
+      openingQty +
+      Math.abs(item.totalDebit || 0) -
+      Math.abs(item.totalCredit || 0);
 
     ledgerMap[accountKey] = {
       openingBalance: openingQty,
@@ -846,13 +898,51 @@ export const getSimpleLedgerReport = async (
     { $project: { _id: 0, account: "$account", closingBalance: 1 } },
   ]);
 
+  // NEW ✅
   const openingBalances = {};
   monthlyBalances.forEach((mb) => {
     openingBalances[mb.account.toString()] = mb.closingBalance || 0;
   });
+
+  // Find accounts with NO monthly balance record
+  const accountsWithoutBalance = accountIdObjs.filter(
+    (id) => !openingBalances[id.toString()],
+  );
+
+  // Fall back to AccountMaster opening balance for those accounts
+  if (accountsWithoutBalance.length > 0) {
+    const masterBalances = await AccountMasterModel.aggregate([
+      {
+        $match: {
+          _id: { $in: accountsWithoutBalance },
+          company: companyId,
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          openingBalance: {
+            $cond: [
+              { $eq: ["$openingBalanceType", "cr"] },
+              { $multiply: ["$openingBalance", -1] },
+              { $ifNull: ["$openingBalance", 0] },
+            ],
+          },
+        },
+      },
+    ]);
+
+    masterBalances.forEach((master) => {
+      openingBalances[master._id.toString()] = master.openingBalance || 0;
+    });
+  }
+
+  // Any remaining accounts (not in master either) → default 0
   accountIdObjs.forEach((id) => {
     const accountKey = id.toString();
-    if (!openingBalances[accountKey]) openingBalances[accountKey] = 0;
+    if (openingBalances[accountKey] === undefined) {
+      openingBalances[accountKey] = 0;
+    }
   });
 
   const ledgers = await AccountLedger.aggregate([
@@ -1118,7 +1208,7 @@ export const getHybridLedgerReport = async (
 
   const accountContacts = await AccountMasterModel.aggregate([
     { $match: { _id: { $in: accountIdObjs }, company: companyId } },
-    { $project: { _id: 1, email: 1,  accountName: 1, phoneNo: 1 } },
+    { $project: { _id: 1, email: 1, accountName: 1, phoneNo: 1 } },
   ]);
 
   const contactMap = {};
@@ -1195,7 +1285,7 @@ export const getHybridLedgerReport = async (
                       ["sale", "purchase_return", "payment"],
                     ],
                   },
-              "$effectiveAmount",
+              "$amount",
               0,
             ],
           },
@@ -1211,7 +1301,7 @@ export const getHybridLedgerReport = async (
                       ["purchase", "sales_return", "receipt"],
                     ],
                   },
-              "$effectiveAmount",
+              "$amount",
               0,
             ],
           },
@@ -1221,12 +1311,21 @@ export const getHybridLedgerReport = async (
     },
   ]);
 
+  // HYBRID PATH - add effectiveAmount mapping
   const ledgerMap = {};
   ledgers.forEach((item) => {
     const accountKey = item._id.toString();
     const openingQty = openingBalances[accountKey] || 0;
     const closingQty =
       openingQty + (item.totalDebit || 0) - (item.totalCredit || 0);
+
+    // ✅ Add effectiveAmount = amount for each transaction
+    const transactionsWithEffectiveAmount = summaryOnly
+      ? undefined
+      : item.transactions.map((txn) => ({
+          ...txn,
+          effectiveAmount: txn.amount,
+        }));
 
     ledgerMap[accountKey] = {
       openingBalance: openingQty,
@@ -1244,7 +1343,7 @@ export const getHybridLedgerReport = async (
           receipt: item.totalReceipt || 0,
         },
       },
-      ...(summaryOnly ? {} : { transactions: item.transactions }),
+      ...(summaryOnly ? {} : { transactions: transactionsWithEffectiveAmount }),
     };
   });
 
@@ -1280,7 +1379,7 @@ export const getHybridLedgerReport = async (
 
     return {
       accountId: row._id,
-       accountName: contact.accountName || row.accountName,
+      accountName: contact.accountName || row.accountName,
       email: contact.email,
       phoneNo: contact.phoneNo,
       openingBalance: data.openingBalance,
@@ -1354,6 +1453,8 @@ export const refoldLedgersWithAdjustments = async (
     searchStage = [{ $match: { $or: [{ accountName: regex }] } }];
   }
 
+  console.log("baseMatch", baseMatch);
+
   const itemFacet = await AccountLedger.aggregate([
     { $match: baseMatch },
     { $group: { _id: "$account", accountName: { $first: "$accountName" } } },
@@ -1366,6 +1467,8 @@ export const refoldLedgersWithAdjustments = async (
       },
     },
   ]);
+
+  console.log("itemFacet", JSON.stringify(itemFacet, null, 2));
 
   const totalItems = itemFacet[0]?.meta[0]?.totalItems || 0;
   const accountsPage = itemFacet[0]?.data || [];
@@ -1392,13 +1495,13 @@ export const refoldLedgersWithAdjustments = async (
 
   const accountContacts = await AccountMasterModel.aggregate([
     { $match: { _id: { $in: accountIdObjs }, company: companyId } },
-    { $project: { _id: 1, email: 1,accountName: 1, phoneNo: 1 } },
+    { $project: { _id: 1, email: 1, accountName: 1, phoneNo: 1 } },
   ]);
 
   const contactMap = {};
   accountContacts.forEach((ac) => {
     contactMap[ac._id.toString()] = {
-       accountName: ac.accountName || null,
+      accountName: ac.accountName || null,
       email: ac.email || null,
       phoneNo: ac.phoneNo || null,
     };
@@ -1421,6 +1524,8 @@ export const refoldLedgersWithAdjustments = async (
     transactionType,
     summaryOnly,
   );
+
+  // console.log("ledger map",ledgerMap);
 
   const ledgersPerAccount = accountsPage.map((row) => {
     const accountKey = row._id.toString();

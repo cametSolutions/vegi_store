@@ -3,9 +3,11 @@ import {
   refoldLedgersWithAdjustments,
   getSimpleLedgerReport,
   getHybridLedgerReport,
-  checkIfDirtyPeriodExists
+  checkIfDirtyPeriodExists,
+  getBatchOpeningBalances
 } from '../../services/accountLeger/accountLegerService.js';
 import AccountLedger from '../../model/AccountLedgerModel.js';
+import AccountMasterModel from '../../model/masters/AccountMasterModel.js';
 import mongoose from 'mongoose';
 
 const toObjectId = (id) => new mongoose.Types.ObjectId(id);
@@ -55,6 +57,56 @@ export const getAccountSummaryReport = async (req, res) => {
     const accountIdsForCheck = await AccountLedger.distinct('account', baseMatch);
 
     if (accountIdsForCheck.length === 0) {
+      if (singleAccount) {
+        const [accountDoc, openingMap] = await Promise.all([
+          AccountMasterModel.findOne(
+            { _id: singleAccount, company },
+            { _id: 1, accountName: 1, email: 1, phoneNo: 1 }
+          ).lean(),
+          getBatchOpeningBalances(company, branch, [singleAccount.toString()], parsedStartDate)
+        ]);
+
+        if (accountDoc) {
+          const openingBalance = openingMap[singleAccount.toString()] || 0;
+
+          return res.json({
+            items: [{
+              accountId: accountDoc._id,
+              accountName: accountDoc.accountName || 'Unknown',
+              email: accountDoc.email || null,
+              phoneNo: accountDoc.phoneNo || null,
+              openingBalance,
+              summary: {
+                totalDebit: 0,
+                totalCredit: 0,
+                closingBalance: openingBalance,
+                transactionCount: 0,
+                breakdown: {
+                  sale: 0,
+                  purchase: 0,
+                  salesReturn: 0,
+                  purchaseReturn: 0,
+                  payment: 0,
+                  receipt: 0
+                }
+              },
+              ...(parsedSummaryOnly ? {} : { transactions: [] })
+            }],
+            pagination: { page: pageNum, limit: limitNum, totalItems: 1, totalPages: 1 },
+            filters: { 
+              company, 
+              branch, 
+              account: singleAccount.toString(),
+              startDate: parsedStartDate, 
+              endDate: parsedEndDate, 
+              transactionType: transactionType || 'all', 
+              searchTerm: searchTerm || null,
+              summaryOnly: parsedSummaryOnly
+            }
+          });
+        }
+      }
+
       return res.json({
         items: [],
         pagination: { page: pageNum, limit: limitNum, totalItems: 0, totalPages: 0 },

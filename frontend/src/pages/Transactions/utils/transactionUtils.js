@@ -85,7 +85,8 @@ export const createEmptyTransaction = () => ({
   netAmount: 0, // totalAmountAfterTax - discountAmount
   totalDue: 0, // netAmount + openingBalance
   paidAmount: 0, // amount paid by customer
-  balanceAmount: 0, // totalDue - paidAmount
+  settledAmount: 0, // amount already settled from linked receipts/adjustments
+  balanceAmount: 0, // totalDue - paidAmount - settledAmount
   previousBalanceAmount: 0, // for receipt creation
 
   reference: "",
@@ -147,7 +148,9 @@ export const calculateTransactionTotals = (transaction) => {
 
   // 6️⃣ Balance Amount (NOT closing balance - just balance)
   const balanceAmount =
-    parseFloat(totalDue) - parseFloat(transaction?.paidAmount || 0);
+    parseFloat(totalDue) -
+    parseFloat(transaction?.paidAmount || 0) -
+    parseFloat(transaction?.settledAmount || 0);
 
   return {
     ...transaction,
