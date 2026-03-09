@@ -208,7 +208,7 @@ export const createFundTransaction = async (data, session = null) => {
     if (shouldManageSession) {
       await activeSession.commitTransaction();
 
-      // ✅ Adjustment entry only for standalone (shouldManageSession = true)
+      // ✅ Adjustment entry only for pastDateAdjustmentEntry (shouldManageSession = true)
       // When called from sale controller, parent handles this after its own commit
       if (isPastDated) {
         await createPastDateAdjustmentEntry(

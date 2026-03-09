@@ -86,8 +86,8 @@ export const adjustmentEntrySchema = new Schema(
     },
     adjustmentPurpose: {
       type: String,
-      enum: ["standalone", "date_change_reversal", "date_change_repost"],
-      default: "standalone",
+      enum: ["pastDateAdjustmentEntry", "date_change_reversal", "date_change_repost"],
+      // default: "",
     },
     linkedAdjustmentId: {
       type: Schema.Types.ObjectId,

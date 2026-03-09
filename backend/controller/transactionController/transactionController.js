@@ -272,7 +272,7 @@ export const createTransaction = async (req, res) => {
       );
     }
 
-      console.timeEnd("createTransaction"); // logs: createTransaction: 4823ms
+    console.timeEnd("createTransaction"); // logs: createTransaction: 4823ms
 
     return res.status(201).json({
       success: true,
@@ -319,8 +319,6 @@ export const createTransaction = async (req, res) => {
   } finally {
     session.endSession();
   }
-
-
 };
 
 /**
@@ -483,6 +481,21 @@ export const editTransaction = async (req, res) => {
       updatedData.transactionType,
       session,
     );
+
+    // /// step 1.5: if the transaction have an un reversed adjustment entry tagged with adjustmentPurpose as pastDateAdjustmentEntry then we will not allow the edit and ask the user to reverse the adjustment entry first and then edit the transaction and then create a new past date adjustment entry if needed
+    // const existingAdjustmentEntry = await AdjustmentEntryModel.findOne({
+    //   originalTransaction: transactionId,
+    //   adjustmentPurpose: "pastDateAdjustmentEntry",
+    //   isReversed: false,
+    // }).session(session);
+
+    // if (existingAdjustmentEntry) {
+    //   await session.abortTransaction();
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: `This transaction has an active past date adjustment entry (Adjustment #${existingAdjustmentEntry.adjustmentNumber}). Please reverse the adjustment entry before editing the transaction.`,
+    //   });
+    // }
 
     console.log("originalTransaction", originalTransaction);
 

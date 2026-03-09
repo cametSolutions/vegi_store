@@ -87,7 +87,7 @@ export const createPastDateAdjustmentEntry = async (
       adjustmentNumber,
       adjustmentDate: new Date(),
       adjustmentType: "item_change",
-      adjustmentPurpose: "standalone",
+      adjustmentPurpose: "pastDateAdjustmentEntry",
       amountDelta: isFundTns ? multiplier * createdTransaction.amount : multiplier * createdTransaction.netAmount,
       oldAmount: 0,
       newAmount: isFundTns ? createdTransaction.amount : createdTransaction.netAmount,

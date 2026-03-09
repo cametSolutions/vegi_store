@@ -310,19 +310,43 @@ export const getBatchOpeningBalances = async (
     {
       $match: {
         company: companyId,
-        // branch: branchId,,
         $or: adjustmentMatchConditions,
         status: "active",
         isReversed: false,
       },
     },
     {
+      $addFields: {
+        effectiveDelta: {
+          $cond: [
+            // SHORT-CIRCUIT: pastDateAdjustmentEntry — use amountDelta as-is (no sign reversal)
+            { $eq: ["$adjustmentPurpose", "pastDateAdjustmentEntry"] },
+            "$amountDelta",
+            // For all other purposes, reverse sign for Purchase & SalesReturn
+            {
+              $cond: [
+                {
+                  $in: [
+                    "$originalTransactionModel",
+                    ["Purchase", "SalesReturn"],
+                  ],
+                },
+                { $multiply: ["$amountDelta", -1] },
+                "$amountDelta",
+              ],
+            },
+          ],
+        },
+      },
+    },
+    {
       $group: {
         _id: "$affectedAccount",
-        totalAmountDelta: { $sum: "$amountDelta" },
+        totalAmountDelta: { $sum: "$effectiveDelta" },
       },
     },
   ]);
+
   console.timeEnd("Step 4 - Adjustment movements query");
   console.log("Adjustment movements found:", adjustmentMovements.length);
 
@@ -350,6 +374,8 @@ export const getBatchOpeningBalances = async (
 
     finalBalances[accountKey] = balance;
   });
+
+  console.log("finalBalances", finalBalances);
 
   console.log("Final balances computed:", Object.keys(finalBalances).length);
   console.log("getBatchOpeningBalances END");
@@ -447,7 +473,6 @@ export const getBatchAdjustedLedgers = async (
 
   const baseMatch = {
     company: companyId,
-    // branch: branchId,,
     account: { $in: accountIdObjs },
     transactionDate: { $gte: startDate, $lte: endDate },
   };
@@ -466,7 +491,6 @@ export const getBatchAdjustedLedgers = async (
         let: {
           txnNum: "$transactionNumber",
           company: "$company",
-          // branch: "$branch",
           currentAccount: "$account",
         },
         pipeline: [
@@ -475,7 +499,6 @@ export const getBatchAdjustedLedgers = async (
               $expr: {
                 $and: [
                   { $eq: ["$company", "$$company"] },
-                  // { $eq: ["$branch", "$$branch"] },
                   { $eq: ["$originalTransactionNumber", "$$txnNum"] },
                   { $eq: ["$status", "active"] },
                   { $eq: ["$isReversed", false] },
@@ -485,7 +508,6 @@ export const getBatchAdjustedLedgers = async (
           },
           {
             $addFields: {
-              // Properly check if oldAccount exists
               hasOldAccount: {
                 $cond: [{ $ifNull: ["$oldAccount", false] }, true, false],
               },
@@ -501,7 +523,6 @@ export const getBatchAdjustedLedgers = async (
             $addFields: {
               adjustmentType: {
                 $cond: [
-                  // Case 1: OLD account being zeroed out
                   {
                     $and: [
                       "$hasOldAccount",
@@ -512,7 +533,6 @@ export const getBatchAdjustedLedgers = async (
                   "ZERO_OUT_OLD",
                   {
                     $cond: [
-                      // Case 2: AFFECTED account
                       { $eq: ["$affectedAccount", "$$currentAccount"] },
                       {
                         $cond: [
@@ -528,27 +548,35 @@ export const getBatchAdjustedLedgers = async (
               },
               adjustmentValue: {
                 $cond: [
-                  // Case 1: Zero out old account
-                  {
-                    $and: [
-                      "$hasOldAccount",
-                      { $eq: ["$oldAccount", "$$currentAccount"] },
-                      "$isAccountChange",
-                    ],
-                  },
-                  { $multiply: ["$oldAmount", -1] },
+                  // SHORT-CIRCUIT: pastDateAdjustmentEntry always uses raw positive amountDelta
+                  { $eq: ["$adjustmentPurpose", "pastDateAdjustmentEntry"] },
+                  { $abs: "$amountDelta" },
+                  // Existing logic for all other adjustment purposes
                   {
                     $cond: [
-                      // Case 2: Affected account
-                      { $eq: ["$affectedAccount", "$$currentAccount"] },
+                      // Case 1: Zero out old account
                       {
-                        $cond: [
+                        $and: [
+                          "$hasOldAccount",
+                          { $eq: ["$oldAccount", "$$currentAccount"] },
                           "$isAccountChange",
-                          "$newAmount",
-                          "$amountDelta",
                         ],
                       },
-                      0,
+                      { $multiply: ["$oldAmount", -1] },
+                      {
+                        $cond: [
+                          // Case 2: Affected account
+                          { $eq: ["$affectedAccount", "$$currentAccount"] },
+                          {
+                            $cond: [
+                              "$isAccountChange",
+                              "$newAmount",
+                              "$amountDelta",
+                            ],
+                          },
+                          0,
+                        ],
+                      },
                     ],
                   },
                 ],
@@ -564,6 +592,7 @@ export const getBatchAdjustedLedgers = async (
               newAmount: 1,
               adjustmentType: 1,
               adjustmentValue: 1,
+              adjustmentPurpose: 1,
               hasOldAccount: 1,
               isAccountChange: 1,
             },
@@ -1495,6 +1524,8 @@ export const refoldLedgersWithAdjustments = async (
     transactionType,
     summaryOnly,
   );
+
+  // console.log("ledger map",ledgerMap);
 
   const ledgersPerAccount = accountsPage.map((row) => {
     const accountKey = row._id.toString();

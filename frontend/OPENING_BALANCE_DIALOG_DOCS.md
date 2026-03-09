@@ -166,7 +166,7 @@ When ready to connect to backend:
 
 ## 🎯 Key Design Decisions
 
-1. **Separate Component**: Created standalone dialog for reusability
+1. **Separate Component**: Created pastDateAdjustmentEntry dialog for reusability
 2. **React Hook Form**: Better validation and form state management
 3. **Dummy Data**: Realistic placeholder data for UI demonstration
 4. **Visual Hierarchy**: Warning → Current → New → Preview → Actions
