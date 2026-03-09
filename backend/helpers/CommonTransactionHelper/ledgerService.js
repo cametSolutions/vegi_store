@@ -82,6 +82,7 @@ export const createAccountLedger = async (data, session) => {
 /**
  * Create item ledger entries for all items in transaction
  */
+
 export const createItemLedgers = async (data, session) => {
   try {
     const {
@@ -97,8 +98,6 @@ export const createItemLedgers = async (data, session) => {
       accountName,
       createdBy,
     } = data;
-
-    console.log("items", items);
 
     /**
      * STEP 1
@@ -123,7 +122,6 @@ export const createItemLedgers = async (data, session) => {
           itemName: item.itemName,
           itemCode: item.itemCode,
           unit: item.unit,
-
           quantity: Number(item.quantity),
           baseAmount: Number(item.baseAmount),
           amountAfterTax: Number(item.amountAfterTax),
@@ -132,7 +130,6 @@ export const createItemLedgers = async (data, session) => {
         });
       } else {
         const existing = consolidatedMap.get(itemId);
-
         existing.quantity += Number(item.quantity);
         existing.baseAmount += Number(item.baseAmount);
         existing.amountAfterTax += Number(item.amountAfterTax);
@@ -142,27 +139,24 @@ export const createItemLedgers = async (data, session) => {
 
     /**
      * STEP 3
-     * Create ledger entries with running balance
+     * Fetch all previous balances IN PARALLEL (safe — these are reads only)
      */
-    const ledgerEntries = [];
-    const runningBalanceMap = {};
+    const consolidatedItems = [...consolidatedMap.values()];
 
-    for (const item of consolidatedMap.values()) {
-      let previousBalance;
+    const previousBalances = await Promise.all(
+      consolidatedItems.map((item) =>
+        ItemLedger.getLastStockBalance(item.item, company, branch, session),
+      ),
+    );
 
-      if (runningBalanceMap[item.item]) {
-        previousBalance = runningBalanceMap[item.item];
-      } else {
-        previousBalance = await ItemLedger.getLastStockBalance(
-          item.item,
-          company,
-          branch,
-          session,
-        );
-      }
+    /**
+     * STEP 4
+     * Build ledger entries using fetched balances (pure in-memory, no DB)
+     */
+    const ledgerEntries = consolidatedItems.map((item, index) => {
+      const previousBalance = previousBalances[index];
 
       let runningStockBalance;
-
       if (movementType === "in") {
         runningStockBalance = previousBalance + item.quantity;
       } else if (movementType === "out") {
@@ -171,43 +165,37 @@ export const createItemLedgers = async (data, session) => {
         throw new Error(`Invalid movement type: ${movementType}`);
       }
 
-      runningBalanceMap[item.item] = runningStockBalance;
-
-      // 🔥 Average Rate Calculation
       const avgRate =
         item.quantity > 0 ? Number(item.baseAmount / item.quantity) : 0;
 
-      ledgerEntries.push({
+      return {
         company,
         branch,
         item: item.item,
         itemName: item.itemName,
         itemCode: item.itemCode,
         unit: item.unit,
-
         transactionId,
         transactionNumber,
         transactionDate,
         transactionType,
         movementType,
-
         quantity: item.quantity,
         rate: avgRate,
         baseAmount: item.baseAmount,
         amountAfterTax: item.amountAfterTax,
         taxRate: item.taxRate,
         taxAmount: item.taxAmount,
-
         runningStockBalance,
         account,
         accountName,
         createdBy,
-      });
-    }
+      };
+    });
 
     /**
-     * STEP 4
-     * Insert ledger entries
+     * STEP 5
+     * Insert all ledger entries in a single insertMany call
      */
     const createdEntries = await ItemLedger.create(ledgerEntries, {
       session,

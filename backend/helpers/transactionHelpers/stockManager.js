@@ -9,69 +9,56 @@ import { determineTransactionBehavior } from "./modelFindHelper.js";
  * @param {ClientSession} session - MongoDB session
  * @param {String} transactionType - Type of transaction
  */
-export const updateStock = async (
-  items,
-  stockDirection,
-  branchId,
-  session,
-  transactionType,
-) => {
-  try {
-    for (const item of items) {
-      // console.log(item);
+export const updateStock = async (items, stockDirection, branchId, session, transactionType) => {
+  // Step 1: Fetch all items in ONE query
+  const itemIds = items.map((i) => i.item);
+  const itemMasters = await ItemMaster.find({ _id: { $in: itemIds } }).session(session);
 
-      // Find the item in ItemMaster
-      const itemMaster = await ItemMaster.findById(item.item).session(session);
+  const itemMasterMap = new Map(itemMasters.map((m) => [m._id.toString(), m]));
 
-      if (!itemMaster) {
-        throw new Error(`Item not found: ${item.itemName}`);
-      }
+  // Step 2: Validate all items and compute new stock values
+  const bulkOps = [];
 
-      // Find the stock entry for this branch
-      const stockEntry = itemMaster.stock.find(
-        (s) => s.branch.toString() === branchId.toString(),
-      );
+  for (const item of items) {
+    const itemMaster = itemMasterMap.get(item.item.toString());
+    if (!itemMaster) throw new Error(`Item not found: ${item.itemName}`);
 
-      if (!stockEntry) {
+    const stockEntry = itemMaster.stock.find(
+      (s) => s.branch.toString() === branchId.toString()
+    );
+    if (!stockEntry) throw new Error(`Stock entry not found for item ${item.itemName} in this branch`);
+
+    const quantityChange = item.quantity;
+    let stockDelta;
+
+    if (stockDirection === "out") {
+      const newStock = stockEntry.currentStock - quantityChange;
+      if (newStock < 0 && (transactionType === "sale" || transactionType === "purchase_return")) {
         throw new Error(
-          `Stock entry not found for item ${item.itemName} in this branch`,
+          `Insufficient stock for ${item.itemName}. Available: ${stockEntry.currentStock}, Required: ${quantityChange}`
         );
       }
-
-      // Calculate new stock
-      const quantityChange = item.quantity;
-      let newStock;
-
-      if (stockDirection === "out") {
-        newStock = stockEntry.currentStock - quantityChange;
-
-        console.log("new stock", newStock);
-
-        // Validate stock availability
-        if (
-          newStock < 0 &&
-          (transactionType == "sale" || transactionType == "purchase_return")
-        ) {
-          throw new Error(
-            `Insufficient stock for ${item.itemName}. Available: ${stockEntry.currentStock}, Required: ${quantityChange}`,
-          );
-        }
-      } else if (stockDirection === "in") {
-        newStock = stockEntry.currentStock + quantityChange;
-      } else {
-        throw new Error(`Invalid stock direction: ${stockDirection}`);
-      }
-
-      // Update stock
-      stockEntry.currentStock = newStock;
-      await itemMaster.save({ session });
+      stockDelta = -quantityChange;
+    } else if (stockDirection === "in") {
+      stockDelta = quantityChange;
+    } else {
+      throw new Error(`Invalid stock direction: ${stockDirection}`);
     }
 
-    return { success: true };
-  } catch (error) {
-    throw error;
+    bulkOps.push({
+      updateOne: {
+        filter: { _id: item.item, "stock.branch": branchId },
+        update: { $inc: { "stock.$.currentStock": stockDelta } },
+      },
+    });
   }
+
+  // Step 3: One bulkWrite for all items
+  await ItemMaster.bulkWrite(bulkOps, { session });
+
+  return { success: true };
 };
+
 
 /**
  * Get current stock for an item in a branch

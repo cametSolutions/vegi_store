@@ -137,6 +137,7 @@ export const getTransactions = async (req, res) => {
  * Create transaction (handles sales, purchase, sales_return, purchase_return)
  */
 export const createTransaction = async (req, res) => {
+  console.time("createTransaction");
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -271,6 +272,8 @@ export const createTransaction = async (req, res) => {
       );
     }
 
+      console.timeEnd("createTransaction"); // logs: createTransaction: 4823ms
+
     return res.status(201).json({
       success: true,
       message: "Transaction created successfully",
@@ -316,6 +319,8 @@ export const createTransaction = async (req, res) => {
   } finally {
     session.endSession();
   }
+
+
 };
 
 /**
@@ -412,8 +417,12 @@ export const getTransactionDetail = async (req, res) => {
             .lean();
 
           const settledAmount = settlements.reduce((sum, settlement) => {
-            const settlementTransactionId = settlement?.transaction?.toString?.();
-            if (settlementTransactionId && receiptIds.includes(settlementTransactionId)) {
+            const settlementTransactionId =
+              settlement?.transaction?.toString?.();
+            if (
+              settlementTransactionId &&
+              receiptIds.includes(settlementTransactionId)
+            ) {
               return sum;
             }
             return sum + (settlement?.settledAmount || 0);
@@ -475,8 +484,7 @@ export const editTransaction = async (req, res) => {
       session,
     );
 
-    console.log("originalTransaction",originalTransaction);
-    
+    console.log("originalTransaction", originalTransaction);
 
     const oldAccount = originalTransaction.account;
 
